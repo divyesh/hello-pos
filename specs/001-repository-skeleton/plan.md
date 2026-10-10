@@ -67,6 +67,29 @@ Result: **pass**, no violations. Re-checked after Phase 1 design (contracts, dat
 quickstart): still pass. `/speckit-analyze` found that structured logging with a correlation id
 (Principle IX) had no task; it was added to User Story 1.
 
+### Re-check after implementation (T053)
+
+Still **pass**. Notes on how the delivered code meets each principle and where it differs from
+the plan:
+
+- **V. Contract-First**: the API is tested against `contracts/openapi.yaml` with real responses;
+  the web client (Kiota, committed) and Android client (OpenAPI Generator, every build) are both
+  generated from it.
+- **VI. Test-First**: backend tests were run red before implementation in every story. For web
+  and Android in User Story 1, tests were written before their projects but first executed once
+  the projects existed. User Stories 2 and 3 followed red then green. Gap found and fixed: Gradle
+  reused stale Android test results after a contract change; `contracts/` is now a declared test
+  input.
+- **VIII. Secure by Default**: debug Android builds allow plain HTTP to any host (a physical
+  device reaches the developer machine at a per-developer LAN address), not only the three hosts
+  the tasks named; release builds have no cleartext allowance. Client configuration files hold
+  no secrets; `Seq:ServerUrl` is never committed.
+- **IX. No Silent Failures**: one structured request event per call carrying the W3C trace id,
+  which matches `traceId` in problem details (verified by test and against a running container);
+  every client-side failure maps to a typed "unavailable" result.
+- **Plan changes recorded in research.md**: Microsoft.Testing.Platform runner (R3), compileSdk 37
+  (R10), `DOTNET_CLI_HOME` on the NuGet volume so local tools persist between container runs (R13).
+
 ## Project Structure
 
 ### Documentation (this feature)

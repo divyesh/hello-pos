@@ -162,10 +162,10 @@ file read and validated by both the .NET and Android test suites.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T050 [P] Update the README's "Building" section (FR-015): prerequisites (Podman or Docker, Android Studio 2026.1+ with JDK 21, `JAVA_HOME`), the container wrapper, the build/test/run commands for each app, the Kiota regeneration command, the Android API address settings for emulator and physical device
-- [ ] T051 [P] Update `.gitignore` for anything the build produced that is not yet ignored (`.artifacts/`, `android/.kotlin/`, `*.iml`, `.idea/` local files, `web/**/wwwroot/appsettings.Local.json` if introduced)
+- [X] T050 [P] Update the README's "Building" section (FR-015): prerequisites (Podman or Docker, Android Studio 2026.1+ with JDK 21, `JAVA_HOME`), the container wrapper, the build/test/run commands for each app, the Kiota regeneration command, the Android API address settings for emulator and physical device
+- [X] T051 [P] Update `.gitignore` for anything the build produced that is not yet ignored (`.artifacts/`, `android/.kotlin/`, `*.iml`, `.idea/` local files, `web/**/wwwroot/appsettings.Local.json` if introduced)
 - [ ] T052 Run every section of `specs/001-repository-skeleton/quickstart.md` end to end, including the manual start-screen checks on web and an emulator, and record the results in `specs/001-repository-skeleton/checklists/quickstart-results.md`
-- [ ] T053 Re-check the plan's Constitution Check against the delivered code and note any deviation in `specs/001-repository-skeleton/plan.md`
+- [X] T053 Re-check the plan's Constitution Check against the delivered code and note any deviation in `specs/001-repository-skeleton/plan.md`
 
 ---
 
