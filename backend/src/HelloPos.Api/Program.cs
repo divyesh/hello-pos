@@ -1,3 +1,4 @@
+using HelloPos.Api.Features.Health.GetHealth;
 using HelloPos.Api.Infrastructure;
 
 // Composition only: services, middleware and feature mapping. Features live in Features/.
@@ -5,12 +6,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddHelloPosLogging();
 builder.Services.AddHelloPosProblemDetails();
+builder.Services.AddHelloPosCors(builder.Configuration);
+builder.Services.AddSingleton(TimeProvider.System);
 
 var app = builder.Build();
 
 app.UseHelloPosRequestLogging();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseCors();
+
+app.MapGetHealth();
 
 app.Run();
 

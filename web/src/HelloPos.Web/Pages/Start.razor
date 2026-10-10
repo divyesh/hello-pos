@@ -1,5 +1,50 @@
 @page "/"
+@using HelloPos.Web.Services
+@inject IHealthService Health
 
 <PageTitle>Hello POS</PageTitle>
 
 <MudText Typo="Typo.h4" GutterBottom="true">Back office</MudText>
+
+<MudCard Outlined="true" Style="max-width: 28rem;">
+    <MudCardContent>
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">API status</MudText>
+
+        @switch (result)
+        {
+            case null:
+                <div data-testid="health-checking">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Inline="true" Class="ml-2">Checking…</MudText>
+                </div>
+                break;
+
+            case HealthCheckResult.Available available:
+                <div data-testid="health-available">
+                    <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">@available.Status</MudChip>
+                    <MudText Typo="Typo.body2">Version @available.Version</MudText>
+                </div>
+                break;
+
+            case HealthCheckResult.Unavailable:
+                <div data-testid="health-unavailable">
+                    <MudAlert Severity="Severity.Error" Dense="true">API unavailable</MudAlert>
+                    <MudButton data-testid="health-retry" Class="mt-2" Variant="Variant.Outlined"
+                               Color="Color.Primary" OnClick="CheckAsync">Retry</MudButton>
+                </div>
+                break;
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private HealthCheckResult? result;
+
+    protected override Task OnInitializedAsync() => CheckAsync();
+
+    private async Task CheckAsync()
+    {
+        result = null;
+        result = await Health.CheckAsync();
+    }
+}

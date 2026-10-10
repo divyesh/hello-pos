@@ -55,6 +55,8 @@ $runArgs = @(
     '-v', 'hellopos-nuget:/nuget',
     '-w', $workDir,
     '-e', 'NUGET_PACKAGES=/nuget',
+    # Keeps `dotnet tool restore` results (e.g. kiota) between container runs.
+    '-e', 'DOTNET_CLI_HOME=/nuget/.cli-home',
     '-e', 'DOTNET_NOLOGO=1',
     '-e', 'DOTNET_CLI_TELEMETRY_OPTOUT=1',
     '--add-host', 'host.docker.internal:host-gateway'

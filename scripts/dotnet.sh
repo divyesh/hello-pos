@@ -43,6 +43,7 @@ run_args=(run --rm -i
   --user "$(id -u):$(id -g)"
   -e HOME=/tmp/home
   -e NUGET_PACKAGES=/nuget
+  -e DOTNET_CLI_HOME=/nuget/.cli-home
   -e DOTNET_NOLOGO=1
   -e DOTNET_CLI_TELEMETRY_OPTOUT=1
   --add-host host.docker.internal:host-gateway)

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug builds only. The development API runs over plain HTTP on the developer's machine, reached
+  as 10.0.2.2 from the emulator or as the machine's LAN address from a physical device (which
+  differs per developer), so cleartext is allowed for debug builds. Release builds have no such
+  configuration and use HTTPS only.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
