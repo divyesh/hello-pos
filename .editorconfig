@@ -1,0 +1,35 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{json,yaml,yml,xml,csproj,props,targets,slnx,razor,html,css,toml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.sh]
+end_of_line = lf
+
+[*.{kt,kts}]
+indent_size = 4
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+
+# Test projects: Method_Scenario_Result names are the convention.
+[**/tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none
+
+# Kiota output is committed but generated: never fail the build on it.
+[web/src/HelloPos.Web/ApiClient/**]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none

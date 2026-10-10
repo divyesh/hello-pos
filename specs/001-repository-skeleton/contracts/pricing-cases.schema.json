@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/divyesh/hello-pos/contracts/pricing-cases.schema.json",
+  "title": "Hello POS shared pricing test cases",
+  "description": "Language-neutral pricing examples run by both the .NET and Kotlin test suites (Constitution, Principles I and VI). Rules: specs/pricing-rules.md. All money is integer minor units. Version 1 is a starting shape; the pricing engine feature (#10) may extend it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "cases"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "cases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/case" }
+    }
+  },
+  "$defs": {
+    "minor": {
+      "description": "Money as integer minor units (cents, paise).",
+      "type": "integer"
+    },
+    "decimalString": {
+      "description": "Non-money decimal (quantity, percentage) as an invariant-culture string.",
+      "type": "string",
+      "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+    },
+    "taxComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "ratePercent"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "ratePercent": { "$ref": "#/$defs/decimalString" }
+      }
+    },
+    "discount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": { "enum": ["percent", "fixed"] },
+        "value": {
+          "description": "Percent as a decimal string, or a fixed amount in minor units.",
+          "oneOf": [
+            { "$ref": "#/$defs/decimalString" },
+            { "$ref": "#/$defs/minor" }
+          ]
+        }
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "unitPrice", "quantity", "taxes"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "unitPrice": { "$ref": "#/$defs/minor" },
+        "quantity": { "$ref": "#/$defs/decimalString" },
+        "itemDiscount": { "$ref": "#/$defs/discount" },
+        "taxProfile": { "type": "string" },
+        "taxes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/taxComponent" }
+        }
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "input", "expected"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "description": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["currency", "pricing", "lines", "payment"],
+          "properties": {
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "pricing": { "enum": ["taxExclusive", "taxInclusive"] },
+            "cashRoundingStep": {
+              "description": "Cash rounding step in minor units; 0 or absent means none.",
+              "$ref": "#/$defs/minor"
+            },
+            "lines": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/line" }
+            },
+            "orderDiscount": { "$ref": "#/$defs/discount" },
+            "tip": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "amount": { "$ref": "#/$defs/minor" },
+                "percentOfSubtotal": { "$ref": "#/$defs/decimalString" }
+              },
+              "minProperties": 1,
+              "maxProperties": 1
+            },
+            "payment": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["method"],
+              "properties": {
+                "method": { "enum": ["cash", "card", "other"] },
+                "tendered": { "$ref": "#/$defs/minor" }
+              }
+            }
+          }
+        },
+        "expected": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lines", "taxes", "subtotal", "taxTotal", "tip", "total"],
+          "properties": {
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "lineAmount", "itemDiscount", "orderDiscountShare", "taxable"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "lineAmount": { "$ref": "#/$defs/minor" },
+                  "itemDiscount": { "$ref": "#/$defs/minor" },
+                  "orderDiscountShare": { "$ref": "#/$defs/minor" },
+                  "taxable": { "$ref": "#/$defs/minor" }
+                }
+              }
+            },
+            "taxes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["label", "ratePercent", "base", "amount"],
+                "properties": {
+                  "label": { "type": "string" },
+                  "ratePercent": { "$ref": "#/$defs/decimalString" },
+                  "base": { "$ref": "#/$defs/minor" },
+                  "amount": { "$ref": "#/$defs/minor" }
+                }
+              }
+            },
+            "subtotal": { "$ref": "#/$defs/minor" },
+            "taxTotal": { "$ref": "#/$defs/minor" },
+            "tip": { "$ref": "#/$defs/minor" },
+            "total": { "$ref": "#/$defs/minor" },
+            "cashRounding": { "$ref": "#/$defs/minor" },
+            "amountDue": { "$ref": "#/$defs/minor" },
+            "change": { "$ref": "#/$defs/minor" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "descriptionHash": "1F738FC1F4E8DFD0B446301162DCBA7B72725272E4CF70B0A5DD6A5E1B5506C9209B3AC90AACCADA6388481E589CE72DF4DC8E5113EF1AB14BA6851D07531E35",
+  "descriptionLocation": "../../../../contracts/openapi.yaml",
+  "lockFileVersion": "1.0.0",
+  "kiotaVersion": "1.36.0",
+  "clientClassName": "HelloPosApiClient",
+  "typeAccessModifier": "Public",
+  "clientNamespaceName": "HelloPos.Web.ApiClient",
+  "language": "CSharp",
+  "usesBackingStore": false,
+  "excludeBackwardCompatible": true,
+  "includeAdditionalData": true,
+  "disableSSLValidation": false,
+  "serializers": [
+    "Microsoft.Kiota.Serialization.Json.JsonSerializationWriterFactory",
+    "Microsoft.Kiota.Serialization.Text.TextSerializationWriterFactory",
+    "Microsoft.Kiota.Serialization.Form.FormSerializationWriterFactory",
+    "Microsoft.Kiota.Serialization.Multipart.MultipartSerializationWriterFactory"
+  ],
+  "deserializers": [
+    "Microsoft.Kiota.Serialization.Json.JsonParseNodeFactory",
+    "Microsoft.Kiota.Serialization.Text.TextParseNodeFactory",
+    "Microsoft.Kiota.Serialization.Form.FormParseNodeFactory"
+  ],
+  "structuredMimeTypes": [
+    "application/json",
+    "text/plain;q=0.9",
+    "application/x-www-form-urlencoded;q=0.2",
+    "multipart/form-data;q=0.1"
+  ],
+  "includePatterns": [],
+  "excludePatterns": [],
+  "disabledValidationRules": [],
+  "allowedExternalOrigins": []
+}

@@ -1,0 +1,3 @@
+# Files the OpenAPI Generator must not produce. Our own NetworkModule builds Retrofit and OkHttp;
+# the generated sample ApiClient would pull in unused dependencies (logging, scalars converter).
+**/infrastructure/ApiClient.kt

@@ -17,7 +17,7 @@ feature exists.
 
 1. **Repository skeleton**: `backend/`, `web/`, `android/`, `contracts/`; .NET 10 solution with a
    vertical-slice layout; Blazor WebAssembly app; Android project; `global.json` pinning the SDK.
-2. **Local environment**: `compose.yaml` for Podman with PostgreSQL and the Prism mock API;
+2. **Local environment**: `compose.yaml` for Podman with PostgreSQL, the Prism mock API and Seq (API logs);
    one-command start; seed script.
 3. **Tenancy and API infrastructure**: `business_id` conventions, EF Core global query filters,
    composite foreign keys, the cross-tenant isolation test harness, RFC 7807 errors, correlation

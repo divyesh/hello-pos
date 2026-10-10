@@ -1,0 +1,86 @@
+# Design contract for feature 001. Implementation copies this into contracts/openapi.yaml at the
+# repository root, which is the single source of truth from then on (Constitution, Principle V).
+openapi: 3.0.3
+info:
+  title: Hello POS API
+  version: 0.1.0
+  description: >
+    API shared by the Hello POS web back office and Android app.
+    Money is always sent as int64 minor units with an ISO 4217 currency code.
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+servers:
+  - url: http://localhost:5080
+    description: Local development
+tags:
+  - name: System
+    description: Service status
+paths:
+  /health:
+    get:
+      tags: [System]
+      operationId: getHealth
+      summary: Service status
+      description: >
+        Anonymous. Returns the service's own status and version only; no configuration,
+        secrets, or internal details.
+      security: []
+      responses:
+        '200':
+          description: The service is running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example:
+                service: hello-pos-api
+                version: 0.1.0-dev
+                status: available
+                serverTimeUtc: '2026-10-10T14:03:22Z'
+        default:
+          description: Unexpected error, as RFC 7807 problem details.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      additionalProperties: false
+      required: [service, version, status, serverTimeUtc]
+      properties:
+        service:
+          type: string
+          description: Service name.
+          example: hello-pos-api
+        version:
+          type: string
+          description: Build version of the running service.
+          example: 0.1.0-dev
+        status:
+          type: string
+          enum: [available, degraded]
+        serverTimeUtc:
+          type: string
+          format: date-time
+          description: Current server time in UTC (ISO 8601, ending in Z).
+    ProblemDetails:
+      type: object
+      description: RFC 7807 problem details.
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+        traceId:
+          type: string
+          description: Correlation id for this request (Constitution, Principle IX).

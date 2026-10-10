@@ -13,10 +13,14 @@ Thumbs.db
 bin/
 obj/
 TestResults/
+# build output from the SDK container (scripts/dotnet.*)
+.artifacts/
 
 # Android / Gradle
 .gradle/
+.kotlin/
 build/
+*.iml
 local.properties
 *.apk
 *.aab

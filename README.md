@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: planning. No application code yet.
+> Status: Phase 0 in progress. The repository skeleton (roadmap #1) builds and tests all three apps; no business features yet.
 
 ## Applications
 
@@ -89,11 +89,80 @@ repositories and use cases, never Retrofit or Room directly. `BLUETOOTH_CONNECT`
 
 ## Building
 
-Not available yet. Phase 0 of the roadmap adds the repository skeleton, a one-command local
-environment (Podman compose with PostgreSQL and a mock API), and CI.
+### Prerequisites
 
-Requirements (expected): .NET 10 SDK (stable), Podman, Android Studio (latest stable) with
-JDK 17+.
+- **Podman** (default) or **Docker**. All .NET commands run inside the official .NET 10 SDK
+  container through `scripts/dotnet.ps1` (Windows) or `scripts/dotnet.sh` (Linux/macOS), so no
+  local .NET SDK is needed. Set `CONTAINER_ENGINE=docker` to use Docker.
+- **Android Studio 2026.1 or newer**, which provides JDK 21 and the Android SDK. For
+  command-line Gradle builds, set `JAVA_HOME` to its bundled JDK (`<Android Studio>/jbr`).
+  The Android Gradle Plugin downloads missing SDK platforms (it compiles against API 37).
+
+A local .NET 10 SDK is optional (for IDE support); `global.json` rejects preview SDKs.
+
+### Build and test
+
+Run from the repository root:
+
+```text
+scripts/dotnet.ps1 build backend/HelloPos.slnx
+scripts/dotnet.ps1 test --solution backend/HelloPos.slnx
+scripts/dotnet.ps1 build web/HelloPos.Web.slnx
+scripts/dotnet.ps1 test --solution web/HelloPos.Web.slnx
+cd android
+./gradlew assembleDebug testDebugUnitTest      # gradlew.bat on Windows
+```
+
+Tests use Microsoft.Testing.Platform, so `dotnet test` takes `--solution` or `--project`.
+Container builds write to `.artifacts/container/` and never touch the `bin/`/`obj/` folders a
+host IDE uses.
+
+### Run
+
+```text
+scripts/dotnet.ps1 -Port 5080 run --project backend/src/HelloPos.Api    # API on http://localhost:5080
+scripts/dotnet.ps1 -Port 5090 run --project web/src/HelloPos.Web        # web on http://localhost:5090
+```
+
+Ports are published only when asked for with `-Port` (`--port` in `dotnet.sh`), so builds and
+tests can run while the API and web app are up. Stop a running app with Ctrl+C; if its terminal
+was closed or the script was killed, the container keeps running, so check with `podman ps` and
+stop it with `podman stop <id>`.
+
+**Android**: `./gradlew installDebug`, then open Hello POS. The emulator reaches the API at
+`http://10.0.2.2:5080/` by default. On a physical device, add your computer's LAN address to
+`android/local.properties`:
+
+```text
+hellopos.apiBaseUrl=http://192.168.1.20:5080/
+```
+
+Debug builds allow plain HTTP for this; release builds do not.
+
+### Logs (Seq)
+
+The API writes structured JSON logs to the console. To see them in Seq locally:
+
+```text
+podman run -d --name seq -e ACCEPT_EULA=Y -e SEQ_FIRSTRUN_NOAUTHENTICATION=true -p 5341:80 datalust/seq
+$env:Seq__ServerUrl = "http://host.docker.internal:5341"     # bash: export Seq__ServerUrl=...
+scripts/dotnet.ps1 -Port 5080 run --project backend/src/HelloPos.Api
+```
+
+Then open `http://localhost:5341`. Every request is one event; its trace id matches the
+`traceId` in error responses.
+
+### After changing the API contract
+
+Edit `contracts/openapi.yaml` first (it is the source of truth), then regenerate the web client:
+
+```text
+scripts/dotnet.ps1 tool restore
+scripts/dotnet.ps1 kiota generate --language CSharp --class-name HelloPosApiClient --namespace-name HelloPos.Web.ApiClient --openapi contracts/openapi.yaml --output web/src/HelloPos.Web/ApiClient --exclude-backward-compatible
+```
+
+The Android client is regenerated automatically on every Gradle build. The backend contract tests
+fail if the API's responses no longer match the contract.
 
 ## License
 
