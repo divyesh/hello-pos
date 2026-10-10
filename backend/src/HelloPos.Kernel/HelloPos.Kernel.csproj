@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared primitives used by both the API and the web back office (Constitution, Principles I and VII):
+    Money and pricing arrive with the pricing engine (roadmap #10). No web, UI or app references.
+  -->
+
+</Project>

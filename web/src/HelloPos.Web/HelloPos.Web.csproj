@@ -11,4 +11,9 @@
     <PackageReference Include="Microsoft.Kiota.Bundle" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Shared with the API: one money and pricing implementation (Constitution, Principle I). -->
+    <ProjectReference Include="..\..\..\backend\src\HelloPos.Kernel\HelloPos.Kernel.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -12,4 +12,8 @@
     <PackageReference Include="Serilog.Sinks.Seq" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\HelloPos.Kernel\HelloPos.Kernel.csproj" />
+  </ItemGroup>
+
 </Project>

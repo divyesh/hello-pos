@@ -146,15 +146,15 @@ file read and validated by both the .NET and Android test suites.
 
 ### Tests for User Story 3 ⚠️ (write first, see them fail)
 
-- [ ] T044 [P] [US3] Write `backend/tests/HelloPos.Kernel.Tests/KernelDependencyTests.cs`: the `HelloPos.Kernel` assembly references no assembly whose name starts with `Microsoft.AspNetCore`, `Microsoft.JSInterop`, `MudBlazor`, `HelloPos.Api` or `HelloPos.Web` (FR-012)
-- [ ] T045 [P] [US3] Write `backend/tests/HelloPos.Kernel.Tests/Pricing/PricingCasesFileTests.cs` (JsonSchema.Net): `contracts/pricing-cases.json` exists, parses, and validates against `contracts/pricing-cases.schema.json`; on failure the message names the file and the violation (FR-014)
-- [ ] T046 [P] [US3] Write `android/app/src/test/java/com/recbook/hellopos/domain/pricing/PricingCasesFileTest.kt` (networknt json-schema-validator): same assertions as T045, reading both files from the path given by system property `hellopos.contractsDir`; configure that property for unit tests in `android/app/build.gradle.kts` as `rootProject.projectDir/../contracts` (FR-014)
+- [X] T044 [P] [US3] Write `backend/tests/HelloPos.Kernel.Tests/KernelDependencyTests.cs`: the `HelloPos.Kernel` assembly references no assembly whose name starts with `Microsoft.AspNetCore`, `Microsoft.JSInterop`, `MudBlazor`, `HelloPos.Api` or `HelloPos.Web` (FR-012)
+- [X] T045 [P] [US3] Write `backend/tests/HelloPos.Kernel.Tests/Pricing/PricingCasesFileTests.cs` (JsonSchema.Net): `contracts/pricing-cases.json` exists, parses, and validates against `contracts/pricing-cases.schema.json`; on failure the message names the file and the violation (FR-014)
+- [X] T046 [P] [US3] Write `android/app/src/test/java/com/recbook/hellopos/domain/pricing/PricingCasesFileTest.kt` (networknt json-schema-validator): same assertions as T045, reading both files from the path given by system property `hellopos.contractsDir`; configure that property for unit tests in `android/app/build.gradle.kts` as `rootProject.projectDir/../contracts` (FR-014)
 
 ### Implementation for User Story 3
 
-- [ ] T047 [US3] Create `backend/src/HelloPos.Kernel/HelloPos.Kernel.csproj` (class library, no framework references) with a single `AssemblyInfo.cs` describing its purpose; create `backend/tests/HelloPos.Kernel.Tests/HelloPos.Kernel.Tests.csproj` (xUnit v3, JsonSchema.Net) referencing it; add both to `backend/HelloPos.slnx` (makes T044 and T045 pass)
-- [ ] T048 [US3] Reference `backend/src/HelloPos.Kernel` from `backend/src/HelloPos.Api/HelloPos.Api.csproj` and from `web/src/HelloPos.Web/HelloPos.Web.csproj` (relative project path), and add the kernel project to `web/HelloPos.Web.slnx`; both solutions still build and test (FR-012)
-- [ ] T049 [US3] Run the Android unit tests and confirm T046 passes; then run quickstart.md section 5 (malformed case rejected by both suites) and revert the change
+- [X] T047 [US3] Create `backend/src/HelloPos.Kernel/HelloPos.Kernel.csproj` (class library, no framework references) with a single `AssemblyInfo.cs` describing its purpose; create `backend/tests/HelloPos.Kernel.Tests/HelloPos.Kernel.Tests.csproj` (xUnit v3, JsonSchema.Net) referencing it; add both to `backend/HelloPos.slnx` (makes T044 and T045 pass)
+- [X] T048 [US3] Reference `backend/src/HelloPos.Kernel` from `backend/src/HelloPos.Api/HelloPos.Api.csproj` and from `web/src/HelloPos.Web/HelloPos.Web.csproj` (relative project path), and add the kernel project to `web/HelloPos.Web.slnx`; both solutions still build and test (FR-012)
+- [X] T049 [US3] Run the Android unit tests and confirm T046 passes; then run quickstart.md section 5 (malformed case rejected by both suites) and revert the change
 
 **Checkpoint**: all three user stories pass independently.
 

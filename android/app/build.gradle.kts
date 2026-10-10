@@ -84,6 +84,8 @@ tasks.named("preBuild") { dependsOn(tasks.named("openApiGenerate")) }
 tasks.withType<Test>().configureEach {
     // Lets JVM tests read the shared contracts (pricing cases, OpenAPI) from the repository.
     systemProperty("hellopos.contractsDir", contractsDir.asFile.absolutePath)
+    // Declared as an input so any change to contracts/ re-runs the tests instead of reusing old results.
+    inputs.dir(contractsDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("contracts")
 }
 
 dependencies {
