@@ -1,0 +1,29 @@
+# Claude Code local/private settings (spec-kit skills in .claude/skills are tracked)
+.claude/settings.local.json
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vs/
+.vscode/
+.idea/
+*.user
+
+# .NET
+bin/
+obj/
+TestResults/
+
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Secrets / env
+.env
+.env.*
+!.env.example
