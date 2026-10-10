@@ -1,0 +1,19 @@
+<Project>
+  <!-- Shared by every .NET project (backend and web). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+    <!-- InvariantGlobalization is set per project: the web app needs culture data. -->
+  </PropertyGroup>
+
+  <!-- Builds inside the SDK container never share bin/ and obj/ with a host IDE. -->
+  <PropertyGroup Condition="'$(DOTNET_RUNNING_IN_CONTAINER)' == 'true'">
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$(MSBuildThisFileDirectory).artifacts/container</ArtifactsPath>
+  </PropertyGroup>
+</Project>

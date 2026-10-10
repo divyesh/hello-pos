@@ -18,9 +18,9 @@ lasting copy (FR-015).
 
 ```text
 scripts/dotnet.ps1 build backend/HelloPos.slnx      # scripts/dotnet.sh on Linux/macOS
-scripts/dotnet.ps1 test  backend/HelloPos.slnx
+scripts/dotnet.ps1 test --solution backend/HelloPos.slnx
 scripts/dotnet.ps1 build web/HelloPos.Web.slnx
-scripts/dotnet.ps1 test  web/HelloPos.Web.slnx
+scripts/dotnet.ps1 test --solution web/HelloPos.Web.slnx
 cd android
 ./gradlew assembleDebug        # gradlew.bat on Windows
 ./gradlew testDebugUnitTest
@@ -60,7 +60,7 @@ version from `global.json`.
 ## 4. Contract drift is caught (SC-004)
 
 Temporarily add a field to the API's health response (or rename one) without changing
-`contracts/openapi.yaml`, then run `scripts/dotnet.ps1 test backend/HelloPos.slnx`: the contract
+`contracts/openapi.yaml`, then run `scripts/dotnet.ps1 test --solution backend/HelloPos.slnx`: the contract
 test fails,
 naming the mismatch. Revert the change.
 

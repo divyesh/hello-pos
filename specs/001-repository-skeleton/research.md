@@ -83,6 +83,10 @@ stable release that satisfies the constraints here, then pinned exactly (no floa
   (`WebApplicationFactory`) for in-memory API tests; bUnit for Blazor component tests.
 - **Rationale**: mainstream, well supported on .NET 10, and bUnit is the standard for Blazor
   components. One framework across backend and web.
+- **Implementation note**: xUnit v3 (4.x) runs on Microsoft.Testing.Platform, which the .NET 10
+  SDK requires opting into: `global.json` sets `"test": { "runner": "Microsoft.Testing.Platform" }`,
+  the VSTest packages (`Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`) are not used, and
+  tests run with `dotnet test --solution <file>.slnx`.
 - **Alternatives considered**: MSTest (fine, smaller community examples), TUnit (newer, less
   proven).
 
@@ -157,7 +161,10 @@ stable release that satisfies the constraints here, then pinned exactly (no floa
 ## R10. Android project
 
 - **Decision**: single `app` module in `android/`, application ID and namespace
-  `com.recbook.hellopos`, minSdk 26, compileSdk and targetSdk 36 (installed locally). Kotlin 2.x
+  `com.recbook.hellopos`, minSdk 26, targetSdk 36, compileSdk 37 (Compose 1.12 from BOM
+  2026.09 requires compiling against API 37; the Android Gradle Plugin installed platform 37
+  automatically). Android Gradle Plugin 9 compiles Kotlin itself, so only the Compose compiler
+  plugin is applied, not `org.jetbrains.kotlin.android`. Kotlin 2.x
   with Compose (Material 3) via the Compose BOM, Hilt (with KSP), Retrofit, OkHttp,
   kotlinx.serialization, Coroutines. Versions live in the Gradle version catalog
   (`gradle/libs.versions.toml`); the Gradle wrapper is committed; the JVM toolchain is 21 (the JDK
