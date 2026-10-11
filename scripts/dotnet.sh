@@ -55,4 +55,19 @@ for name in Seq__ServerUrl Seq__ApiKey ASPNETCORE_ENVIRONMENT; do
   [[ -n "${!name:-}" ]] && run_args+=(-e "$name=${!name}")
 done
 
+# Tests start throwaway containers (Testcontainers, e.g. a real PostgreSQL), so `test` runs get the
+# container engine's socket. Only for `test`: the socket gives full control of the engine.
+if [[ "${1:-}" == "test" ]]; then
+  if [[ -n "${HELLOPOS_ENGINE_SOCKET:-}" ]]; then socket="$HELLOPOS_ENGINE_SOCKET"
+  elif [[ "$engine" == "docker" ]]; then socket=/var/run/docker.sock
+  else socket="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock"; [[ -S "$socket" ]] || socket=/run/podman/podman.sock
+  fi
+  run_args+=(-v "$socket:/var/run/docker.sock"
+    -e DOCKER_HOST=unix:///var/run/docker.sock
+    -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
+    -e TESTCONTAINERS_RYUK_DISABLED=true)
+  # The container runs as the calling user, who needs the socket's group to use it.
+  if [[ -S "$socket" ]]; then run_args+=(--group-add "$(stat -c %g "$socket" 2>/dev/null || stat -f %g "$socket")"); fi
+fi
+
 exec "$engine" "${run_args[@]}" "$image" dotnet "$@"

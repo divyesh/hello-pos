@@ -1,0 +1,87 @@
+# Hello POS local environment (feature 002). Use scripts/env.ps1 or scripts/env.sh, not this
+# file directly: they create .env, wait for health checks and touch only project "hellopos".
+# Every setting comes from .env (see .env.example); every port binds to HELLOPOS_BIND_ADDRESS.
+name: hellopos
+
+services:
+  postgres:
+    image: postgres:18.6
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      HELLOPOS_DB_NAME: ${HELLOPOS_DB_NAME}
+      HELLOPOS_DB_APP_USER: ${HELLOPOS_DB_APP_USER}
+      HELLOPOS_DB_APP_PASSWORD: ${HELLOPOS_DB_APP_PASSWORD}
+    volumes:
+      # PostgreSQL 18 images keep data under /var/lib/postgresql/<major>/docker.
+      - hellopos-postgres:/var/lib/postgresql
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_PG_PORT}:5432"
+    healthcheck:
+      # Healthy only when the application database exists, so a failed init script is caught.
+      test: ["CMD-SHELL", "psql -U \"$${POSTGRES_USER}\" -d \"$${HELLOPOS_DB_NAME}\" -tAc 'select 1'"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  mock-api:
+    image: stoplight/prism:5.15.10
+    # Serves every operation in the API contract from its examples (Constitution, Principle V).
+    # Single process: Prism 5.15.10's multi-process mode crashes on its bundled Node.js
+    # ("Cannot read properties of undefined (reading 'isPrimary')").
+    command: ["mock", "-h", "0.0.0.0", "-p", "4010", "--multiprocess", "false", "/contracts/openapi.yaml"]
+    environment:
+      # Set by scripts/env to a hash of contracts/openapi.yaml: a changed contract changes this
+      # service's configuration, so `up` re-creates it and Prism reloads the contract.
+      HELLOPOS_CONTRACT_HASH: ${HELLOPOS_CONTRACT_HASH:-unset}
+    volumes:
+      - ./contracts:/contracts:ro
+    ports:
+      - "${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_MOCK_PORT}:4010"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4010/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  seq:
+    image: datalust/seq:2026.1.17182
+    environment:
+      ACCEPT_EULA: "Y"
+      # Development only: no login. Ports are bound to loopback by default.
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
+    volumes:
+      - hellopos-seq:/data
+    ports:
+      - "${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_SEQ_PORT}:80"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  api:
+    # Started only with `scripts/env up --api`. The image is the one later environments deploy.
+    profiles: ["api"]
+    image: localhost/hellopos-api:dev
+    build:
+      context: .
+      dockerfile: backend/src/HelloPos.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__HelloPos: "Host=postgres;Port=5432;Database=${HELLOPOS_DB_NAME};Username=${HELLOPOS_DB_APP_USER};Password=${HELLOPOS_DB_APP_PASSWORD}"
+      Seq__ServerUrl: http://seq:80
+    ports:
+      - "${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_API_PORT}:8080"
+    depends_on:
+      # Started, not healthy: the API must come up (and report "degraded") even without a database.
+      postgres:
+        condition: service_started
+      seq:
+        condition: service_started
+    # No health check: the chiseled image has no shell or curl; scripts/env checks /health from the host.
+
+volumes:
+  hellopos-postgres:
+  hellopos-seq:

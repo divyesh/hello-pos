@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: Phase 0 in progress. The repository skeleton (roadmap #1) builds and tests all three apps; no business features yet.
+> Status: Phase 0 in progress. Roadmap #1 (repository skeleton) and #2 (local environment) are done; no business features yet.
 
 ## Applications
 
@@ -139,18 +139,45 @@ hellopos.apiBaseUrl=http://192.168.1.20:5080/
 
 Debug builds allow plain HTTP for this; release builds do not.
 
-### Logs (Seq)
+### Local environment
 
-The API writes structured JSON logs to the console. To see them in Seq locally:
+One command starts the services development needs (PostgreSQL, a mock API, Seq), with Podman
+or Docker (`CONTAINER_ENGINE=docker`):
 
 ```text
-podman run -d --name seq -e ACCEPT_EULA=Y -e SEQ_FIRSTRUN_NOAUTHENTICATION=true -p 5341:80 datalust/seq
-$env:Seq__ServerUrl = "http://host.docker.internal:5341"     # bash: export Seq__ServerUrl=...
-scripts/dotnet.ps1 -Port 5080 run --project backend/src/HelloPos.Api
+scripts/env.ps1 up            # postgres, mock-api, seq; waits until healthy, prints addresses
+scripts/env.ps1 up --api      # also builds and runs the real API image
+scripts/env.ps1 status        # services and health
+scripts/env.ps1 logs [svc]    # follow logs
+scripts/env.ps1 down          # stop; data is kept
+scripts/env.ps1 reset         # stop and DELETE local data (asks first; --yes to skip)
 ```
 
-Then open `http://localhost:5341`. Every request is one event; its trace id matches the
-`traceId` in error responses.
+(`scripts/env.sh` on Linux/macOS.) Settings live in `.env`, created from `.env.example` on first
+use and never committed: logins, database name and ports.
+
+| Service | Address | Notes |
+|---------|---------|-------|
+| PostgreSQL | `localhost:5432` | database `hellopos`; the API uses login `hellopos_app`, which can only connect to it |
+| Mock API | `http://localhost:4010` | serves `contracts/openapi.yaml` from its examples; picks up contract changes on `up` |
+| Seq | `http://localhost:5341` | API logs; no login locally |
+| API (`up --api`) | `http://localhost:5080` | the deployable image; `/health` says `degraded` when the database is unreachable |
+
+Ports bind to `127.0.0.1` only. To test on a physical Android device, set
+`HELLOPOS_BIND_ADDRESS=0.0.0.0` in `.env` (this also exposes Seq, which has no login, to your
+network; switch back afterwards).
+
+**Build clients against the mock API**: web, set `Api:BaseUrl` to `http://localhost:4010/` in
+`web/src/HelloPos.Web/wwwroot/appsettings.Development.json`; Android, set
+`hellopos.apiBaseUrl=http://10.0.2.2:4010/` in `android/local.properties`.
+
+**API from the SDK container with Seq**: when running the API with `scripts/dotnet.ps1 run`
+instead of `up --api`, send its logs to the environment's Seq with
+`$env:Seq__ServerUrl = "http://host.docker.internal:5341"` (bash: `export Seq__ServerUrl=...`).
+
+**Database tests**: `scripts/dotnet.ps1 test ...` mounts the container engine's socket (only for
+`test`), so tests can start their own throwaway PostgreSQL with Testcontainers. Override the socket
+path with `HELLOPOS_ENGINE_SOCKET` if your engine keeps it elsewhere.
 
 ### After changing the API contract
 

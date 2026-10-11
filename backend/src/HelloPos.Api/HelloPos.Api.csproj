@@ -10,6 +10,7 @@
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Formatting.Compact" />
     <PackageReference Include="Serilog.Sinks.Seq" />
+    <PackageReference Include="Npgsql" />
   </ItemGroup>
 
   <ItemGroup>
