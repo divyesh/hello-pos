@@ -1,0 +1,61 @@
+# Design draft of the operations this feature adds to contracts/openapi.yaml (merged there by the
+# implementation, which stays the single source of truth). Errors are RFC 7807 problem details.
+# Every staff operation acts on the business open in the session, needs X-HelloPos-Client: web on
+# writes, honours the stale-tab header X-HelloPos-Business, and checks the caller's role (research R3/R4):
+# 401 no session or no open business; 403 role not allowed; 404 another business's or unknown record.
+paths:
+  /staff:
+    get:
+      operationId: listStaff            # owner, manager. ?status=active|inactive|all (default active)
+      responses: { '200': { description: StaffMember[] }, '401': {}, '403': {}, '409': {} }
+    post:
+      operationId: addStaff             # NewStaffMember: displayName, role (cashier|manager), posUsername, pin
+      responses: { '201': { description: StaffMember }, '400': {}, '401': {}, '403': {}, '409': {} }
+  /staff/{staffId}:
+    get:
+      operationId: getStaff
+      responses: { '200': {}, '401': {}, '403': {}, '404': {} }
+    put:
+      operationId: updateStaff          # StaffUpdate: displayName, role, posUsername, version
+      responses: { '200': {}, '400': {}, '401': {}, '403': {}, '404': {}, '409': { description: staff-changed or last-owner } }
+  /staff/{staffId}/deactivate:
+    post:
+      operationId: deactivateStaff      # body: version
+      responses: { '200': {}, '401': {}, '403': {}, '404': {}, '409': {} }
+  /staff/{staffId}/reactivate:
+    post:
+      operationId: reactivateStaff      # body: version
+      responses: { '200': {}, '401': {}, '403': {}, '404': {}, '409': {} }
+  /staff/{staffId}/pin:
+    put:
+      operationId: setStaffPin          # body: posUsername?, pin, version (sets or resets)
+      responses: { '200': {}, '400': {}, '401': {}, '403': {}, '404': {}, '409': {} }
+  /staff/invitations:
+    get:
+      operationId: listInvitations      # owner only; pending and recent
+      responses: { '200': { description: Invitation[] }, '401': {}, '403': {} }
+    post:
+      operationId: inviteStaff          # NewInvitation: email, role (owner|manager), displayName
+      responses: { '201': { description: Invitation }, '400': {}, '401': {}, '403': {}, '409': { description: already pending or member } }
+  /staff/invitations/{invitationId}/revoke:
+    post: { operationId: revokeInvitation, responses: { '204': {}, '401': {}, '403': {}, '404': {} } }
+  /staff/invitations/{invitationId}/resend:
+    post: { operationId: resendInvitation, responses: { '204': {}, '401': {}, '403': {}, '404': {} } }
+  /invitations/preview:
+    post:
+      operationId: previewInvitation    # anonymous; body: token -> businessName, role, displayName
+      responses: { '200': {}, '404': {}, '429': {} }
+  /invitations/accept:
+    post:
+      operationId: acceptInvitation     # signed-in, verified account whose email matches; body: token
+      responses: { '204': {}, '401': {}, '404': { description: unknown, expired, revoked or other email (identical) }, '409': { description: already-member }, '429': {} }
+components:
+  schemas:
+    StaffMember:      # id, displayName, role, active, posUsername?, hasPin, hasBackOfficeAccess, version, createdAt, updatedAt
+      type: object
+    Invitation:       # id, email, role, displayName, status, expiresAt, createdAt
+      type: object
+    OwnerProfile:     # + currentRole? (owner|manager) when a business is open
+      type: object
+    BusinessSummary:  # + role (owner|manager)
+      type: object
