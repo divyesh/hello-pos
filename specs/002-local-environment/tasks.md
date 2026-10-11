@@ -73,8 +73,8 @@ least-privilege logins.
 
 **Independent Test**: quickstart.md section 2.
 
-- [ ] T010 [US2] Add service `mock-api` to `compose.yaml`: image `stoplight/prism:5.15.10`; command `mock -h 0.0.0.0 -p 4010 /contracts/openapi.yaml`; volume `./contracts:/contracts:ro`; port `${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_MOCK_PORT}:4010`; health check that fails when the mock is not serving (verify a tool available in the image; if none, have `scripts/env` check `GET /health` from the host) (research R4)
-- [ ] T011 [US2] Make `scripts/env up` print the mock API address and recreate `mock-api` when `contracts/openapi.yaml` changed (compose `up` does this when the service config or a mounted file hash is part of its labels; otherwise always `--force-recreate mock-api`) in `scripts/env.ps1` and `scripts/env.sh`
+- [X] T010 [US2] Add service `mock-api` to `compose.yaml`: image `stoplight/prism:5.15.10`; command `mock -h 0.0.0.0 -p 4010 /contracts/openapi.yaml`; volume `./contracts:/contracts:ro`; port `${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_MOCK_PORT}:4010`; health check that fails when the mock is not serving (verify a tool available in the image; if none, have `scripts/env` check `GET /health` from the host) (research R4)
+- [X] T011 [US2] Make `scripts/env up` print the mock API address and recreate `mock-api` when `contracts/openapi.yaml` changed (compose `up` does this when the service config or a mounted file hash is part of its labels; otherwise always `--force-recreate mock-api`) in `scripts/env.ps1` and `scripts/env.sh`
 - [ ] T012 [US2] Verify User Story 2 by running quickstart.md section 2 (`curl /health` on the mock returns the contract example; web and Android start screens show available against the mock; a broken contract makes `up` fail naming `mock-api`) and record results in `specs/002-local-environment/checklists/quickstart-results.md`
 
 **Checkpoint**: clients can be built against the mock.

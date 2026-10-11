@@ -29,6 +29,9 @@ $options = @($args | Select-Object -Skip 1 | ForEach-Object { [string]$_ })
 $withApi = $options -contains '--api'
 $assumeYes = $options -contains '--yes'
 
+# A changed contract changes mock-api's configuration, so compose re-creates it (Prism reloads).
+$env:HELLOPOS_CONTRACT_HASH = (Get-FileHash -Algorithm SHA256 (Join-Path $repoRoot 'contracts/openapi.yaml')).Hash
+
 function Invoke-Compose {
     param([string[]]$ComposeArgs)
     # Compose writes progress to stderr; Windows PowerShell would treat that as a terminating
@@ -85,7 +88,7 @@ switch ($command) {
         if ((Invoke-Compose $composeArgs) -ne 0) {
             Write-Host ''
             Write-Host 'Environment failed to start. Service status:' -ForegroundColor Red
-            Invoke-Compose @('ps', '--all', '--format', 'table {{.Service}}\t{{.State}}\t{{.Health}}') | Out-Null
+            Invoke-Compose @('ps', '--all', '--format', 'table {{.Service}}\t{{.State}}\t{{.Status}}') | Out-Null
             exit 1
         }
 

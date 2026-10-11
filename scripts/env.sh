@@ -18,6 +18,9 @@ engine="${CONTAINER_ENGINE:-podman}"
 export PODMAN_COMPOSE_WARNING_LOGS=false
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="$repo_root/.env"
+# A changed contract changes mock-api's configuration, so compose re-creates it (Prism reloads).
+HELLOPOS_CONTRACT_HASH="$( (sha256sum "$repo_root/contracts/openapi.yaml" 2>/dev/null || shasum -a 256 "$repo_root/contracts/openapi.yaml") | cut -d' ' -f1)"
+export HELLOPOS_CONTRACT_HASH
 
 command="${1:-help}"
 shift || true
@@ -56,7 +59,7 @@ case "$command" in
     if ! compose "${args[@]}"; then
       echo
       echo "Environment failed to start. Service status:" >&2
-      compose ps --all --format 'table {{.Service}}\t{{.State}}\t{{.Health}}' >&2 || true
+      compose ps --all --format 'table {{.Service}}\t{{.State}}\t{{.Status}}' >&2 || true
       exit 1
     fi
     bind="$(setting HELLOPOS_BIND_ADDRESS)"; [[ "$bind" == "0.0.0.0" ]] && bind=localhost

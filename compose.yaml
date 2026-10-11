@@ -25,6 +25,26 @@ services:
       timeout: 3s
       retries: 12
 
+  mock-api:
+    image: stoplight/prism:5.15.10
+    # Serves every operation in the API contract from its examples (Constitution, Principle V).
+    # Single process: Prism 5.15.10's multi-process mode crashes on its bundled Node.js
+    # ("Cannot read properties of undefined (reading 'isPrimary')").
+    command: ["mock", "-h", "0.0.0.0", "-p", "4010", "--multiprocess", "false", "/contracts/openapi.yaml"]
+    environment:
+      # Set by scripts/env to a hash of contracts/openapi.yaml: a changed contract changes this
+      # service's configuration, so `up` re-creates it and Prism reloads the contract.
+      HELLOPOS_CONTRACT_HASH: ${HELLOPOS_CONTRACT_HASH:-unset}
+    volumes:
+      - ./contracts:/contracts:ro
+    ports:
+      - "${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_MOCK_PORT}:4010"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4010/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
   seq:
     image: datalust/seq:2026.1.17182
     environment:

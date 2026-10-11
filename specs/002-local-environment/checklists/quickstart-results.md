@@ -33,7 +33,19 @@ default); every connection from the network, including the API's, requires the p
 
 ## Section 2: mock API (User Story 2)
 
-Pending.
+| Check | Result |
+|-------|--------|
+| `up` starts `mock-api` healthy | ✅ health check `wget /health` inside the container |
+| `GET /health` on the mock returns the contract example | ✅ identical to the `example` in `contracts/openapi.yaml`; CORS allows any origin |
+| Changed contract is served after `up` | ✅ only `mock-api` re-created (contract hash in its configuration); new example returned |
+| Broken contract fails `up` naming `mock-api` | ✅ exit 1; status table shows `mock-api exited`, postgres and seq healthy |
+| Web start page against the mock | ⏳ pending, needs a browser (developer) |
+| Android start screen against the mock | ⏳ pending, needs an emulator (developer) |
+
+### Issue found and fixed
+
+Prism 5.15.10 crashes in its default multi-process mode (`Cannot read properties of undefined
+(reading 'isPrimary')`). The service runs Prism with `--multiprocess false`.
 
 ## Section 3: real API (User Story 3)
 
