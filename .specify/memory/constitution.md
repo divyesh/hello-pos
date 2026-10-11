@@ -22,6 +22,10 @@ Sync Impact Report
 - Product name set to "Hello POS" (2026-10-10)
 - Product Scope (v1): added hosted-service subscriptions, API-enforced, switchable off for
   self-hosting (2026-10-10)
+- Amendment 1.0.0 → 1.1.0 (2026-10-11, MINOR: scope materially expanded): Product Scope (v1)
+  adds retail stores (convenience stores and groceries) next to cafés and restaurants: barcode
+  scanning, container deposits, age-restricted items, multi-buy promotions, cash drawer and shifts.
+  Inventory is planned right after v1. No principle changed. Roadmap updated in the same change.
 - Deferred TODOs: none
 - Templates: plan/spec/tasks templates read the constitution at runtime; the plan template's
   Constitution Check MUST now cover Principles I–X.
@@ -222,10 +226,13 @@ flexibility nobody has asked for.
 
 ## Product Scope (v1)
 
-v1 delivers: login, selling screen, checkout, card payments, pending orders, sales history,
-cancel/refund, itemized sales report, kitchen display, Bluetooth receipt printing, email/SMS
-receipts, and tables, plus the web back office described above, and subscriptions for the
-hosted service. Subscription status MUST be enforced by the API, never by a check inside a
+v1 serves both food service (cafés, restaurants) and retail stores (convenience stores,
+groceries). v1 delivers: login, selling screen (scan-first for retail, product grid for quick
+items), barcode scanning, checkout, card payments, pending orders, sales history, cancel/refund,
+itemized sales report, kitchen display, Bluetooth receipt printing, email/SMS receipts, tables,
+container deposits, age-restricted item checks, multi-buy promotions, and cash drawer and shift
+close, plus the web back office described above, and subscriptions for the hosted service.
+Inventory (stock levels, receiving) follows right after v1. Subscription status MUST be enforced by the API, never by a check inside a
 client app, and billing MUST be switchable off for self-hosted deployments (the code is open
 source under Apache-2.0). Ordering and phasing live in
 `specs/roadmap.md`; anything outside this list requires a scope change recorded there.
@@ -255,4 +262,4 @@ source under Apache-2.0). Ordering and phasing live in
 - Compliance is verified at plan time (Constitution Check), at review time, and by
   `/speckit-analyze` before implementation; unjustified violations block merge.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-09
+**Version**: 1.1.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-11

@@ -91,3 +91,9 @@ differ (Constitution, Principle I).
   example 10%).
 - **Discount and tax-inclusive order**: for a tax-inclusive business, does an order discount
   reduce the tax-inclusive price? The current rules assume yes.
+- **Container deposits** (retail, roadmap #11/#14): a deposit is a separate line per item sold.
+  Is it taxed? (Varies by province and state: likely a per-business or per-tax-profile setting.)
+  Is it discountable? (Assumed no.) Is it refunded with the item? (Assumed yes.)
+- **Multi-buy promotions** (roadmap #28): where they sit in the calculation order relative to item
+  and order discounts (assumed: after item discounts, before the order discount), how the promotion
+  amount is spread across lines for tax and refunds, and whether a product can be in two promotions.

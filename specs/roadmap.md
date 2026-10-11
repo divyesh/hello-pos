@@ -4,7 +4,11 @@ How v1 (Constitution, "Product Scope") is split into phases. Each phase ends wit
 works end to end, and each numbered item is one Spec Kit feature
 (`/speckit-specify` → … → `/speckit-implement`) on its own branch.
 
-Status: draft, 2026-10-10. Order and scope are open for review.
+Status: draft, 2026-10-10; retail scope added 2026-10-11 (convenience stores and groceries next to
+cafés and restaurants). Order and scope are open for review.
+
+Feature numbers are identifiers, not an order: features added later get the next free number and
+are placed in the phase where they belong, so references such as "#7" never change.
 
 Every feature includes its API slice (contract first), its web back office pages, its Android
 screens where relevant, tenant-isolation tests, and an update to `contracts/pricing-cases.json`
@@ -65,9 +69,14 @@ Goal: a business can set up everything it sells.
 10. **Pricing engine**: the shared pricing module in C# (used by the API and the web app) and
    Kotlin, driven by `contracts/pricing-cases.json`, implementing `specs/pricing-rules.md`.
 11. **Catalog setup** (web): categories, products, units, open-price items, tax profiles,
-   scheduled item discounts, CSV import.
+   scheduled item discounts, CSV import; per product: one or more barcodes (UPC/EAN, PLU),
+   an age-restriction flag with minimum age, and a container deposit amount.
+28. **Promotions** (web, pricing engine): multi-buy ("2 for $5", "3 for the price of 2"),
+   buy-one-get-one, mix and match across a group of products, with schedules; added to
+   `specs/pricing-rules.md` and the shared pricing test cases.
 12. **Business settings** (web): payment types, tables, discount approval limit.
-13. **Catalog on Android**: download and cache the catalog for offline selling.
+13. **Catalog on Android**: download and cache the catalog for offline selling, including a
+   barcode index for instant offline lookup.
 
 Done when: a business's full catalog is set up on the web and shows correctly on Android, with
 prices matching the shared test cases.
@@ -76,14 +85,22 @@ prices matching the shared test cases.
 
 Goal: a real cash sale, online or offline, that can never be lost or duplicated.
 
-14. **Selling screen** (Android): category tabs, product grid, cart, quantities with units and
-    steps, item and order discounts, price override with manager approval, tips.
+14. **Selling screen** (Android): scan-first for retail (camera and Bluetooth/USB barcode
+    scanners, search by name or code, unknown-barcode handling) and a product grid for quick items;
+    category tabs, cart, quantities with units and steps, item and order discounts, price override
+    with manager approval, tips; age-restricted items prompt the cashier to check ID (recorded on
+    the sale); container deposits added as separate lines.
 15. **Cash checkout and sale sync**: cash tendered, cash rounding, change; local outbox;
     idempotent sale creation; server recalculation; invoice and ticket numbers.
 16. **Receipt printing** (Android): Bluetooth ESC/POS printers, printer selection, receipt layout.
+29. **Cash drawer and shifts** (Android, API, web): open a shift with a starting float, cash
+    drawer kick through the receipt printer, pay-ins and pay-outs with reasons, no-sale opens
+    logged, close with a counted amount and the over/short against expected cash, shift report
+    (X during the shift, Z at close).
 
-Done when: a cashier completes cash sales in airplane mode, and they appear exactly once on the
-server with correct totals and numbers once the device reconnects.
+Done when: a cashier scans items and completes cash sales in airplane mode, and they appear
+exactly once on the server with correct totals and numbers once the device reconnects; the shift
+closes with the counted cash matching the expected amount.
 
 ## Phase 5: Order lifecycle
 
@@ -127,10 +144,26 @@ Done when: an owner reconciles a day's sales and tax from the web reports.
     load test.
 27. **Pilot**: one or two real businesses, feedback, fixes.
 
+## Phase 9: Inventory (after v1 launch, unless a pilot store needs it earlier)
+
+Goal: a store knows what it has and what to reorder.
+
+30. **Stock levels**: quantity on hand per product, decreased by sales and increased by refunds,
+    manual adjustments with reasons (damage, theft, count), low-stock alerts.
+31. **Receiving and suppliers**: suppliers, deliveries received against products (cost price),
+    stock counts.
+
+Done when: a store receives a delivery, sells from it, counts stock, and the on-hand quantity and
+low-stock list are correct.
+
 ## Later (not v1)
 
 - "Sign in with Google" for owners (clarification of #5; the account model already allows external logins).
 - Payment provider integration for India (Razorpay or Pine Labs).
 - Manager mode in the Android app (if a client asks).
 - Scale integration for weighed items.
+- Customer-facing display (second screen showing items and total).
+- Lottery sales and payouts.
+- EBT / SNAP payments (USA).
+- Shelf labels and price-change printing.
 - Self-service features beyond the back office (online ordering, customer accounts).
