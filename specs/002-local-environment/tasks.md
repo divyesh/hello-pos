@@ -32,8 +32,8 @@ quickstart steps and record results.
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 [P] Create `.env.example` at the repository root with every variable in contracts/environment-interface.md ("Local settings") and its example value, plus a header comment: development placeholders only, copy to `.env` (done automatically by `scripts/env`), never commit `.env`
-- [ ] T002 [P] Verify `.gitignore` ignores `.env` and keeps `.env.example` tracked (`git check-ignore .env` succeeds, `git check-ignore .env.example` fails); fix `.gitignore` if not
+- [X] T001 [P] Create `.env.example` at the repository root with every variable in contracts/environment-interface.md ("Local settings") and its example value, plus a header comment: development placeholders only, copy to `.env` (done automatically by `scripts/env`), never commit `.env`
+- [X] T002 [P] Verify `.gitignore` ignores `.env` and keeps `.env.example` tracked (`git check-ignore .env` succeeds, `git check-ignore .env.example` fails); fix `.gitignore` if not
 
 **Checkpoint**: settings template in place.
 
@@ -41,7 +41,7 @@ quickstart steps and record results.
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-- [ ] T003 Create `compose.yaml` at the repository root with `name: hellopos` and an empty `services:` map plus the top-level `volumes:` entries `hellopos-postgres` and `hellopos-seq` (research R1); every later service is added to this file
+- [X] T003 Create `compose.yaml` at the repository root with `name: hellopos` and an empty `services:` map plus the top-level `volumes:` entries `hellopos-postgres` and `hellopos-seq` (research R1); every later service is added to this file
 
 **Checkpoint**: compose project exists; user stories can add services.
 
@@ -56,12 +56,12 @@ least-privilege logins.
 
 ### Implementation for User Story 1
 
-- [ ] T004 [P] [US1] Create `infra/postgres/init/01-app-database.sh` (LF line endings, executable): using `POSTGRES_USER`, `HELLOPOS_DB_NAME`, `HELLOPOS_DB_APP_USER`, `HELLOPOS_DB_APP_PASSWORD`, run `psql -v ON_ERROR_STOP=1` to create database `${HELLOPOS_DB_NAME}` owned by the admin login, create role `${HELLOPOS_DB_APP_USER}` with `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD ...`, `REVOKE CONNECT ON DATABASE ... FROM PUBLIC`, `GRANT CONNECT ... TO` the app role; no table or schema grants (data-model.md, research R3)
-- [ ] T005 [US1] Add service `postgres` to `compose.yaml`: image `postgres:18.6`; env `POSTGRES_USER`, `POSTGRES_PASSWORD`, `HELLOPOS_DB_NAME`, `HELLOPOS_DB_APP_USER`, `HELLOPOS_DB_APP_PASSWORD` from `.env`; volume `hellopos-postgres:/var/lib/postgresql` (PostgreSQL 18 data layout) and `./infra/postgres/init:/docker-entrypoint-initdb.d:ro`; port `${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_PG_PORT}:5432`; health check `pg_isready -U $${POSTGRES_USER} -d postgres` (interval 5s, retries 12) (depends on T003, T004)
-- [ ] T006 [US1] Add service `seq` to `compose.yaml`: image `datalust/seq:2026.1.17182`; env `ACCEPT_EULA=Y`, `SEQ_FIRSTRUN_NOAUTHENTICATION=true`; volume `hellopos-seq:/data`; port `${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_SEQ_PORT}:80`; health check against its HTTP API using a tool available in the image (verify which; if none, use a compose `healthcheck` with the image's own binary or fall back to the script's host-side check) (research R5)
-- [ ] T007 [US1] Create `scripts/env.ps1`: subcommands `up [--api]`, `down`, `reset [--yes]`, `status`, `logs [service]` per contracts/environment-interface.md; engine from `CONTAINER_ENGINE` (default `podman`) calling `<engine> compose --project-name hellopos --env-file .env -f compose.yaml`; creates `.env` from `.env.example` when missing and says so; `up` runs `up -d --wait` (adds `--profile api` and `--build` for `--api`), on failure prints the unhealthy service and exits non-zero, on success prints each service address from `.env`; `reset` prompts unless `--yes`, then `down --volumes --remove-orphans`; works from any working directory (resolves the repository root from the script location)
-- [ ] T008 [P] [US1] Create `scripts/env.sh` with the same behavior as T007 for Linux/macOS; mark executable in git
-- [ ] T009 [US1] Verify User Story 1 by running quickstart.md section 1 (create `.env`, healthy services, least-privilege checks, persistence across `down`/`up`, `reset` removes data) and record results in `specs/002-local-environment/checklists/quickstart-results.md` (depends on T005–T007)
+- [X] T004 [P] [US1] Create `infra/postgres/init/01-app-database.sh` (LF line endings, executable): using `POSTGRES_USER`, `HELLOPOS_DB_NAME`, `HELLOPOS_DB_APP_USER`, `HELLOPOS_DB_APP_PASSWORD`, run `psql -v ON_ERROR_STOP=1` to create database `${HELLOPOS_DB_NAME}` owned by the admin login, create role `${HELLOPOS_DB_APP_USER}` with `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD ...`, `REVOKE CONNECT ON DATABASE ... FROM PUBLIC`, `GRANT CONNECT ... TO` the app role; no table or schema grants (data-model.md, research R3)
+- [X] T005 [US1] Add service `postgres` to `compose.yaml`: image `postgres:18.6`; env `POSTGRES_USER`, `POSTGRES_PASSWORD`, `HELLOPOS_DB_NAME`, `HELLOPOS_DB_APP_USER`, `HELLOPOS_DB_APP_PASSWORD` from `.env`; volume `hellopos-postgres:/var/lib/postgresql` (PostgreSQL 18 data layout) and `./infra/postgres/init:/docker-entrypoint-initdb.d:ro`; port `${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_PG_PORT}:5432`; health check `pg_isready -U $${POSTGRES_USER} -d postgres` (interval 5s, retries 12) (depends on T003, T004)
+- [X] T006 [US1] Add service `seq` to `compose.yaml`: image `datalust/seq:2026.1.17182`; env `ACCEPT_EULA=Y`, `SEQ_FIRSTRUN_NOAUTHENTICATION=true`; volume `hellopos-seq:/data`; port `${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_SEQ_PORT}:80`; health check against its HTTP API using a tool available in the image (verify which; if none, use a compose `healthcheck` with the image's own binary or fall back to the script's host-side check) (research R5)
+- [X] T007 [US1] Create `scripts/env.ps1`: subcommands `up [--api]`, `down`, `reset [--yes]`, `status`, `logs [service]` per contracts/environment-interface.md; engine from `CONTAINER_ENGINE` (default `podman`) calling `<engine> compose --project-name hellopos --env-file .env -f compose.yaml`; creates `.env` from `.env.example` when missing and says so; `up` runs `up -d --wait` (adds `--profile api` and `--build` for `--api`), on failure prints the unhealthy service and exits non-zero, on success prints each service address from `.env`; `reset` prompts unless `--yes`, then `down --volumes --remove-orphans`; works from any working directory (resolves the repository root from the script location)
+- [X] T008 [P] [US1] Create `scripts/env.sh` with the same behavior as T007 for Linux/macOS; mark executable in git
+- [X] T009 [US1] Verify User Story 1 by running quickstart.md section 1 (create `.env`, healthy services, least-privilege checks, persistence across `down`/`up`, `reset` removes data) and record results in `specs/002-local-environment/checklists/quickstart-results.md` (depends on T005–T007)
 
 **Checkpoint**: database and Seq run with one command. MVP of this feature.
 
