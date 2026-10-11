@@ -140,8 +140,10 @@ to manager; try to deactivate the last owner and fail.
 - **FR-001**: Each business MUST have a staff list; each staff member belongs to exactly one business
   and has a display name, a role (owner, manager or cashier), an active/inactive state, and creation
   and change times.
-- **FR-002**: Owners MUST be able to add people with any role; managers MUST be able to add only
-  cashiers. Cashiers MUST NOT use the back office.
+- **FR-002**: Owners MUST be able to add cashiers and managers directly (POS username and PIN) and to
+  invite managers and co-owners by email (FR-011); an owner always has a back-office account, so owners
+  join only by invitation or by creating the business. Managers MUST be able to add only cashiers.
+  Cashiers MUST NOT use the back office.
 - **FR-003**: Owners MUST be able to change any staff member's role; managers MUST NOT change roles
   at all (they manage cashiers, not promotions).
 - **FR-004**: Staff MUST be deactivated and reactivated, never deleted. A deactivated person cannot
