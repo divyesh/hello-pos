@@ -198,6 +198,34 @@ scripts/dotnet.ps1 kiota generate --language CSharp --class-name HelloPosApiClie
 The Android client is regenerated automatically on every Gradle build. The backend contract tests
 fail if the API's responses no longer match the contract.
 
+## Continuous integration
+
+Every pull request to `main` and every push to `main` runs six checks
+([.github/workflows/ci.yml](.github/workflows/ci.yml)). They run with read-only permissions and no
+secrets (safe for pull requests from forks), and every action is pinned to a commit SHA.
+
+| Check | Proves | Reproduce locally |
+|-------|--------|-------------------|
+| `backend` | Backend builds; all tests pass, including real-PostgreSQL tests | `scripts/dotnet.ps1 test --solution backend/HelloPos.slnx` |
+| `web` | Web back office builds; all tests pass | `scripts/dotnet.ps1 test --solution web/HelloPos.Web.slnx` |
+| `android` | Android app builds; all unit tests pass | `cd android; ./gradlew assembleDebug testDebugUnitTest` |
+| `contract` | The contract is valid and the committed web client matches it | `npx @redocly/cli@2.62.1 lint contracts/openapi.yaml`, then the regeneration commands above and `git status` |
+| `image` | The API container image builds | `podman build -f backend/src/HelloPos.Api/Dockerfile .` |
+| `environment` | `compose.yaml` is valid for every profile | `podman compose --env-file .env.example --profile api --profile tools config --quiet` |
+
+A newer push to the same pull request cancels the older run. Test results are attached to each run
+as artifacts. Flaky tests are fixed, never retried automatically.
+
+**Making the checks required** (repository owner, once): on GitHub open **Settings → Rules →
+Rulesets → New branch ruleset** (or **Settings → Branches → Add branch protection rule**), target
+`main`, and enable:
+
+- **Require a pull request before merging**;
+- **Require status checks to pass**, adding `backend`, `web`, `android`, `contract`, `image` and
+  `environment` (they appear in the list after the workflow has run once);
+- **Require branches to be up to date before merging**;
+- **Block force pushes**.
+
 ## License
 
 [Apache License 2.0](LICENSE).

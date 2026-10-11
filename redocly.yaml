@@ -1,0 +1,6 @@
+# Contract validation in CI (feature 004, research R5): structural correctness only.
+# Style rules are not enforced until the project adopts them explicitly.
+extends: []
+rules:
+  struct: error
+  no-unresolved-refs: error

@@ -23,12 +23,12 @@ feature exists.
    composite foreign keys, row-level security, migrations by a dedicated migrator login, the
    cross-tenant isolation test harness, schema convention checks. (RFC 7807 errors, correlation
    ids and structured logging were delivered earlier, in #1.)
-4. **CI and staging**: GitHub Actions building all three apps and running tests (including
-   Testcontainers PostgreSQL); deployment to a DigitalOcean staging environment (Managed
-   PostgreSQL, API container, static web app).
+4. **Continuous integration**: GitHub Actions building all three apps and running every test
+   (including Testcontainers PostgreSQL), contract validity and generated-client drift, API image
+   build and compose validation, on every pull request and push to `main`. Staging deployment was
+   moved to Phase 8 (decided 2026-10-11: not deploying to DigitalOcean yet).
 
-Done when: a "hello" endpoint from the contract is deployed to staging, the web app and Android
-app call it, and the isolation test harness runs in CI.
+Done when: every pull request shows the six checks and the isolation test harness runs in CI.
 
 ## Phase 1: Accounts and access
 
@@ -121,8 +121,10 @@ Done when: an owner reconciles a day's sales and tax from the web reports.
 
 ## Phase 8: Launch
 
-26. **Production readiness**: production environment on DigitalOcean, backups and restore test,
-    monitoring and alerts, security review, load test.
+26. **Production readiness**: staging and production environments on DigitalOcean (Managed
+    PostgreSQL, API container with the `migrate` job before each deploy, static web app; moved here
+    from #4), deployment from CI, backups and restore test, monitoring and alerts, security review,
+    load test.
 27. **Pilot**: one or two real businesses, feedback, fixes.
 
 ## Later (not v1)

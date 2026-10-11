@@ -7,3 +7,5 @@ gradlew text eol=lf
 *.jar binary
 *.png binary
 *.ico binary
+contracts/*.yaml text eol=lf
+contracts/*.json text eol=lf
