@@ -13,7 +13,8 @@ public static class PersistenceOptions
             .UseNpgsql(ConnectionStrings.Normalize(connectionString), npgsql => npgsql
                 .MigrationsHistoryTable(HelloPosDbContext.MigrationsHistoryTable, HelloPosDbContext.Schema)
                 .MigrationsAssembly(typeof(HelloPosDbContext).Assembly.GetName().Name))
-            .UseSnakeCaseNamingConvention();
+            .UseSnakeCaseNamingConvention()
+            .AddInterceptors(BusinessSessionInterceptor.Instance, BusinessStampingInterceptor.Instance);
         return builder;
     }
 }

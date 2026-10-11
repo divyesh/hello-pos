@@ -17,6 +17,7 @@ builder.Services.AddHelloPosProblemDetails();
 builder.Services.AddHelloPosCors(builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHelloPosDatabase(builder.Configuration);
+builder.Services.AddExceptionHandler<PersistenceExceptionHandler>();
 
 var app = builder.Build();
 
@@ -26,6 +27,7 @@ app.UseStatusCodePages();
 app.UseCors();
 
 app.MapGetHealth();
+app.MapRegisteredEndpoints();
 
 await app.RunAsync().ConfigureAwait(false);
 return 0;
