@@ -20,6 +20,10 @@ tags:
     description: The business open in this session
   - name: Staff
     description: People who work at the open business, roles and invitations
+  - name: Devices
+    description: POS devices of the open business
+  - name: Pos
+    description: Calls made by the Android POS app
   - name: Owner
     description: Owner accounts and sessions (web back office)
 paths:
@@ -751,6 +755,389 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+  /devices:
+    get:
+      tags: [Devices]
+      operationId: listDevices
+      summary: POS devices of the open business (owners and managers)
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+      responses:
+        '200':
+          description: Devices, active first, then by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
+  /devices/pairings:
+    post:
+      tags: [Devices]
+      operationId: createDevicePairing
+      summary: A one-time code to connect a device to the open business
+      description: 8 characters shown as ABCD-EFGH, valid for 5 minutes, usable once.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      responses:
+        '201':
+          description: The code. It is shown only now.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePairing'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
+  /devices/{deviceId}:
+    get:
+      tags: [Devices]
+      operationId: getDevice
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/DeviceId'
+      responses:
+        '200':
+          description: The device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
+    put:
+      tags: [Devices]
+      operationId: renameDevice
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRename'
+      responses:
+        '200':
+          description: Renamed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/DeviceConflict'
+  /devices/{deviceId}/revoke:
+    post:
+      tags: [Devices]
+      operationId: revokeDevice
+      summary: Revoke a device; everyone signed in on it is signed out
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceVersion'
+      responses:
+        '200':
+          description: Revoked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/DeviceConflict'
+  /pos/device:
+    get:
+      tags: [Pos]
+      operationId: posDevice
+      summary: This device's registration (the app checks it at start)
+      security:
+        - deviceCredential: []
+      responses:
+        '200':
+          description: Registered and active.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PosDeviceInfo'
+        '401':
+          description: Unknown or revoked device; the app asks to register again.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /pos/pair:
+    post:
+      tags: [Pos]
+      operationId: posPair
+      summary: Connect this device to a business with a one-time code
+      description: >
+        Anonymous and rate limited. The business is the one the code was issued for. Answers the device
+        credential once; the device must keep it in secure storage.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PosPairRequest'
+      responses:
+        '200':
+          description: Connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PosPairResult'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '404':
+          description: The code is unknown, used or expired.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /pos/sign-in:
+    post:
+      tags: [Pos]
+      operationId: posSignIn
+      summary: Sign a person in on this device with POS username and PIN
+      description: >
+        Every failure (unknown username, wrong PIN, inactive or locked person, another business's
+        username) gets the same 401. Five failures lock the person for 15 minutes on every device; repeated
+        failures on one device make it wait (429 with Retry-After).
+      security:
+        - deviceCredential: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PosSignInRequest'
+      responses:
+        '200':
+          description: Signed in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PosSignInResult'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          description: Username or PIN is incorrect (also for an unknown or revoked device).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          description: Too many attempts on this device or from this address; wait for Retry-After seconds.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /pos/refresh:
+    post:
+      tags: [Pos]
+      operationId: posRefresh
+      summary: New tokens for a session (the refresh token is replaced every time)
+      description: Presenting a refresh token that was already replaced ends the session.
+      security:
+        - deviceCredential: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PosRefreshRequest'
+      responses:
+        '200':
+          description: New tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PosTokens'
+        '401':
+          description: The session has ended; sign in again.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /pos/sign-out:
+    post:
+      tags: [Pos]
+      operationId: posSignOut
+      summary: End this session
+      security:
+        - staffSession: []
+      responses:
+        '204':
+          description: Signed out.
+        '401':
+          description: No session.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /pos/me:
+    get:
+      tags: [Pos]
+      operationId: posMe
+      summary: The signed-in person
+      security:
+        - staffSession: []
+      responses:
+        '200':
+          description: The person.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PosStaff'
+        '401':
+          description: No session, or it has ended.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /pos/me/pin:
+    put:
+      tags: [Pos]
+      operationId: posChangeOwnPin
+      summary: Change one's own PIN
+      description: >
+        Needs the current PIN; a wrong one counts as a failed sign-in (lockout). On success the person's
+        other sessions end and this session continues with the new tokens returned.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PosChangePin'
+      responses:
+        '200':
+          description: Changed; use these tokens from now on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PosTokens'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          description: No session, or it has ended.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /pos/offline-access:
+    get:
+      tags: [Pos]
+      operationId: posOfflineAccess
+      summary: The data this device needs to check PINs offline
+      description: >
+        The active staff of this business who have a PIN (username, name, role, PIN hash, when the PIN
+        changed), encrypted so only this device can read it. Fetch every 15 minutes while online.
+      security:
+        - deviceCredential: []
+      responses:
+        '200':
+          description: The encrypted bundle.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PosOfflineAccess'
+        '401':
+          description: The device is not registered or was revoked.
+  /pos/sessions/offline:
+    post:
+      tags: [Pos]
+      operationId: posSessionFromOffline
+      summary: Turn an offline sign-in into a session
+      description: >
+        Accepted only when the person is still active and their PIN has not changed since the value
+        the device checked against; otherwise 401 and the device signs the person out.
+      security:
+        - deviceCredential: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PosOfflineSession'
+      responses:
+        '200':
+          description: The session for the offline sign-in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PosTokens'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          description: Not accepted; sign the person out.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /pos/attempts:
+    post:
+      tags: [Pos]
+      operationId: posReportAttempts
+      summary: Report PIN attempts made offline
+      description: Failures count toward the person's lockout as if they had happened online.
+      security:
+        - deviceCredential: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PosAttemptReport'
+      responses:
+        '204':
+          description: Recorded.
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          description: The device is not registered or was revoked.
 components:
   schemas:
     HealthStatus:
@@ -1114,6 +1501,235 @@ components:
         version:
           type: integer
           format: int32
+    Device:
+      type: object
+      additionalProperties: false
+      required: [id, name, registeredBy, registeredAt, active, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        registeredBy:
+          type: string
+          description: Name of the person who registered it.
+        registeredAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+    DevicePairing:
+      type: object
+      additionalProperties: false
+      required: [code, expiresAt]
+      properties:
+        code:
+          type: string
+          description: ABCD-EFGH (no 0, O, 1, I or L).
+        expiresAt:
+          type: string
+          format: date-time
+    DeviceRename:
+      type: object
+      additionalProperties: false
+      required: [name, version]
+      properties:
+        name:
+          type: string
+        version:
+          type: integer
+          format: int32
+    DeviceVersion:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version:
+          type: integer
+          format: int32
+    PosDeviceInfo:
+      type: object
+      additionalProperties: false
+      required: [deviceId, deviceName, businessId, businessName]
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        deviceName:
+          type: string
+        businessId:
+          type: string
+          format: uuid
+        businessName:
+          type: string
+    PosPairRequest:
+      type: object
+      additionalProperties: false
+      required: [code, deviceName, publicKey]
+      properties:
+        code:
+          type: string
+        deviceName:
+          type: string
+          description: 1 to 60 characters, for example Front till.
+        publicKey:
+          type: string
+          description: The device's RSA public key (X.509 SubjectPublicKeyInfo, base64), at least 2048 bits.
+    PosPairResult:
+      type: object
+      additionalProperties: false
+      required: [deviceId, deviceCredential, businessId, businessName]
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        deviceCredential:
+          type: string
+          description: 'Sent as "Authorization: Device <credential>". Shown only in this response.'
+        businessId:
+          type: string
+          format: uuid
+        businessName:
+          type: string
+    PosSignInRequest:
+      type: object
+      additionalProperties: false
+      required: [username, pin]
+      properties:
+        username:
+          type: string
+        pin:
+          type: string
+    PosRefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    PosTokens:
+      type: object
+      additionalProperties: false
+      required: [accessToken, accessExpiresAt, refreshToken, sessionExpiresAt]
+      properties:
+        accessToken:
+          type: string
+          description: 'Sent as "Authorization: Bearer <token>"; valid 15 minutes.'
+        accessExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+          description: Replaced on every refresh; keep only the newest.
+        sessionExpiresAt:
+          type: string
+          format: date-time
+          description: The session ends at this time at the latest (12 hours after sign-in).
+    PosStaff:
+      type: object
+      additionalProperties: false
+      required: [staffId, displayName, role, businessId, businessName]
+      properties:
+        staffId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager, cashier]
+        businessId:
+          type: string
+          format: uuid
+        businessName:
+          type: string
+    PosSignInResult:
+      type: object
+      additionalProperties: false
+      required: [tokens, staff]
+      properties:
+        tokens:
+          $ref: '#/components/schemas/PosTokens'
+        staff:
+          $ref: '#/components/schemas/PosStaff'
+    PosChangePin:
+      type: object
+      additionalProperties: false
+      required: [currentPin, newPin]
+      properties:
+        currentPin:
+          type: string
+        newPin:
+          type: string
+          description: 4 to 6 digits, not a simple pattern.
+    PosOfflineAccess:
+      type: object
+      additionalProperties: false
+      required: [version, generatedAt, bundle]
+      properties:
+        version:
+          type: string
+          description: Changes whenever the contents change.
+        generatedAt:
+          type: string
+          format: date-time
+        bundle:
+          type: string
+          description: >
+            Base64 (plain string, so every client reads it the same way) of: 2-byte big-endian length of the wrapped key, the AES-256 key wrapped with the
+            device's RSA public key (OAEP with SHA-1, the padding the Android Keystore supports on every
+            version), a 12-byte nonce, then AES-GCM ciphertext with its 16-byte tag. The plaintext is UTF-8
+            JSON: {"businessId", "generatedAt", "staff": [{"staffId", "username", "displayName", "role",
+            "pinHash", "pinChangedAt"}]}; pinHash is ASP.NET Core Identity's v3 format (PBKDF2).
+    PosOfflineSession:
+      type: object
+      additionalProperties: false
+      required: [staffId, signedInAt]
+      properties:
+        staffId:
+          type: string
+          format: uuid
+        signedInAt:
+          type: string
+          format: date-time
+          description: When the person signed in offline; within the last 12 hours.
+        pinChangedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: The pinChangedAt of the bundle entry the PIN was checked against.
+    PosAttempt:
+      type: object
+      additionalProperties: false
+      required: [username, success, at]
+      properties:
+        username:
+          type: string
+        success:
+          type: boolean
+        at:
+          type: string
+          format: date-time
+    PosAttemptReport:
+      type: object
+      additionalProperties: false
+      required: [attempts]
+      properties:
+        attempts:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/PosAttempt'
   parameters:
     ClientHeader:
       name: X-HelloPos-Client
@@ -1136,6 +1752,13 @@ components:
         format: uuid
     StaffId:
       name: staffId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DeviceId:
+      name: deviceId
       in: path
       required: true
       schema:
@@ -1200,9 +1823,24 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetails'
+    DeviceConflict:
+      description: Someone else changed this device (device-changed), or another business is open now.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
   securitySchemes:
     ownerSession:
       type: apiKey
       in: cookie
       name: hellopos_session
       description: HttpOnly session cookie set by ownerSignIn (web back office only).
+    deviceCredential:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'A registered POS device: "Device dev_<business>.<device>.<secret>".'
+    staffSession:
+      type: http
+      scheme: bearer
+      description: 'A person signed in on a POS device: "Bearer pat_<business>.<session>.<secret>".'

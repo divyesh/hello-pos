@@ -1,3 +1,4 @@
+using HelloPos.Api.Features.Devices;
 using HelloPos.Api.Features.Invitations;
 using HelloPos.Api.Infrastructure.Persistence;
 using HelloPos.Api.Infrastructure.Tenancy;
@@ -19,6 +20,9 @@ public sealed class StaffChange : IBusinessOwned
     public Guid? StaffMemberId { get; init; }
 
     public Guid? InvitationId { get; init; }
+
+    /// <summary>The POS device involved (feature 007), if any.</summary>
+    public Guid? DeviceId { get; init; }
 
     /// <summary>Who did it; for an accepted invitation, the new staff member themselves.</summary>
     public Guid ActorStaffId { get; init; }
@@ -46,6 +50,14 @@ public static class StaffChangeActions
     public const string Reactivated = "reactivated";
     public const string PinSet = "pin_set";
     public const string PinChanged = "pin_changed";
+    public const string DeviceRegistered = "device_registered";
+    public const string DeviceRenamed = "device_renamed";
+    public const string DeviceRevoked = "device_revoked";
+    public const string SignedIn = "signed_in";
+    public const string SignedInOffline = "signed_in_offline";
+    public const string SignInFailed = "sign_in_failed";
+    public const string LockedOut = "locked_out";
+    public const string SignedOut = "signed_out";
 }
 
 public sealed class StaffChangeConfiguration : IEntityTypeConfiguration<StaffChange>
@@ -66,6 +78,10 @@ public sealed class StaffChangeConfiguration : IEntityTypeConfiguration<StaffCha
         builder.HasOne<StaffMember>().WithMany()
             .HasForeignKey(c => new { c.BusinessId, c.ActorStaffId })
             .HasPrincipalKey(s => new { s.BusinessId, s.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Device>().WithMany()
+            .HasForeignKey(c => new { c.BusinessId, c.DeviceId })
+            .HasPrincipalKey(d => new { d.BusinessId, d.Id })
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<StaffInvitation>().WithMany()
             .HasForeignKey(c => new { c.BusinessId, c.InvitationId })

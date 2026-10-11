@@ -11,7 +11,8 @@ public static class StaffAudit
 {
     public static void Record(
         this HelloPosDbContext db, TimeProvider clock, Guid actorStaffId, string action,
-        Guid? staffMemberId = null, Guid? invitationId = null, string? oldValue = null, string? newValue = null)
+        Guid? staffMemberId = null, Guid? invitationId = null, string? oldValue = null, string? newValue = null,
+        Guid? deviceId = null)
     {
         ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(clock);
@@ -21,6 +22,7 @@ public static class StaffAudit
             Action = action,
             StaffMemberId = staffMemberId,
             InvitationId = invitationId,
+            DeviceId = deviceId,
             OldValue = oldValue,
             NewValue = newValue,
             At = clock.GetUtcNow(),

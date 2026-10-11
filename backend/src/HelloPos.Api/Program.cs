@@ -5,6 +5,7 @@ using HelloPos.Api.Infrastructure.Database;
 using HelloPos.Api.Infrastructure.Identity;
 using HelloPos.Api.Infrastructure.Identity.Email;
 using HelloPos.Api.Infrastructure.Persistence;
+using HelloPos.Api.Infrastructure.Pos;
 
 // `dotnet HelloPos.Api.dll migrate`: apply the schema and exit (never starts the web host).
 if (MigrateCommand.IsRequested(args))
@@ -23,6 +24,7 @@ builder.Services.AddHelloPosDatabase(builder.Configuration);
 builder.Services.AddOwnerIdentity(builder.Configuration, builder.Environment);
 builder.Services.AddOwnerEmail(builder.Configuration);
 builder.Services.AddStaff();
+builder.Services.AddPosAuthentication(builder.Configuration);
 builder.Services.AddEndpointMappers(typeof(Program).Assembly);
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
 builder.Services.AddExceptionHandler<PersistenceExceptionHandler>();

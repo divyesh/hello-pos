@@ -35,6 +35,12 @@ public sealed class StaffMember : IBusinessOwned
     /// <summary>When the PIN last changed, so #7 can end POS sessions issued before it.</summary>
     public DateTimeOffset? PinChangedAt { get; set; }
 
+    /// <summary>Consecutive failed PIN sign-ins of this person on any device (feature 007, FR-006).</summary>
+    public int PinFailedCount { get; set; }
+
+    /// <summary>PIN sign-in is refused until this time after 5 consecutive failures.</summary>
+    public DateTimeOffset? PinLockedUntil { get; set; }
+
     /// <summary>Concurrency token: +1 on every change; a stale value is "changed by someone else".</summary>
     public int Version { get; set; } = 1;
 

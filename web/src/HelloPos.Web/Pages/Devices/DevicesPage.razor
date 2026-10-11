@@ -1,0 +1,219 @@
+@page "/devices"
+@using HelloPos.Kernel.Staff
+@inject IDeviceService DeviceApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Devices · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">POS devices</MudText>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers manage devices.</MudAlert>
+}
+else
+{
+    @if (message is not null)
+    {
+        <MudAlert data-testid="device-message" Severity="@(failed ? Severity.Error : Severity.Success)" Dense="true" Class="mb-3">@message</MudAlert>
+    }
+
+    @if (pairing is not null)
+    {
+        <PairingCountdown Code="@pairing.Code" ExpiresAt="pairing.ExpiresAt" OnRenew="NewCodeAsync" OnDone="DoneAsync" />
+    }
+    else
+    {
+        <MudButton data-testid="register-device" Variant="Variant.Filled" Color="Color.Primary" Class="mb-4" Disabled="busy" OnClick="NewCodeAsync">
+            Register a device
+        </MudButton>
+    }
+
+    @if (loadError is not null)
+    {
+        <MudAlert data-testid="load-error" Severity="Severity.Error" Class="mt-4">@loadError</MudAlert>
+    }
+    else if (devices is { Count: 0 })
+    {
+        <MudText data-testid="no-devices" Class="mt-4">No devices yet. Register the tablet or phone you sell on.</MudText>
+    }
+    else if (devices is not null)
+    {
+        <MudPaper Outlined="true" Class="mt-4" Style="max-width: 44rem;">
+            <MudList T="string" Dense="true">
+                @foreach (var device in devices)
+                {
+                    <MudListItem T="string" data-testid="device">
+                        <div class="d-flex align-center" style="gap: 8px;">
+                            @if (renaming?.Id == device.Id)
+                            {
+                                <MudTextField data-testid="rename-name" @bind-Value="newName" Label="Name" MaxLength="60" Class="flex-grow-1" />
+                                <MudButton data-testid="rename-save" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="busy"
+                                           OnClick="() => RenameAsync(device)">Save</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => renaming = null">Cancel</MudButton>
+                            }
+                            else
+                            {
+                                <MudText Class="flex-grow-1">
+                                    <b>@device.Name</b> · registered by @device.RegisteredBy
+                                    @if (device.LastUsedAt is { } used)
+                                    {
+                                        <span> · last used @used.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture)</span>
+                                    }
+                                </MudText>
+                                @if (device.Active)
+                                {
+                                    <MudButton data-testid="rename" Size="Size.Small" Variant="Variant.Text" OnClick="() => StartRename(device)">Rename</MudButton>
+                                    @if (confirmRevoke == device.Id)
+                                    {
+                                        <MudButton data-testid="confirm-revoke" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" Disabled="busy"
+                                                   OnClick="() => RevokeAsync(device)">Revoke now</MudButton>
+                                    }
+                                    else
+                                    {
+                                        <MudButton data-testid="revoke" Size="Size.Small" Variant="Variant.Text" Color="Color.Error"
+                                                   OnClick="() => confirmRevoke = device.Id">Revoke</MudButton>
+                                    }
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small">Revoked</MudChip>
+                                }
+                            }
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        </MudPaper>
+    }
+}
+
+@code {
+    private Guid pageBusiness;
+    private bool noBusiness;
+    private bool stale;
+    private bool busy;
+    private IReadOnlyList<DeviceItem>? devices;
+    private string? loadError;
+    private PairingCode? pairing;
+    private DeviceItem? renaming;
+    private string newName = string.Empty;
+    private Guid? confirmRevoke;
+    private string? message;
+    private bool failed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        pageBusiness = id;
+        if (OpenBusiness.Role is StaffRole.Owner or StaffRole.Manager)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        loadError = null;
+        switch (await DeviceApi.ListAsync(pageBusiness))
+        {
+            case LoadResult<IReadOnlyList<DeviceItem>>.Loaded loaded:
+                devices = loaded.Value;
+                break;
+            case LoadResult<IReadOnlyList<DeviceItem>>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<IReadOnlyList<DeviceItem>>.Failed loadFailed:
+                loadError = loadFailed.Message;
+                break;
+        }
+    }
+
+    private async Task NewCodeAsync()
+    {
+        busy = true;
+        message = null;
+        var result = await DeviceApi.CreatePairingAsync(pageBusiness);
+        busy = false;
+        switch (result)
+        {
+            case LoadResult<PairingCode>.Loaded loaded:
+                pairing = loaded.Value;
+                break;
+            case LoadResult<PairingCode>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<PairingCode>.Failed codeFailed:
+                (message, failed) = (codeFailed.Message, true);
+                break;
+        }
+    }
+
+    private async Task DoneAsync()
+    {
+        pairing = null;
+        await LoadAsync();
+    }
+
+    private void StartRename(DeviceItem device)
+    {
+        renaming = device;
+        newName = device.Name;
+    }
+
+    private Task RenameAsync(DeviceItem device) =>
+        ApplyAsync(DeviceApi.RenameAsync(pageBusiness, device, newName.Trim()), "The device was renamed.");
+
+    private Task RevokeAsync(DeviceItem device) =>
+        ApplyAsync(DeviceApi.RevokeAsync(pageBusiness, device), $"{device.Name} was revoked; anyone signed in on it is signed out.");
+
+    private async Task ApplyAsync(Task<OwnerActionResult> call, string success)
+    {
+        busy = true;
+        var result = await call;
+        busy = false;
+        (renaming, confirmRevoke) = (null, null);
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                (message, failed) = (success, false);
+                break;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                return;
+            case OwnerActionResult.FieldErrors fields:
+                (message, failed) = (string.Join(" ", fields.Errors.Values), true);
+                break;
+            case OwnerActionResult.Failed changeFailed:
+                (message, failed) = (changeFailed.Message, true);
+                break;
+        }
+
+        await LoadAsync();
+    }
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

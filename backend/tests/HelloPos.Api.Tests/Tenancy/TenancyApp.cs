@@ -50,6 +50,7 @@ public sealed class TenancyApp : IAsyncDisposable
         {
             builder.UseSetting("ConnectionStrings:HelloPos", AppConnectionString);
             builder.UseSetting("RateLimits:OwnerAuthPerMinute", "100000");
+            builder.UseSetting("RateLimits:PosAuthPerMinute", "100000");
             foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
             {
                 builder.UseSetting(key, value);
@@ -62,12 +63,12 @@ public sealed class TenancyApp : IAsyncDisposable
                 services.AddSingleton<IEmailSender>(Emails);
                 services.AddSingleton<TimeProvider>(Clock);
 
-                // The test header when present, otherwise the real owner session cookie.
+                // The test header when present, otherwise the production choice (POS headers, else the cookie).
                 services.AddAuthentication(TestOrSession)
                     .AddPolicyScheme(TestOrSession, TestOrSession, o => o.ForwardDefaultSelector = context =>
                         context.Request.Headers.ContainsKey(TestAuthHandler.Header)
                             ? TestAuthHandler.SchemeName
-                            : IdentityConstants.ApplicationScheme)
+                            : HelloPos.Api.Infrastructure.Pos.PosAuthentication.SchemeFor(context.Request) ?? IdentityConstants.ApplicationScheme)
                     .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
                 configureServices?.Invoke(services, logins);
             });

@@ -107,3 +107,25 @@ POS authentication infrastructure; Android gets its first real features and the 
 | Offline PIN verification on the device | Clarification Q1: sign-in must work during an outage | Online-only sign-in would stop the till at shift change during an outage |
 | Business id inside device credentials and tokens | The API must choose the business before it can find the row under RLS | A global lookup table outside tenancy, or a definer function per request |
 | Two authentication schemes for the device | Device-level calls (sign-in, refresh, offline data) vs person-level calls | Reusing the session token for device calls would make sign-in impossible before a session exists |
+
+## Constitution re-check after delivery (T030)
+
+All gates still pass against the delivered code. Deviations from the design above, none weakening a
+principle:
+
+- **Bundle key wrapping uses RSA-OAEP with SHA-1, not SHA-256** (VIII). The Android Keystore supports
+  only SHA-1 for OAEP's MGF1 before Android 14, and .NET's OAEP-SHA256 uses SHA-256 for both digests.
+  OAEP-SHA1 remains sound for key wrapping; the choice is documented in the contract and in
+  `OfflineAccess.KeyWrapPadding`.
+- **`PosOfflineAccess.bundle` is a plain base64 string** (no `format: byte`) in the contract (V), so the
+  generated Kotlin client reads it the same way as the .NET side writes it.
+- **Periodic work runs in the root `AppViewModel` scope** (offline-bundle refresh every 15 minutes,
+  sync every 30 seconds, idle check every 5 seconds) rather than a process-wide scope: equivalent while
+  the app is open, which is the only time it is needed (X).
+- **Offline sign-in conversion does not consult the server-side PIN lock**: a person locked online who
+  then signs in offline with the right PIN gets a session if still active with an unchanged PIN. The
+  device's own lockout applies offline; reported failures merge into the server count. Recorded for the
+  security review (#26) with the R4 residual risk.
+- **Own PIN change starts a new session** for the current device (the old one ends with `pin_changed`)
+  instead of keeping the session id, so every session that predates the change ends by the same rule.
+
