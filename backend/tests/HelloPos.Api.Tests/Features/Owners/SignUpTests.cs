@@ -64,6 +64,20 @@ public sealed class SignUpTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task MalformedJson_Is400_NotAServerError()
+    {
+        await using var app = await TenancyApp.CreateAsync(postgres);
+        using var client = app.OwnerClient();
+        using var body = new StringContent("{\"email\":\"a\rb\"}", System.Text.Encoding.UTF8, "application/json");
+
+        using var response = await client.PostAsync(new Uri("/owner/sign-up", UriKind.Relative), body, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.DoesNotContain("a\rb", await response.Content.ReadAsStringAsync(Ct), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SignUp_WithoutTheClientHeader_IsRefused()
     {
         await using var app = await TenancyApp.CreateAsync(postgres);
