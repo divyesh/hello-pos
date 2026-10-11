@@ -107,4 +107,24 @@ public static class RowSecurityMigrationExtensions
                              WHERE bo.business_id = businesses.id AND bo.owner_id = {schema}.current_owner_id()));
             """);
     }
+
+    /// <summary>
+    /// Feature 006: the businesses' <c>owner_read</c> policy based on staff. The signed-in account reads
+    /// a business where it is an active owner or manager; a cashier row grants nothing. Replaces
+    /// <see cref="AddBusinessesOwnerRead"/> (kept unchanged because migration history replays it).
+    /// </summary>
+    public static void ReplaceBusinessesOwnerReadWithStaff(this MigrationBuilder migrationBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(migrationBuilder);
+        var schema = HelloPosDbContext.Schema;
+        migrationBuilder.Sql($"""
+            DROP POLICY {OwnerReadPolicyName} ON {schema}.businesses;
+            CREATE POLICY {OwnerReadPolicyName} ON {schema}.businesses FOR SELECT
+              USING (EXISTS (SELECT 1 FROM {schema}.staff_members s
+                             WHERE s.business_id = businesses.id
+                               AND s.account_id = {schema}.current_owner_id()
+                               AND s.active
+                               AND s.role IN ('owner', 'manager')));
+            """);
+    }
 }

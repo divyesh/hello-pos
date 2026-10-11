@@ -19,6 +19,7 @@ public static class DatabaseSetup
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentBusiness, ClaimsCurrentBusiness>();
         services.AddScoped<ICurrentOwner, ClaimsCurrentOwner>();
+        services.AddScoped<ICurrentStaff, CurrentStaff>();
 
         var connectionString = configuration.GetConnectionString(ConnectionStringName);
 

@@ -29,7 +29,8 @@ public abstract record OwnerActionResult
 }
 
 /// <summary>The signed-in owner, from <c>GET /owner/me</c>.</summary>
-public sealed record OwnerSession(Guid OwnerId, string DisplayName, string Email, Guid? CurrentBusinessId);
+public sealed record OwnerSession(
+    Guid OwnerId, string DisplayName, string Email, Guid? CurrentBusinessId, Kernel.Staff.StaffRole? CurrentRole = null);
 
 public interface IOwnerAccountService
 {
@@ -102,7 +103,8 @@ public sealed partial class OwnerAccountService(HttpClient http, ILogger<OwnerAc
         {
             var me = await Api.Owner.Me.GetAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             return me is { OwnerId: { } id, DisplayName: { } name, Email: { } email }
-                ? new OwnerSession(id, name, email, me.CurrentBusinessId)
+                ? new OwnerSession(id, name, email, me.CurrentBusinessId,
+                    Enum.TryParse<Kernel.Staff.StaffRole>(me.CurrentRole?.ToString(), ignoreCase: true, out var role) ? role : null)
                 : null;
         }
         catch (ProblemDetails)

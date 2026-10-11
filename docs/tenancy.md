@@ -15,32 +15,50 @@ Owners (feature 005) sign in to the web back office and open one of their busine
 ownership, then puts `business_id` in the session cookie, so every layer above works unchanged.
 Staff and device logins arrive with roadmap #7.
 
-## The owner dimension
+## The account dimension: staff and roles
 
-An owner account (schema `identity`, not business-owned) can own several businesses, linked by the
-business-owned table `pos.business_owners`. Before a business is opened, an owner must still see
-their own businesses (to list and choose one), so the session also carries the signed-in owner:
+A back-office account (schema `identity`, not business-owned; the C# type is still `OwnerAccount`) can
+work at several businesses. Who works where, and in which role, is the business-owned table
+`pos.staff_members` (feature 006; it replaced 005's `business_owners`): one row per person per
+business, role `owner`, `manager` or `cashier`, an `active` flag, an optional link to an account
+(`account_id`, back-office access) and an optional POS username and hashed PIN (POS access, #7).
+Before a business is opened, an account must still see its own businesses, so the session also
+carries the signed-in account:
 
 | Piece | What it does |
 |-------|--------------|
-| `ICurrentOwner` | the `owner_id` claim of the session; never from request data |
+| `ICurrentOwner` | the `owner_id` claim of the session (the signed-in account); never from request data |
 | `pos.owner_id`, `pos.current_owner_id()` | set by `BusinessSessionInterceptor` next to `pos.business_id` |
-| Policy `owner_read` on `businesses` and `business_owners` | **read-only**: an owner sees their own links and the businesses they own |
+| Policy `owner_read` on `staff_members` | **read-only**: an account sees its own staff rows |
+| Policy `owner_read` on `businesses` | **read-only**: an account sees businesses where it is an *active owner or manager* (a cashier row grants nothing) |
+| `ICurrentStaff` + `RequireRole(...)` | the caller's active staff row in the open business, **read from the database on every request**; `403` for the wrong role |
 
-Owner access never writes. Every change runs in a session acting as the business:
+Account access never writes. Every change runs in a session acting as the business:
 
-- **Creating a business**: the server generates the id and saves the business and its ownership link
-  in one transaction through a context built with `FixedCurrentBusiness(id)`.
-- **Changing a business**: the owner opens it first (`POST /owner/businesses/{id}/open`, which checks
-  ownership and answers `404` for anything else), then edits it through `/business`.
+- **Creating a business**: the server generates the id and saves the business, the creator's owner
+  staff row and its audit entry in one transaction through `FixedCurrentBusiness(id)`.
+- **Opening a business** (`POST /owner/businesses/{id}/open`) needs an active owner or manager row of
+  the account (`404` otherwise). Once `business_id` is in the session, row-level security trusts it, so
+  this check and its tests (`OwnerIsolationTests`, `OpenAndEditTests`, `BusinessRoleTests`) matter most.
+- **Roles** come from `ICurrentStaff` on each request, never from a claim, so a role change or a
+  deactivation applies on the very next request. Rules (who may do what to whom) live in the kernel
+  (`StaffRules`), shared by the API and the web.
 
-So an owner session cannot plant a row in a business it is not acting as, for example an ownership
-link to someone else's business. Opening is the one check that matters most: once `business_id` is in
-the session, row-level security trusts it, which is why `OwnerIsolationTests` and
-`OpenAndEditTests` cover it.
+Querying across businesses for one account (`Memberships.BackOfficeMemberships`) uses
+`AcrossAllBusinesses()` with an explicit account filter; `owner_read` keeps it to that account even if
+the filter were wrong.
 
-Querying across businesses for one owner (the list, the ownership check) uses `AcrossAllBusinesses()`
-with an explicit owner filter; `owner_read` keeps it to that owner even if the filter were wrong.
+**Invitations** (`pos.staff_invitations`): the person accepting has no business open, and the business
+must not come from the request. The emailed token's SHA-256 is looked up by `pos.invitation_business()`,
+a `SECURITY DEFINER` function owned by the migrator that returns only the business id of a pending,
+unexpired invitation; the API then acts as that business. Treat any new definer function the same way:
+narrow input, minimal output, pinned `search_path`, `EXECUTE` only for `pos_app`.
+
+**Last owner**: changes that can remove an active owner lock the business row (`LastOwnerGuard`) before
+counting owners, so two owners deactivating each other at once cannot leave a business without one.
+
+**Audit**: `pos.staff_changes` is append-only for the app (`UPDATE`, `DELETE` revoked) and never holds a
+PIN or token.
 
 **Stale tabs**: business pages send `X-HelloPos-Business` with the business they were opened for.
 `RequireSameBusiness()` answers `409 business-changed` when the session has since opened another
@@ -168,6 +186,6 @@ and would make the test meaningless.
 | Login | Used by | Rights |
 |-------|---------|--------|
 | admin (`POSTGRES_USER` locally) | bootstrap only | creates roles |
-| `hellopos_migrator` | `HelloPos.Api migrate` | owns schemas `pos` and `identity`; creates and alters tables |
+| `hellopos_migrator` | `HelloPos.Api migrate` | owns schemas `pos` and `identity`; creates and alters tables; owns `pos.invitation_business()` (applies `identity` migrations first) |
 | `pos_app` (group, no login) | — | row read/write on `pos` and `identity` tables (granted by default privileges) |
 | `hellopos_app` | the API | member of `pos_app`; no schema rights; subject to row-level security |

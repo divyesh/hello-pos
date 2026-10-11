@@ -1,0 +1,103 @@
+@page "/accept-invitation"
+@inject IStaffService StaffApi
+@inject OwnerAuthenticationStateProvider Session
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Invitation · Hello POS</PageTitle>
+
+<MudPaper Outlined="true" Class="pa-6" Style="max-width: 32rem;">
+    <MudText Typo="Typo.h5" GutterBottom="true">Invitation</MudText>
+
+    @if (offer is null && error is null)
+    {
+        <MudProgressCircular data-testid="loading" Indeterminate="true" Size="Size.Small" />
+    }
+    else if (error is not null)
+    {
+        <MudAlert data-testid="invitation-error" Severity="Severity.Error">@error</MudAlert>
+    }
+    else if (offer is not null)
+    {
+        <MudText data-testid="offer" Class="mb-4">
+            You are invited to join <b>@offer.BusinessName</b> as <b>@offer.Role.ToString().ToLowerInvariant()</b>.
+        </MudText>
+
+        <AuthorizeView>
+            <Authorized>
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Signed in as @context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value. The invitation must be for this
+                    address.
+                </MudText>
+                <MudButton data-testid="accept" Variant="Variant.Filled" Color="Color.Primary" Disabled="busy" OnClick="AcceptAsync">
+                    Accept invitation
+                </MudButton>
+            </Authorized>
+            <NotAuthorized>
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Sign in with the email address the invitation was sent to. No account yet? Create one with that address,
+                    confirm it, then open this link again.
+                </MudText>
+                <MudButton data-testid="sign-in" Href="@SignInHref" Variant="Variant.Filled" Color="Color.Primary">Sign in</MudButton>
+                <MudButton data-testid="sign-up" Href="sign-up" Variant="Variant.Text" Color="Color.Primary" Class="ml-2">Create an account</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    }
+</MudPaper>
+
+@code {
+    private InvitationOffer? offer;
+    private string? error;
+    private bool busy;
+
+    [SupplyParameterFromQuery(Name = "token")]
+    public string? Token { get; set; }
+
+    private string SignInHref => $"sign-in?returnUrl={Uri.EscapeDataString($"accept-invitation?token={Token}")}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(Token))
+        {
+            error = StaffService.InvalidInvitation;
+            return;
+        }
+
+        switch (await StaffApi.PreviewAsync(Token))
+        {
+            case LoadResult<InvitationOffer>.Loaded loaded:
+                offer = loaded.Value;
+                break;
+            case LoadResult<InvitationOffer>.Failed failed:
+                error = failed.Message;
+                break;
+            default:
+                error = StaffService.InvalidInvitation;
+                break;
+        }
+    }
+
+    private async Task AcceptAsync()
+    {
+        busy = true;
+        var result = await StaffApi.AcceptAsync(Token!);
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                Session.Refresh();
+                await OpenBusiness.LoadAsync();
+                Navigation.NavigateTo("businesses");
+                break;
+            // 404 (wrong account, used, expired): one message; anything else (already a member, offline): the server's.
+            case OwnerActionResult.Failed failed when failed.Message != "Not Found":
+                error = failed.Message;
+                offer = null;
+                break;
+            default:
+                error = "This invitation is for a different email address, or it is no longer valid.";
+                offer = null;
+                break;
+        }
+    }
+}

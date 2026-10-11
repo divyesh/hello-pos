@@ -29,8 +29,8 @@ public sealed record BusinessResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
-/// <summary>Contract <c>BusinessSummary</c>.</summary>
-public sealed record BusinessSummaryResponse(Guid Id, string Name, string CountryCode, string CurrencyCode);
+/// <summary>Contract <c>BusinessSummary</c>; <c>Role</c> is the signed-in account's role there (owner or manager).</summary>
+public sealed record BusinessSummaryResponse(Guid Id, string Name, string CountryCode, string CurrencyCode, string Role);
 
 public static class BusinessContracts
 {

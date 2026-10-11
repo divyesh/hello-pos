@@ -32,7 +32,7 @@ public sealed class CreateBusinessTests(PostgresFixture postgres)
 
         var id = Guid.Parse((string)created["id"]!);
         Assert.Equal(await OwnerIdAsync(owner), await ScalarAsync<Guid>(app,
-            $"select owner_id from pos.business_owners where business_id = '{id}'"));
+            $"select account_id from pos.staff_members where business_id = '{id}' and role = 'owner' and active"));
         Assert.Equal(rounding / 100m, await ScalarAsync<decimal>(app,
             $"select cash_rounding_step from pos.businesses where id = '{id}'"));
     }

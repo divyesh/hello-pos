@@ -7,7 +7,8 @@ using BusinessSettings = HelloPos.Kernel.Businesses.BusinessSettings;
 namespace HelloPos.Web.Services;
 
 /// <summary>A business in the owner's list.</summary>
-public sealed record BusinessListItem(Guid Id, string Name, string CountryCode, string CurrencyCode);
+public sealed record BusinessListItem(
+    Guid Id, string Name, string CountryCode, string CurrencyCode, Kernel.Staff.StaffRole Role = Kernel.Staff.StaffRole.Owner);
 
 /// <summary>The owner's businesses, or why they could not be loaded.</summary>
 public abstract record BusinessListResult
@@ -72,7 +73,8 @@ public sealed partial class BusinessService(HttpClient http, ILogger<BusinessSer
             var businesses = await ApiClients.Create(http).Owner.Businesses.GetAsync(cancellationToken: cancellationToken).ConfigureAwait(false) ?? [];
             return new BusinessListResult.Loaded(businesses
                 .Where(b => b.Id is not null)
-                .Select(b => new BusinessListItem(b.Id!.Value, b.Name ?? string.Empty, b.CountryCode?.ToString() ?? string.Empty, b.CurrencyCode ?? string.Empty))
+                .Select(b => new BusinessListItem(b.Id!.Value, b.Name ?? string.Empty, b.CountryCode?.ToString() ?? string.Empty, b.CurrencyCode ?? string.Empty,
+                    b.Role == BusinessSummary_role.Manager ? Kernel.Staff.StaffRole.Manager : Kernel.Staff.StaffRole.Owner))
                 .ToList());
         }
         catch (ProblemDetails problem)

@@ -1,0 +1,388 @@
+@page "/staff"
+@using HelloPos.Kernel.Staff
+@inject IStaffService StaffApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Staff · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Staff</MudText>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session. Nothing was saved.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">
+        No business is open. <MudLink Href="businesses">Choose one</MudLink>.
+    </MudAlert>
+}
+else if (actorRole is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers manage staff.</MudAlert>
+}
+else
+{
+    <div class="d-flex mb-3" style="gap: 8px;">
+        @foreach (var option in new[] { "active", "inactive", "all" })
+        {
+            <MudButton data-testid="@($"filter-{option}")" Size="Size.Small"
+                       Variant="@(status == option ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
+                       OnClick="() => FilterAsync(option)">@option</MudButton>
+        }
+    </div>
+
+    @if (changeMessage is not null)
+    {
+        <MudAlert data-testid="change-message" Severity="@(changeFailed ? Severity.Error : Severity.Success)" Dense="true" Class="mb-3">@changeMessage</MudAlert>
+    }
+
+    @if (loadError is not null)
+    {
+        <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else if (people is null)
+    {
+        <MudProgressCircular data-testid="loading" Indeterminate="true" Size="Size.Small" />
+    }
+    else
+    {
+        <MudPaper Outlined="true" Class="mb-6" Style="max-width: 44rem;">
+            <MudList T="string" Dense="true">
+                @foreach (var person in people)
+                {
+                    <MudListItem T="string" data-testid="staff-member">
+                        <div class="d-flex align-center" style="gap: 8px;">
+                            <MudText Class="flex-grow-1"><b>@person.DisplayName</b> · @person.Role.ToString().ToLowerInvariant()</MudText>
+                            @if (person.PosUsername is { } username)
+                            {
+                                <MudChip T="string" Size="Size.Small">POS: @username</MudChip>
+                            }
+                            @if (person.HasBackOfficeAccess)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info">Back office</MudChip>
+                            }
+                            @if (!person.Active)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactive</MudChip>
+                            }
+                            @if (Allowed(StaffAction.Rename, person) || Allowed(StaffAction.ChangeRole, person))
+                            {
+                                <MudButton data-testid="edit" Size="Size.Small" Variant="Variant.Text" OnClick="() => Edit(person, StaffEditorMode.Details)">Edit</MudButton>
+                            }
+                            @if (Allowed(StaffAction.SetPin, person))
+                            {
+                                <MudButton data-testid="pin" Size="Size.Small" Variant="Variant.Text" OnClick="() => Edit(person, StaffEditorMode.Pin)">PIN</MudButton>
+                            }
+                            @if (person.Active && Allowed(StaffAction.Deactivate, person))
+                            {
+                                <MudButton data-testid="deactivate" Size="Size.Small" Variant="Variant.Text" Color="Color.Error" Disabled="busy"
+                                           OnClick="() => SetActiveAsync(person, false)">Deactivate</MudButton>
+                            }
+                            @if (!person.Active && Allowed(StaffAction.Reactivate, person))
+                            {
+                                <MudButton data-testid="reactivate" Size="Size.Small" Variant="Variant.Text" Disabled="busy"
+                                           OnClick="() => SetActiveAsync(person, true)">Reactivate</MudButton>
+                            }
+                        </div>
+                        @if (editing?.Id == person.Id)
+                        {
+                            <StaffEditor Person="person" ActorRole="actorRole!.Value" Mode="editMode" Busy="busy"
+                                         ServerErrors="editErrors" FormError="@editError"
+                                         OnSaveDetails="SaveDetailsAsync" OnSetPin="SetPinAsync" OnCancel="() => editing = null" />
+                        }
+                    </MudListItem>
+                }
+            </MudList>
+        </MudPaper>
+    }
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudPaper Outlined="true" Class="pa-6">
+                <MudText Typo="Typo.h6" GutterBottom="true">Add a person to the POS</MudText>
+                @if (added is not null)
+                {
+                    <MudAlert data-testid="added" Severity="Severity.Success" Dense="true" Class="mb-3">@added was added.</MudAlert>
+                }
+                <AddStaffForm @ref="addForm" ActorRole="actorRole!.Value" OnSubmit="AddAsync" ServerErrors="addErrors" FormError="@addError" Busy="busy" />
+            </MudPaper>
+        </MudItem>
+
+        @if (StaffRules.Can(actorRole!.Value, StaffAction.ListInvitations))
+        {
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-6" data-testid="invitations">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Invite an owner or manager</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-2">They get an email link, sign in with that address and set their own password.</MudText>
+                    <MudTextField data-testid="invite-email" @bind-Value="inviteEmail" Label="Email" InputType="InputType.Email"
+                                  Error="@(inviteErrors.ContainsKey("email"))" ErrorText="@inviteErrors.GetValueOrDefault("email")" />
+                    <MudTextField data-testid="invite-name" @bind-Value="inviteName" Label="Name" Class="mt-2"
+                                  Error="@(inviteErrors.ContainsKey("displayName"))" ErrorText="@inviteErrors.GetValueOrDefault("displayName")" />
+                    <div class="mt-4">
+                        <MudText Typo="Typo.caption">Role</MudText>
+                        <select data-testid="invite-role" class="hp-select" value="@inviteRole" @onchange="e => inviteRole = Enum.Parse<StaffRole>((string)e.Value!)">
+                            <option value="@StaffRole.Manager">Manager</option>
+                            <option value="@StaffRole.Owner">Owner</option>
+                        </select>
+                    </div>
+                    @if (inviteError is not null)
+                    {
+                        <MudAlert data-testid="invite-error" Severity="Severity.Error" Dense="true" Class="mt-3">@inviteError</MudAlert>
+                    }
+                    @if (invited is not null)
+                    {
+                        <MudAlert data-testid="invited" Severity="Severity.Success" Dense="true" Class="mt-3">Invitation sent to @invited.</MudAlert>
+                    }
+                    <MudButton data-testid="invite" Class="mt-4" Variant="Variant.Filled" Color="Color.Primary" Disabled="busy" OnClick="InviteAsync">
+                        Send invitation
+                    </MudButton>
+
+                    @if (invitations is { Count: > 0 })
+                    {
+                        <MudList T="string" Dense="true" Class="mt-4">
+                            @foreach (var invitation in invitations)
+                            {
+                                <MudListItem T="string" data-testid="invitation">
+                                    <div class="d-flex align-center" style="gap: 8px;">
+                                        <MudText Class="flex-grow-1">@invitation.Email · @invitation.Role.ToString().ToLowerInvariant() · @invitation.Status</MudText>
+                                        @if (invitation.Status is "pending" or "expired")
+                                        {
+                                            <MudButton data-testid="resend" Size="Size.Small" Variant="Variant.Text" Disabled="busy"
+                                                       OnClick="() => InvitationActionAsync(invitation, resend: true)">Resend</MudButton>
+                                        }
+                                        @if (invitation.Status == "pending")
+                                        {
+                                            <MudButton data-testid="revoke" Size="Size.Small" Variant="Variant.Text" Color="Color.Error" Disabled="busy"
+                                                       OnClick="() => InvitationActionAsync(invitation, resend: false)">Revoke</MudButton>
+                                        }
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private Guid pageBusiness;
+    private StaffRole? actorRole;
+    private bool noBusiness;
+    private bool stale;
+    private bool busy;
+    private string status = "active";
+    private IReadOnlyList<StaffListItem>? people;
+    private IReadOnlyList<InvitationItem>? invitations;
+    private string? loadError;
+    private AddStaffForm? addForm;
+    private IReadOnlyDictionary<string, string>? addErrors;
+    private string? addError;
+    private string? added;
+    private string inviteEmail = string.Empty;
+    private string inviteName = string.Empty;
+    private StaffRole inviteRole = StaffRole.Manager;
+    private IReadOnlyDictionary<string, string> inviteErrors = new Dictionary<string, string>();
+    private string? inviteError;
+    private string? invited;
+    private StaffListItem? editing;
+    private StaffEditorMode editMode;
+    private IReadOnlyDictionary<string, string>? editErrors;
+    private string? editError;
+    private string? changeMessage;
+    private bool changeFailed;
+
+    private bool Allowed(StaffAction action, StaffListItem person) =>
+        actorRole is { } actor && StaffRules.Can(actor, action, person.Role,
+            action == StaffAction.ChangeRole ? (person.Role == StaffRole.Cashier ? StaffRole.Manager : StaffRole.Cashier) : null);
+
+    private Task InvitationActionAsync(InvitationItem invitation, bool resend) =>
+        ApplyAsync(resend
+                ? StaffApi.ResendInvitationAsync(pageBusiness, invitation.Id)
+                : StaffApi.RevokeInvitationAsync(pageBusiness, invitation.Id),
+            resend ? $"A new link was sent to {invitation.Email}." : $"The invitation to {invitation.Email} was revoked.",
+            inEditor: false);
+
+    private void Edit(StaffListItem person, StaffEditorMode mode)
+    {
+        editing = person;
+        editMode = mode;
+        editErrors = null;
+        editError = null;
+    }
+
+    private Task SaveDetailsAsync((string DisplayName, StaffRole Role) details) =>
+        ApplyAsync(StaffApi.UpdateAsync(pageBusiness, editing!, details.DisplayName, details.Role), $"{details.DisplayName} was saved.", inEditor: true);
+
+    private Task SetPinAsync((string PosUsername, string Pin) credentials) =>
+        ApplyAsync(StaffApi.SetPinAsync(pageBusiness, editing!, credentials.PosUsername, credentials.Pin), $"The PIN for {editing!.DisplayName} was changed.", inEditor: true);
+
+    private Task SetActiveAsync(StaffListItem person, bool active) =>
+        ApplyAsync(StaffApi.SetActiveAsync(pageBusiness, person, active),
+            $"{person.DisplayName} was {(active ? "reactivated" : "deactivated")}.", inEditor: false);
+
+    /// <summary>Shows the outcome; a refusal (stale edit, last owner) reloads the list so the page shows the truth.</summary>
+    private async Task ApplyAsync(Task<OwnerActionResult> call, string success, bool inEditor)
+    {
+        busy = true;
+        changeMessage = null;
+        editErrors = null;
+        editError = null;
+        var result = await call;
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                (changeMessage, changeFailed, editing) = (success, false, null);
+                await LoadAsync();
+                break;
+            case OwnerActionResult.FieldErrors fields when inEditor:
+                editErrors = fields.Errors;
+                break;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                break;
+            case OwnerActionResult.Failed failed:
+                (changeMessage, changeFailed, editing) = (failed.Message, true, null);
+                await LoadAsync();
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                (changeMessage, changeFailed) = (string.Join(" ", fields.Errors.Values), true);
+                break;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        // Every request from this page names the business it was opened for (stale-tab guard).
+        pageBusiness = id;
+        actorRole = OpenBusiness.Role;
+        if (actorRole is StaffRole.Owner or StaffRole.Manager)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task FilterAsync(string option)
+    {
+        status = option;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        people = null;
+        loadError = null;
+        Apply(await StaffApi.ListAsync(pageBusiness, status), value => people = value);
+        if (StaffRules.Can(actorRole!.Value, StaffAction.ListInvitations))
+        {
+            Apply(await StaffApi.ListInvitationsAsync(pageBusiness), value => invitations = value);
+        }
+    }
+
+    private void Apply<T>(LoadResult<T> result, Action<T> loaded)
+    {
+        switch (result)
+        {
+            case LoadResult<T>.Loaded ok:
+                loaded(ok.Value);
+                break;
+            case LoadResult<T>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<T>.Failed failed:
+                loadError = failed.Message;
+                break;
+        }
+    }
+
+    private async Task AddAsync((string DisplayName, StaffRole Role, string PosUsername, string Pin) person)
+    {
+        busy = true;
+        addErrors = null;
+        addError = null;
+        added = null;
+        var result = await StaffApi.AddAsync(pageBusiness, person.DisplayName, person.Role, person.PosUsername, person.Pin);
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                added = person.DisplayName;
+                addForm?.Reset();
+                await LoadAsync();
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                addErrors = fields.Errors;
+                break;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                break;
+            case OwnerActionResult.Failed failed:
+                addError = failed.Message;
+                break;
+        }
+    }
+
+    private async Task InviteAsync()
+    {
+        var errors = new Dictionary<string, string>();
+        if (StaffRules.ValidateDisplayName(inviteName) is { } nameError)
+        {
+            errors["displayName"] = nameError;
+        }
+
+        if (string.IsNullOrWhiteSpace(inviteEmail) || !inviteEmail.Contains('@', StringComparison.Ordinal))
+        {
+            errors["email"] = "Enter a valid email address.";
+        }
+
+        inviteErrors = errors;
+        inviteError = null;
+        invited = null;
+        if (errors.Count > 0)
+        {
+            return;
+        }
+
+        busy = true;
+        var result = await StaffApi.InviteAsync(pageBusiness, inviteEmail.Trim(), inviteRole, inviteName.Trim());
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                invited = inviteEmail.Trim();
+                inviteEmail = inviteName = string.Empty;
+                await LoadAsync();
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                inviteErrors = fields.Errors;
+                break;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                break;
+            case OwnerActionResult.Failed failed:
+                inviteError = failed.Message;
+                break;
+        }
+    }
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

@@ -24,6 +24,11 @@
                                Color="Color.Inherit" Size="Size.Small" Class="ml-4">@open</MudButton>
                     <MudButton data-testid="switch-business" Href="businesses" Variant="Variant.Text" Color="Color.Inherit"
                                Size="Size.Small" Class="ml-1">Switch</MudButton>
+                    @if (OpenBusiness.Role is HelloPos.Kernel.Staff.StaffRole.Owner or HelloPos.Kernel.Staff.StaffRole.Manager)
+                    {
+                        <MudButton data-testid="staff-link" Href="staff" Variant="Variant.Text" Color="Color.Inherit"
+                                   Size="Size.Small" Class="ml-1">Staff</MudButton>
+                    }
                 }
             </Authorized>
         </AuthorizeView>

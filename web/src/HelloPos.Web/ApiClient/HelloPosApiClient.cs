@@ -2,7 +2,9 @@
 #pragma warning disable CS0618
 using HelloPos.Web.ApiClient.Business;
 using HelloPos.Web.ApiClient.Health;
+using HelloPos.Web.ApiClient.Invitations;
 using HelloPos.Web.ApiClient.Owner;
+using HelloPos.Web.ApiClient.Staff;
 using Microsoft.Kiota.Abstractions.Extensions;
 using Microsoft.Kiota.Abstractions;
 using Microsoft.Kiota.Serialization.Form;
@@ -31,10 +33,20 @@ namespace HelloPos.Web.ApiClient
         {
             get => new global::HelloPos.Web.ApiClient.Health.HealthRequestBuilder(PathParameters, RequestAdapter);
         }
+        /// <summary>The invitations property</summary>
+        public global::HelloPos.Web.ApiClient.Invitations.InvitationsRequestBuilder Invitations
+        {
+            get => new global::HelloPos.Web.ApiClient.Invitations.InvitationsRequestBuilder(PathParameters, RequestAdapter);
+        }
         /// <summary>The owner property</summary>
         public global::HelloPos.Web.ApiClient.Owner.OwnerRequestBuilder Owner
         {
             get => new global::HelloPos.Web.ApiClient.Owner.OwnerRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The staff property</summary>
+        public global::HelloPos.Web.ApiClient.Staff.StaffRequestBuilder Staff
+        {
+            get => new global::HelloPos.Web.ApiClient.Staff.StaffRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>
         /// Instantiates a new <see cref="global::HelloPos.Web.ApiClient.HelloPosApiClient"/> and sets the default values.

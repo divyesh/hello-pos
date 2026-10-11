@@ -4,6 +4,7 @@ using HelloPos.Api.Infrastructure.Identity;
 using HelloPos.Api.Infrastructure.Persistence;
 using HelloPos.Api.Infrastructure.Tenancy;
 using Microsoft.AspNetCore.Http.HttpResults;
+using HelloPos.Kernel.Staff;
 using Microsoft.EntityFrameworkCore;
 
 namespace HelloPos.Api.Features.Businesses;
@@ -11,6 +12,7 @@ namespace HelloPos.Api.Features.Businesses;
 /// <summary>
 /// <c>GET</c> and <c>PUT /business</c> (FR-014): settings of the business open in this session. The
 /// business comes only from the session; the stale-tab header can refuse a request, never redirect it.
+/// Owners and managers read the settings; only owners change them (feature 006).
 /// </summary>
 public sealed class CurrentBusiness : IEndpointMapper
 {
@@ -21,14 +23,14 @@ public sealed class CurrentBusiness : IEndpointMapper
         app.MapGet("/business", GetAsync)
             .WithName("getCurrentBusiness")
             .WithTags(Tag)
-            .RequireCurrentBusiness()
+            .RequireRole(StaffRole.Owner, StaffRole.Manager)
             .RequireSameBusiness();
 
         app.MapPut("/business", UpdateAsync)
             .WithName("updateCurrentBusiness")
             .WithTags(Tag)
             .RequireClientHeader()
-            .RequireCurrentBusiness()
+            .RequireRole(StaffRole.Owner)
             .RequireSameBusiness();
     }
 

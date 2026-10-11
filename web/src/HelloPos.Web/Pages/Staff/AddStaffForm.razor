@@ -1,0 +1,97 @@
+@using HelloPos.Kernel.Staff
+
+@* Add a person who signs in on the POS (feature 006, FR-002, FR-008). The roles offered come from the
+   kernel rule table; the PIN rules are the kernel's; the API checks both again. *@
+
+<MudTextField data-testid="staff-name" @bind-Value="displayName" Label="Name" MaxLength="100"
+              Error="@Has("displayName")" ErrorText="@For("displayName")" />
+
+<div class="mt-4">
+    <MudText Typo="Typo.caption">Role</MudText>
+    <select data-testid="staff-role" class="hp-select" value="@role" @onchange="e => role = Enum.Parse<StaffRole>((string)e.Value!)">
+        @foreach (var option in AllowedRoles)
+        {
+            <option value="@option">@(option == StaffRole.Manager ? "Manager" : "Cashier")</option>
+        }
+    </select>
+</div>
+
+<MudTextField data-testid="staff-username" @bind-Value="posUsername" Label="POS username" Class="mt-2"
+              HelperText="Used to sign in on the till, for example ravi."
+              Error="@Has("posUsername")" ErrorText="@For("posUsername")" />
+<MudTextField data-testid="staff-pin" @bind-Value="pin" Label="PIN" InputType="InputType.Password" Class="mt-2"
+              HelperText="4 to 6 digits. Hand it over in person; the person can change it on the till."
+              Error="@Has("pin")" ErrorText="@For("pin")" />
+
+@if (FormError is not null)
+{
+    <MudAlert data-testid="add-error" Severity="Severity.Error" Dense="true" Class="mt-3">@FormError</MudAlert>
+}
+
+<MudButton data-testid="add-staff" Class="mt-4" Variant="Variant.Filled" Color="Color.Primary" Disabled="Busy" OnClick="SubmitAsync">
+    Add person
+</MudButton>
+
+@code {
+    private string displayName = string.Empty;
+    private string posUsername = string.Empty;
+    private string pin = string.Empty;
+    private StaffRole role = StaffRole.Cashier;
+    private Dictionary<string, string> localErrors = [];
+
+    /// <summary>The signed-in person's role: decides which roles may be given.</summary>
+    [Parameter, EditorRequired]
+    public StaffRole ActorRole { get; set; }
+
+    [Parameter]
+    public EventCallback<(string DisplayName, StaffRole Role, string PosUsername, string Pin)> OnSubmit { get; set; }
+
+    [Parameter]
+    public IReadOnlyDictionary<string, string>? ServerErrors { get; set; }
+
+    [Parameter]
+    public string? FormError { get; set; }
+
+    [Parameter]
+    public bool Busy { get; set; }
+
+    private IEnumerable<StaffRole> AllowedRoles =>
+        new[] { StaffRole.Cashier, StaffRole.Manager }.Where(r => StaffRules.Can(ActorRole, StaffAction.AddPosStaff, newRole: r));
+
+    private bool Has(string field) => For(field) is not null;
+
+    private string? For(string field) => localErrors.GetValueOrDefault(field) ?? ServerErrors?.GetValueOrDefault(field);
+
+    /// <summary>Clears the form after a successful add.</summary>
+    public void Reset()
+    {
+        displayName = posUsername = pin = string.Empty;
+        role = StaffRole.Cashier;
+        localErrors = [];
+        StateHasChanged();
+    }
+
+    private async Task SubmitAsync()
+    {
+        localErrors = [];
+        if (StaffRules.ValidateDisplayName(displayName) is { } nameError)
+        {
+            localErrors["displayName"] = nameError;
+        }
+
+        if (StaffRules.ValidatePosUsername(posUsername) is { } usernameError)
+        {
+            localErrors["posUsername"] = usernameError;
+        }
+
+        if (PinRules.Validate(pin) is { } pinError)
+        {
+            localErrors["pin"] = pinError;
+        }
+
+        if (localErrors.Count == 0)
+        {
+            await OnSubmit.InvokeAsync((displayName.Trim(), role, posUsername.Trim(), pin));
+        }
+    }
+}

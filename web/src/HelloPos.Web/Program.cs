@@ -26,6 +26,7 @@ builder.Services.AddScoped<IHealthService>(sp => new HealthService(
 builder.Services.AddScoped<IOwnerAccountService, OwnerAccountService>();
 builder.Services.AddScoped<IBusinessService, BusinessService>();
 builder.Services.AddScoped<OpenBusinessState>();
+builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<OwnerAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<OwnerAuthenticationStateProvider>());
 builder.Services.AddAuthorizationCore();
