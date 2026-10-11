@@ -18,7 +18,11 @@ public sealed class PostgresFixture : IAsyncLifetime
     public const string AppLogin = "hellopos_app";
     public const string AppPassword = "test-app";
 
-    private readonly PostgreSqlContainer container = new PostgreSqlBuilder("postgres:18.6").Build();
+    // Many short-lived test databases, each with its own connection pools: allow more connections
+    // than the default 100 (test container only).
+    private readonly PostgreSqlContainer container = new PostgreSqlBuilder("postgres:18.6")
+        .WithCommand("-c", "max_connections=500")
+        .Build();
 
     /// <summary>Superuser connection to the default database (setup and the feature 002 probe tests).</summary>
     public string ConnectionString => container.GetConnectionString();

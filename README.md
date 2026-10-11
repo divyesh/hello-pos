@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: Phase 0 in progress. Roadmap #1 (repository skeleton) and #2 (local environment) are done; no business features yet.
+> Status: Phase 0 in progress. Roadmap #1 (repository skeleton), #2 (local environment) and #3 (tenancy infrastructure) are done; no business features yet.
 
 ## Applications
 
@@ -29,6 +29,8 @@ Read these before changing anything:
 - [Roadmap](specs/roadmap.md): v1 split into phases and features.
 - [Pricing rules](specs/pricing-rules.md): how a sale's totals, taxes, discounts, tips and
   rounding are calculated.
+- [Tenancy guide](docs/tenancy.md): how business data is isolated, and how to add a table, an
+  endpoint and its isolation test. Read before touching business-owned data.
 - Feature specs: `specs/NNN-feature-name/` (spec, plan, tasks), created per feature.
 
 ## How we work
@@ -154,7 +156,12 @@ scripts/env.ps1 reset         # stop and DELETE local data (asks first; --yes to
 ```
 
 (`scripts/env.sh` on Linux/macOS.) Settings live in `.env`, created from `.env.example` on first
-use and never committed: logins, database name and ports.
+use and never committed: logins (admin, migrator, app), database name and ports.
+
+`up` applies database migrations automatically after PostgreSQL is healthy: a one-off `migrate`
+container bootstraps the roles and applies pending migrations as the migrator login. The API only
+ever receives the app login, which can read and write rows but never change the schema. Adding
+tables and migrations: [docs/tenancy.md](docs/tenancy.md).
 
 | Service | Address | Notes |
 |---------|---------|-------|

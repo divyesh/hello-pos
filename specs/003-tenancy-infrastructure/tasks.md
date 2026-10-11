@@ -114,17 +114,17 @@ the minimal sample model they need).
 
 ## Phase 6: User Story 4 - Conventions are followed automatically (P3)
 
-- [ ] T033 [US4] Write `backend/tests/HelloPos.Api.Tests/Persistence/ConventionTests.cs`: catalog check per research R11 over the migrated test database including sample tables (passes); negative cases create, in a scratch schema treated as `pos`-like by the check, tables that each break one rule (no `business_id`, PK without it, FK without it, RLS off, `timestamp without time zone`, `double precision`, unconstrained `numeric`) and assert the check names the table/column and rule (SC-001, FR-020)
-- [ ] T034 [US4] Implement the catalog check as `backend/tests/HelloPos.Api.Tests/Persistence/SchemaConventions.cs` (reusable by later features' tests) (makes T033 pass)
-- [ ] T035 [P] [US4] Add a unit test that `Guid` ids created by the server for business-owned entities are version 7 and time-ordered (FR-018), in `backend/tests/HelloPos.Api.Tests/Persistence/IdConventionTests.cs`
+- [X] T033 [US4] Write `backend/tests/HelloPos.Api.Tests/Persistence/ConventionTests.cs`: catalog check per research R11 over the migrated test database including sample tables (passes); negative cases create, in a scratch schema treated as `pos`-like by the check, tables that each break one rule (no `business_id`, PK without it, FK without it, RLS off, `timestamp without time zone`, `double precision`, unconstrained `numeric`) and assert the check names the table/column and rule (SC-001, FR-020)
+- [X] T034 [US4] Implement the catalog check as `backend/tests/HelloPos.Api.Tests/Persistence/SchemaConventions.cs` (reusable by later features' tests) (makes T033 pass)
+- [X] T035 [P] [US4] Add a unit test that `Guid` ids created by the server for business-owned entities are version 7 and time-ordered (FR-018), in `backend/tests/HelloPos.Api.Tests/Persistence/IdConventionTests.cs`
 
 ---
 
 ## Phase 7: Polish
 
-- [ ] T036 Run the full backend suite; all tests pass, including feature 001/002 tests (health, contract, probe)
-- [ ] T037 [P] Update `README.md` (link `docs/tenancy.md`; migrations in "Local environment"; migrator login in settings) and `specs/roadmap.md` #3 if scope changed
-- [ ] T038 Re-check the Constitution Check against delivered code; note deviations in `plan.md`; finish `checklists/quickstart-results.md`
+- [X] T036 Run the full backend suite; all tests pass, including feature 001/002 tests (health, contract, probe)
+- [X] T037 [P] Update `README.md` (link `docs/tenancy.md`; migrations in "Local environment"; migrator login in settings) and `specs/roadmap.md` #3 if scope changed
+- [X] T038 Re-check the Constitution Check against delivered code; note deviations in `plan.md`; finish `checklists/quickstart-results.md`
 
 ---
 

@@ -96,7 +96,17 @@ public sealed class TenancyApp : IAsyncDisposable
         return id;
     }
 
-    public async ValueTask DisposeAsync() => await factory.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        await factory.DisposeAsync();
+
+        // Close this database's idle pooled connections so finished tests do not hold server slots.
+        foreach (var connectionString in new[] { AppConnectionString, Logins.App, Logins.Migrator, Logins.Admin })
+        {
+            using var connection = new NpgsqlConnection(ConnectionStrings.Normalize(connectionString));
+            NpgsqlConnection.ClearPool(connection);
+        }
+    }
 }
 
 /// <summary>Test-only authentication: never registered outside tests.</summary>

@@ -20,8 +20,9 @@ feature exists.
 2. **Local environment**: `compose.yaml` for Podman or Docker with PostgreSQL, the Prism mock API, Seq and an optional API container (the deployable image); `/health` reports the database;
    one-command start, stop and reset (seed data arrives with the features that create business data).
 3. **Tenancy and API infrastructure**: `business_id` conventions, EF Core global query filters,
-   composite foreign keys, the cross-tenant isolation test harness, RFC 7807 errors, correlation
-   ids, structured logging.
+   composite foreign keys, row-level security, migrations by a dedicated migrator login, the
+   cross-tenant isolation test harness, schema convention checks. (RFC 7807 errors, correlation
+   ids and structured logging were delivered earlier, in #1.)
 4. **CI and staging**: GitHub Actions building all three apps and running tests (including
    Testcontainers PostgreSQL); deployment to a DigitalOcean staging environment (Managed
    PostgreSQL, API container, static web app).

@@ -39,3 +39,25 @@
 
 Compose warns that `COMPOSE_BAKE=false` is deprecated. Without it, compose warns that Bake needs
 buildkit (which Podman lacks). Harmless either way; revisit when the compose provider changes.
+
+## User Stories 2–4 (automated, `scripts/dotnet.ps1 test --solution backend/HelloPos.slnx`: 53/53, stable over 3 runs)
+
+| Area | Result |
+|------|--------|
+| No identity → 401, no data touched; business ids in body, query, headers ignored (FR-006–FR-008) | ✅ |
+| Stamping; business change rejected; save without business throws (FR-010) | ✅ |
+| Reference to another business's record → 404, nothing stored; foreign read identical to unknown id (FR-012, FR-013) | ✅ |
+| Raw SQL as app login: only session business visible/changeable; no session business → nothing (SC-007) | ✅ |
+| 200 interleaved requests over a 2-connection pool never mix; pooled connection reused without business sees nothing (SC-008) | ✅ |
+| `IgnoreQueryFilters` only in `AcrossAllBusinesses()` (FR-009) | ✅ |
+| Isolation harness on the sample slice: list, read, update, delete, reference (SC-002, SC-006) | ✅ |
+| Harness catches leaks that bypass both layers, naming operation and record (SC-003) | ✅ |
+| Convention check passes on the real schema; each of 8 rules fires on a deliberately broken table (SC-001) | ✅ |
+| Ids are UUIDv7 and time-ordered (FR-018) | ✅ |
+| Sabotage: no session interceptor → 10/12 tenancy tests fail; no stamping → 11/12 fail | ✅ tests are load-bearing |
+
+### Issue found and fixed
+
+As the suite grew, idle pooled connections from finished test databases exhausted PostgreSQL's
+default 100 connections. The test container now allows 500 and each test app clears its pools on
+dispose.
