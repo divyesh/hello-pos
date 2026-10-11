@@ -60,6 +60,31 @@ readable; staff never deleted; ≥ 1 active owner per business at all times
 
 Result: **pass**. Re-checked after design: pass.
 
+### Re-check against the delivered code (T028)
+
+Result: **pass**. Deviations from the plan:
+
+1. **Migration order**: the migrator now applies `identity` migrations before `pos` ones, because
+   `AddStaff` copies owners' display names from `identity.owner_accounts` (a fresh database would not
+   have that table yet otherwise).
+2. **POS username changes** go through `PUT /staff/{id}/pin` together with a new PIN, not through the
+   update operation (the draft contract had `posUsername` on `StaffUpdate`). A username and PIN are one
+   credential; changing one without the other is not offered.
+3. **Already a member** is refused when inviting (409 `already-member`), not only on acceptance (which
+   still checks, for someone added while the invitation was pending).
+4. **Invitation expiry** is checked by the database function (`now()`) and again by the API with its
+   clock, so lifespans are testable.
+5. **Making someone owner** who has no back-office account is a field error (400 on `role`), not a
+   403: the rule table allows it, the data does not.
+6. **`/owner/me.currentRole`** reports only back-office roles (owner, manager); a cashier row linked to
+   an account gives none.
+7. **Fixed in passing (feature 005 web)**: string component parameters were bound as literals, so the
+   business forms always showed a "formError" alert; fixed with regression tests.
+
+Still for #7: POS sign-in with registered devices and attempt limits (research R5), the cashier's own
+PIN-change screen and endpoint (the service exists and is tested), and ending POS sessions issued before
+`pin_changed_at`.
+
 ## Project Structure
 
 ### Documentation (this feature)

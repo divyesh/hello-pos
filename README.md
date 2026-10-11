@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 started: #5 owner sign-up and businesses (owners sign up, verify their email, sign in, create, open and edit businesses in the web back office).
+> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). Next: #7 login and sessions (POS sign-in on Android).
 
 ## Applications
 
@@ -182,6 +182,11 @@ network; switch back afterwards).
 open it. The session is an HttpOnly cookie set by the API; requests that change data also send the
 header `X-HelloPos-Client: web` (CSRF guard). Sign-in and sign-up are rate limited to 10 per minute
 per address (`RateLimits:OwnerAuthPerMinute`).
+
+With a business open, **Staff** in the top bar lists the people who work there: add a cashier with a
+POS username and PIN, edit, deactivate or reset PINs, and invite a manager or co-owner by email (the
+link opens `/accept-invitation`; the invited person signs in with that address and accepts). Managers
+see and manage cashiers only.
 
 **Build clients against the mock API**: web, set `Api:BaseUrl` to `http://localhost:4010/` in
 `web/src/HelloPos.Web/wwwroot/appsettings.Development.json`; Android, set

@@ -94,10 +94,10 @@ refused for everything else; the last active owner cannot be removed.
 
 ## Phase 6: Polish
 
-- [ ] T025 Run backend and web suites; add a test that runs add / set PIN / verify / change PIN / invite / accept with captured logs and asserts no PIN or token appears in any response body or log event (SC-005)
-- [ ] T026 Run quickstart.md manual steps with Mailpit; record in `checklists/quickstart-results.md`
-- [ ] T027 [P] Update `docs/tenancy.md` (staff table replaces `business_owners`, `ICurrentStaff`/`RequireRole`, why invitations use a `SECURITY DEFINER` lookup) and README (staff, invitations)
-- [ ] T028 Re-check the Constitution Check against delivered code; note deviations in plan.md
+- [X] T025 Run backend and web suites; add a test that runs add / set PIN / verify / change PIN / invite / accept with captured logs and asserts no PIN or token appears in any response body or log event (SC-005)
+- [X] T026 Run quickstart.md manual steps with Mailpit; record in `checklists/quickstart-results.md`
+- [X] T027 [P] Update `docs/tenancy.md` (staff table replaces `business_owners`, `ICurrentStaff`/`RequireRole`, why invitations use a `SECURITY DEFINER` lookup) and README (staff, invitations)
+- [X] T028 Re-check the Constitution Check against delivered code; note deviations in plan.md
 
 ---
 
