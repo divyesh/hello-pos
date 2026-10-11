@@ -1,3 +1,4 @@
+using HelloPos.Api.Infrastructure.Identity;
 using HelloPos.Api.Infrastructure.Persistence;
 using HelloPos.Api.Infrastructure.Tenancy;
 using Npgsql;
@@ -6,7 +7,7 @@ namespace HelloPos.Api.Infrastructure.Database;
 
 /// <summary>
 /// Database wiring for the API process: the health probe (feature 002) and the EF Core context with
-/// the current business (feature 003). The API only ever receives the app login's connection string;
+/// the current business (feature 003), the owner identity context (feature 005). The API only ever receives the app login's connection string;
 /// admin and migrator credentials exist only for <c>HelloPos.Api migrate</c>.
 /// </summary>
 public static class DatabaseSetup
@@ -17,14 +18,19 @@ public static class DatabaseSetup
     {
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentBusiness, ClaimsCurrentBusiness>();
+        services.AddScoped<ICurrentOwner, ClaimsCurrentOwner>();
 
         var connectionString = configuration.GetConnectionString(ConnectionStringName);
+
+        // Always registered, so endpoints and Identity's stores resolve even when the API runs without a
+        // database (health and startup checks); using them then fails like any database call.
+        services.AddDbContext<OwnerIdentityDbContext>(options => options.UseOwnerIdentityDatabase(connectionString));
+        services.AddDbContext<HelloPosDbContext>(options => options.UseHelloPosDatabase(connectionString));
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             return services.AddSingleton<IDatabaseProbe, NoDatabaseProbe>();
         }
 
-        services.AddDbContext<HelloPosDbContext>(options => options.UseHelloPosDatabase(connectionString));
         return services.AddSingleton<IDatabaseProbe>(sp => new NpgsqlDatabaseProbe(
             CreateProbeDataSource(connectionString),
             sp.GetRequiredService<ILogger<NpgsqlDatabaseProbe>>()));

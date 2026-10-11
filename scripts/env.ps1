@@ -109,6 +109,7 @@ switch ($command) {
         Write-Host ("  Database   {0}:{1}  (database {2}, app login {3})" -f $bind, $s.HELLOPOS_PG_PORT, $s.HELLOPOS_DB_NAME, $s.HELLOPOS_DB_APP_USER)
         Write-Host ("  Mock API   http://{0}:{1}" -f $bind, $s.HELLOPOS_MOCK_PORT)
         Write-Host ("  Seq        http://{0}:{1}" -f $bind, $s.HELLOPOS_SEQ_PORT)
+        Write-Host ("  Mail (dev) http://{0}:{1}  (all emails from the API land here)" -f $bind, $s.HELLOPOS_MAIL_UI_PORT)
 
         if ($withApi) {
             $url = "http://{0}:{1}/health" -f $bind, $s.HELLOPOS_API_PORT

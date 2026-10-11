@@ -1,0 +1,152 @@
+@page "/businesses"
+@using HelloPos.Kernel.Businesses
+@inject IBusinessService BusinessApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Your businesses · Hello POS</PageTitle>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <MudAlert data-testid="sign-in-required" Severity="Severity.Info">
+            <MudLink Href="sign-in">Sign in</MudLink> to see your businesses.
+        </MudAlert>
+    </NotAuthorized>
+    <Authorized>
+        <MudText Typo="Typo.h4" GutterBottom="true">Your businesses</MudText>
+
+        @if (openError is not null)
+        {
+            <MudAlert data-testid="open-error" Severity="Severity.Error" Class="mb-4">@openError</MudAlert>
+        }
+
+        @if (loadError is not null)
+        {
+            <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+        }
+        else if (businesses is null)
+        {
+            <MudProgressCircular data-testid="loading" Indeterminate="true" Size="Size.Small" />
+        }
+        else
+        {
+            @if (businesses.Count == 0)
+            {
+                <MudText data-testid="no-businesses" Class="mb-4">
+                    You have no businesses yet. Create your first one: choose its country and we fill in the usual settings.
+                </MudText>
+            }
+            else
+            {
+                <MudPaper Outlined="true" Class="mb-4" Style="max-width: 36rem;">
+                    <MudList T="string" Dense="true">
+                        @foreach (var business in businesses)
+                        {
+                            <MudListItem T="string" data-testid="business">
+                                <div class="d-flex align-center">
+                                    <MudText Class="flex-grow-1"><b>@business.Name</b> · @business.CountryCode · @business.CurrencyCode</MudText>
+                                    @if (business.Id == OpenBusiness.Id)
+                                    {
+                                        <MudChip T="string" data-testid="is-open" Size="Size.Small" Color="Color.Primary">Open</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudButton data-testid="open" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                                                   Disabled="busy" OnClick="() => OpenAsync(business)">Open</MudButton>
+                                    }
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudPaper>
+            }
+
+            @if (creating || businesses.Count == 0)
+            {
+                <MudPaper Outlined="true" Class="pa-6" Style="max-width: 36rem;">
+                    <MudText Typo="Typo.h6" GutterBottom="true">New business</MudText>
+                    <BusinessForm OnSubmit="CreateAsync" ServerErrors="serverErrors" FormError="formError" Busy="busy" />
+                </MudPaper>
+            }
+            else
+            {
+                <MudButton data-testid="new-business" Variant="Variant.Outlined" Color="Color.Primary" OnClick="() => creating = true">
+                    New business
+                </MudButton>
+            }
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private IReadOnlyList<BusinessListItem>? businesses;
+    private string? loadError;
+    private IReadOnlyDictionary<string, string>? serverErrors;
+    private string? formError;
+    private string? openError;
+    private bool creating;
+    private bool busy;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationState is not null && (await AuthenticationState).User.Identity?.IsAuthenticated == true)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        var result = await BusinessApi.ListMineAsync();
+        (businesses, loadError) = result switch
+        {
+            BusinessListResult.Loaded loaded => (loaded.Businesses, (string?)null),
+            BusinessListResult.Failed failed => (null, failed.Message),
+            _ => (null, "Your businesses could not be loaded."),
+        };
+    }
+
+    private async Task OpenAsync(BusinessListItem business)
+    {
+        busy = true;
+        openError = null;
+        var result = await OpenBusiness.OpenAsync(business.Id, business.Name);
+        busy = false;
+        if (result is OwnerActionResult.Succeeded)
+        {
+            Navigation.NavigateTo("business/settings");
+        }
+        else
+        {
+            openError = result is OwnerActionResult.Failed failed ? failed.Message : "The business could not be opened.";
+        }
+    }
+
+    private async Task CreateAsync(BusinessSettings settings)
+    {
+        busy = true;
+        serverErrors = null;
+        formError = null;
+        var result = await BusinessApi.CreateAsync(settings);
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                creating = false;
+                await LoadAsync();
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                serverErrors = fields.Errors;
+                break;
+            case OwnerActionResult.Failed failed:
+                formError = failed.Message;
+                break;
+            case OwnerActionResult.VerificationRequired:
+                formError = "Confirm your email address before creating a business.";
+                break;
+        }
+    }
+}

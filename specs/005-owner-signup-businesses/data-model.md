@@ -26,8 +26,9 @@ names. Key fields of **owner_accounts**:
 |--------|--------|
 | `cash_rounding_step` | new, `numeric(19,4)`, one of `0`, `0.05`, `0.10`, `1.00`; default `0` |
 
-RLS policy `business_scope` (replaced): visible/writable when `id = current_business_id()` **or** the
-current owner owns it (via `business_owners`).
+RLS: policy `business_scope` unchanged (visible/writable when `id = current_business_id()`); new
+read-only policy `owner_read` (`FOR SELECT`): visible when the current owner owns it (via
+`business_owners`). Writes always need a session acting as the business.
 
 ### business_owners (new, business-owned)
 
@@ -38,8 +39,9 @@ current owner owns it (via `business_owners`).
 | `owner_id` | `uuid` | the owner account (no FK across schemas; enforced by the API) |
 | `created_at` | `timestamptz` | UTC |
 
-Unique `(business_id, owner_id)`. RLS `business_scope`: `business_id = current_business_id() OR
-owner_id = current_owner_id()`.
+Unique `(business_id, owner_id)`. RLS: `business_scope` (`business_id = current_business_id()`, all
+commands) plus read-only `owner_read` (`owner_id = current_owner_id()`), so an owner session cannot plant
+an ownership link for a business it is not acting as.
 
 ## Session settings
 

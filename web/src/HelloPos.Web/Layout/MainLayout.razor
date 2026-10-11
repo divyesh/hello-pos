@@ -1,4 +1,11 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@using HelloPos.Web.Services
+@inject IOwnerAccountService Accounts
+@inject OwnerAuthenticationStateProvider Session
+@inject AuthenticationStateProvider Authentication
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -8,6 +15,29 @@
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudText Typo="Typo.h6">Hello POS</MudText>
+        <AuthorizeView>
+            <Authorized>
+                @if (OpenBusiness.Name is { } open)
+                {
+                    @* FR-015: always show which business is open; switching is on the businesses page. *@
+                    <MudButton data-testid="open-business" Href="business/settings" Variant="Variant.Outlined"
+                               Color="Color.Inherit" Size="Size.Small" Class="ml-4">@open</MudButton>
+                    <MudButton data-testid="switch-business" Href="businesses" Variant="Variant.Text" Color="Color.Inherit"
+                               Size="Size.Small" Class="ml-1">Switch</MudButton>
+                }
+            </Authorized>
+        </AuthorizeView>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <MudButton Href="businesses" Variant="Variant.Text" Color="Color.Inherit" Class="mr-2">Businesses</MudButton>
+                <MudText Typo="Typo.body2" Class="mr-3" data-testid="signed-in-as">@context.User.Identity?.Name</MudText>
+                <MudButton data-testid="sign-out" Variant="Variant.Text" Color="Color.Inherit" OnClick="SignOutAsync">Sign out</MudButton>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Href="sign-in" Variant="Variant.Text" Color="Color.Inherit">Sign in</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
     </MudAppBar>
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.Large" Class="pt-6">
@@ -15,3 +45,43 @@
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        OpenBusiness.Changed += OnOpenBusinessChanged;
+        Authentication.AuthenticationStateChanged += OnAuthenticationChanged;
+        await LoadOpenBusinessAsync(Authentication.GetAuthenticationStateAsync());
+    }
+
+    public void Dispose()
+    {
+        OpenBusiness.Changed -= OnOpenBusinessChanged;
+        Authentication.AuthenticationStateChanged -= OnAuthenticationChanged;
+    }
+
+    private async Task LoadOpenBusinessAsync(Task<AuthenticationState> state)
+    {
+        if ((await state).User.Identity?.IsAuthenticated == true)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+        else
+        {
+            OpenBusiness.Clear();
+        }
+    }
+
+    private void OnAuthenticationChanged(Task<AuthenticationState> state) =>
+        _ = InvokeAsync(() => LoadOpenBusinessAsync(state));
+
+    private void OnOpenBusinessChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task SignOutAsync()
+    {
+        await Accounts.SignOutAsync();
+        OpenBusiness.Clear();
+        Session.Refresh();
+        Navigation.NavigateTo("sign-in");
+    }
+}

@@ -11,9 +11,15 @@ info:
 servers:
   - url: http://localhost:5080
     description: Local development
+security:
+  - ownerSession: []
 tags:
   - name: System
     description: Service status
+  - name: Business
+    description: The business open in this session
+  - name: Owner
+    description: Owner accounts and sessions (web back office)
 paths:
   /health:
     get:
@@ -42,6 +48,318 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+  /owner/sign-up:
+    post:
+      tags: [Owner]
+      operationId: ownerSignUp
+      summary: Create an owner account
+      description: >
+        Anonymous. Always answers 202 for a well-formed request, whether or not the email is already
+        registered (no account enumeration); the address receives either a verification link or an
+        "already registered" notice. Rate limited per client address.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '202':
+          description: Accepted. Check the email inbox.
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /owner/verify-email:
+    post:
+      tags: [Owner]
+      operationId: ownerVerifyEmail
+      summary: Confirm an email address from the verification link
+      description: The link works once, for 24 hours.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OwnerTokenRequest'
+      responses:
+        '204':
+          description: Email verified.
+        '400':
+          $ref: '#/components/responses/InvalidLink'
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+  /owner/resend-verification:
+    post:
+      tags: [Owner]
+      operationId: ownerResendVerification
+      summary: Send a new verification link
+      description: Always 202; a link is sent only to an existing, unverified account.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          description: Accepted.
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /owner/sign-in:
+    post:
+      tags: [Owner]
+      operationId: ownerSignIn
+      summary: Sign in and start a session
+      description: >
+        Sets the HttpOnly session cookie. Every failure (unknown email, wrong password, locked
+        account) gets the same 401. Five failures lock the account for 15 minutes.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+      responses:
+        '204':
+          description: Signed in; the response sets the session cookie.
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          description: Email or password is incorrect.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: >
+            The password is correct but the email is not verified yet (type
+            urn:hellopos:problem:verification-required), or the client header is missing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /owner/sign-out:
+    post:
+      tags: [Owner]
+      operationId: ownerSignOut
+      summary: End the session
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '204':
+          description: Signed out; the session cookie is removed.
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+  /owner/forgot-password:
+    post:
+      tags: [Owner]
+      operationId: ownerForgotPassword
+      summary: Send a password reset link
+      description: Always 202; a link is sent only to an existing account.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          description: Accepted.
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /owner/reset-password:
+    post:
+      tags: [Owner]
+      operationId: ownerResetPassword
+      summary: Set a new password from the reset link
+      description: The link works once, for 1 hour. Ends every existing session of the account.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Password changed.
+        '400':
+          description: Invalid, used or expired link, or the new password breaks the rules.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblemDetails'
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /owner/me:
+    get:
+      tags: [Owner]
+      operationId: ownerMe
+      summary: The signed-in owner
+      responses:
+        '200':
+          description: The signed-in owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerProfile'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+  /owner/businesses:
+    get:
+      tags: [Owner]
+      operationId: ownerListBusinesses
+      summary: The businesses the signed-in owner owns
+      responses:
+        '200':
+          description: The owner's businesses, by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BusinessSummary'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+    post:
+      tags: [Owner]
+      operationId: ownerCreateBusiness
+      summary: Create a business owned by the signed-in owner
+      description: >
+        The server chooses the business id. Needs a verified email. Settings are validated with
+        the same rules the web form uses; nothing is stored when any field is invalid.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessSettings'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Business'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          description: Email not verified, or the client header is missing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /owner/businesses/{businessId}/open:
+    post:
+      tags: [Owner]
+      operationId: ownerOpenBusiness
+      summary: Open one of the owner's businesses in this session
+      description: >
+        The session then acts for this business only. A business the owner does not own answers
+        404, exactly like one that does not exist. Opening another business switches.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Opened; the response renews the session cookie.
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+        '404':
+          description: Not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /business:
+    get:
+      tags: [Business]
+      operationId: getCurrentBusiness
+      summary: Settings of the business open in this session
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+      responses:
+        '200':
+          description: The open business.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Business'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
+    put:
+      tags: [Business]
+      operationId: updateCurrentBusiness
+      summary: Change the settings of the business open in this session
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessSettings'
+      responses:
+        '200':
+          description: Saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Business'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
 components:
   schemas:
     HealthStatus:
@@ -82,3 +400,243 @@ components:
         traceId:
           type: string
           description: Correlation id for this request (Constitution, Principle IX).
+    ValidationProblemDetails:
+      type: object
+      description: RFC 7807 problem details with the message for each invalid field.
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+        traceId:
+          type: string
+        errors:
+          type: object
+          description: Field name (camelCase) to messages.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    SignUpRequest:
+      type: object
+      additionalProperties: false
+      required: [displayName, email, password]
+      properties:
+        displayName:
+          type: string
+          description: The owner's name, 1 to 100 characters.
+          example: Asha Patel
+        email:
+          type: string
+          example: asha@example.com
+        password:
+          type: string
+          description: At least 12 and at most 128 characters; very common passwords are refused.
+    OwnerTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [ownerId, token]
+      properties:
+        ownerId:
+          type: string
+          format: uuid
+        token:
+          type: string
+    EmailRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+    SignInRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    ResetPasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [ownerId, token, newPassword]
+      properties:
+        ownerId:
+          type: string
+          format: uuid
+        token:
+          type: string
+        newPassword:
+          type: string
+    OwnerProfile:
+      type: object
+      additionalProperties: false
+      required: [ownerId, displayName, email, emailVerified]
+      properties:
+        ownerId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        email:
+          type: string
+        emailVerified:
+          type: boolean
+        currentBusinessId:
+          type: string
+          format: uuid
+          description: The business opened in this session; absent when none is open.
+    BusinessSettings:
+      type: object
+      additionalProperties: false
+      required: [name, countryCode, currencyCode, pricingMode, financialYearStartMonth, timeZone, cashRoundingStepMinor]
+      properties:
+        name:
+          type: string
+          description: 1 to 200 characters.
+          example: Patel Grocers
+        countryCode:
+          type: string
+          enum: [IN, US, CA]
+        currencyCode:
+          type: string
+          description: ISO 4217, three capital letters.
+          example: INR
+        pricingMode:
+          type: string
+          enum: [tax_inclusive, tax_exclusive]
+        financialYearStartMonth:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 12
+        timeZone:
+          type: string
+          description: IANA time zone in the chosen country.
+          example: Asia/Kolkata
+        cashRoundingStepMinor:
+          type: integer
+          format: int64
+          description: Cash rounding step in minor units (paise, cents); 0 (none), 5, 10 or 100.
+          enum: [0, 5, 10, 100]
+    Business:
+      type: object
+      additionalProperties: false
+      required: [id, name, countryCode, currencyCode, pricingMode, financialYearStartMonth, timeZone, cashRoundingStepMinor, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        countryCode:
+          type: string
+          enum: [IN, US, CA]
+        currencyCode:
+          type: string
+        pricingMode:
+          type: string
+          enum: [tax_inclusive, tax_exclusive]
+        financialYearStartMonth:
+          type: integer
+          format: int32
+        timeZone:
+          type: string
+        cashRoundingStepMinor:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    BusinessSummary:
+      type: object
+      additionalProperties: false
+      required: [id, name, countryCode, currencyCode]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        countryCode:
+          type: string
+          enum: [IN, US, CA]
+        currencyCode:
+          type: string
+  parameters:
+    ClientHeader:
+      name: X-HelloPos-Client
+      in: header
+      required: true
+      description: Must be "web". Guards cookie-authenticated requests against cross-site forgery.
+      schema:
+        type: string
+        enum: [web]
+    BusinessHeader:
+      name: X-HelloPos-Business
+      in: header
+      required: false
+      description: >
+        The business this page was opened for. When it differs from the session's open business
+        (another tab switched), the request is refused with 409 instead of acting for the wrong
+        business. It never selects the business.
+      schema:
+        type: string
+        format: uuid
+  responses:
+    ValidationProblem:
+      description: The request is invalid; errors are listed per field.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ValidationProblemDetails'
+    InvalidLink:
+      description: The link is invalid, already used or expired.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    MissingClientHeader:
+      description: The X-HelloPos-Client header is missing.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotSignedIn:
+      description: No session, or the session has ended.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    TooManyRequests:
+      description: Too many attempts from this address; wait a minute.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    BusinessChanged:
+      description: >
+        Another business is open in this session now (type urn:hellopos:problem:business-changed);
+        reload the page.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+  securitySchemes:
+    ownerSession:
+      type: apiKey
+      in: cookie
+      name: hellopos_session
+      description: HttpOnly session cookie set by ownerSignIn (web back office only).

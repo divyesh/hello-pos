@@ -30,7 +30,8 @@ public sealed class MigrationTests(PostgresFixture postgres)
         Assert.NotEmpty(first);
         Assert.Empty(second);
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(60), $"migration took {watch.Elapsed}"); // SC-005
-        Assert.Equal(first.Count, await ScalarAsync<long>(db.Migrator, "select count(*) from pos.__ef_migrations_history"));
+        Assert.Equal(first.Count, await ScalarAsync<long>(db.Migrator, "select count(*) from pos.__ef_migrations_history")
+            + await ScalarAsync<long>(db.Migrator, "select count(*) from identity.__ef_migrations_history"));
     }
 
     [Fact]
@@ -49,6 +50,13 @@ public sealed class MigrationTests(PostgresFixture postgres)
         await ExecAsync(app, $"update pos.businesses set name = 'Renamed' where id = '{business}'");
         Assert.Equal(1L, await ScalarAsync<long>(app, "select count(*) from pos.businesses"));
         await ExecAsync(app, $"delete from pos.businesses where id = '{business}'");
+        await ExecAsync(app, $"""
+            insert into identity.owner_accounts (id, display_name, email, normalized_email, user_name, normalized_user_name,
+              email_confirmed, phone_number_confirmed, two_factor_enabled, lockout_enabled, access_failed_count)
+            values ('{Guid.CreateVersion7()}', 'Owner', 'o@example.com', 'O@EXAMPLE.COM', 'o@example.com', 'O@EXAMPLE.COM',
+              false, false, false, true, 0)
+            """);
+        await ExecAsync(app, "insert into identity.data_protection_keys (friendly_name, xml) values ('k', '<key/>')");
 
         foreach (var ddl in new[]
                  {
@@ -56,6 +64,8 @@ public sealed class MigrationTests(PostgresFixture postgres)
                      "alter table pos.businesses add column y int",
                      "drop table pos.businesses",
                      "create table public.x (id int)",
+                     "create table identity.x (id int)",
+                     "alter table identity.owner_accounts add column y int",
                  })
         {
             var error = await Assert.ThrowsAsync<PostgresException>(() => ExecAsync(app, ddl));

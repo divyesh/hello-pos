@@ -1,0 +1,91 @@
+@page "/verify-email"
+@inject IOwnerAccountService Accounts
+
+<PageTitle>Confirm your email · Hello POS</PageTitle>
+
+<MudPaper Outlined="true" Class="pa-6" Style="max-width: 28rem;">
+    <MudText Typo="Typo.h5" GutterBottom="true">Confirm your email</MudText>
+    @switch (state)
+    {
+        case State.Verifying:
+            <div data-testid="verify-checking">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                <MudText Typo="Typo.body2" Inline="true" Class="ml-2">Confirming…</MudText>
+            </div>
+            break;
+
+        case State.Verified:
+            <div data-testid="verify-done">
+                <MudAlert Severity="Severity.Success">Your email is confirmed.</MudAlert>
+                <MudButton Href="sign-in" Class="mt-4" Variant="Variant.Filled" Color="Color.Primary">Sign in</MudButton>
+            </div>
+            break;
+
+        case State.Invalid:
+            <div data-testid="verify-failed">
+                <MudAlert Severity="Severity.Error">@message</MudAlert>
+                @if (resent)
+                {
+                    <MudText data-testid="verification-resent" Class="mt-3">
+                        If that address has an unconfirmed account, a new link is on its way.
+                    </MudText>
+                }
+                else
+                {
+                    <MudTextField data-testid="email" @bind-Value="email" Label="Your email" InputType="InputType.Email" Class="mt-3" />
+                    <MudButton data-testid="resend" Class="mt-3" Variant="Variant.Outlined" Color="Color.Primary"
+                               OnClick="ResendAsync">Send a new link</MudButton>
+                }
+            </div>
+            break;
+    }
+</MudPaper>
+
+@code {
+    private enum State
+    {
+        Verifying,
+        Verified,
+        Invalid,
+    }
+
+    private const string InvalidLinkMessage = "This link is invalid, already used or expired.";
+
+    private State state = State.Verifying;
+    private string message = InvalidLinkMessage;
+    private string email = string.Empty;
+    private bool resent;
+
+    [SupplyParameterFromQuery(Name = "owner")]
+    public string? Owner { get; set; }
+
+    [SupplyParameterFromQuery(Name = "token")]
+    public string? Token { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Guid.TryParse(Owner, out var ownerId) || string.IsNullOrEmpty(Token))
+        {
+            state = State.Invalid;
+            return;
+        }
+
+        var result = await Accounts.VerifyEmailAsync(ownerId, Token);
+        if (result is OwnerActionResult.Succeeded)
+        {
+            state = State.Verified;
+            return;
+        }
+
+        message = result is OwnerActionResult.Failed { Message: OwnerAccountService.Unreachable } failed
+            ? failed.Message
+            : InvalidLinkMessage;
+        state = State.Invalid;
+    }
+
+    private async Task ResendAsync()
+    {
+        await Accounts.ResendVerificationAsync(email);
+        resent = true;
+    }
+}

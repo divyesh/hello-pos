@@ -17,23 +17,43 @@ public class HelloPosDbContext : DbContext
 
     private readonly Guid? currentBusinessId;
 
+    public HelloPosDbContext(DbContextOptions<HelloPosDbContext> options, ICurrentBusiness currentBusiness, ICurrentOwner currentOwner)
+        : this((DbContextOptions)options, currentBusiness, currentOwner)
+    {
+    }
+
     public HelloPosDbContext(DbContextOptions<HelloPosDbContext> options, ICurrentBusiness currentBusiness)
-        : this((DbContextOptions)options, currentBusiness)
+        : this((DbContextOptions)options, currentBusiness, NoCurrentOwner.Instance)
     {
     }
 
     /// <summary>For contexts that extend the model (test-only sample tables).</summary>
     protected HelloPosDbContext(DbContextOptions options, ICurrentBusiness currentBusiness)
+        : this(options, currentBusiness, NoCurrentOwner.Instance)
+    {
+    }
+
+    protected HelloPosDbContext(DbContextOptions options, ICurrentBusiness currentBusiness, ICurrentOwner currentOwner)
         : base(options)
     {
         ArgumentNullException.ThrowIfNull(currentBusiness);
+        ArgumentNullException.ThrowIfNull(currentOwner);
         currentBusinessId = currentBusiness.BusinessId;
+        CurrentOwnerId = currentOwner.OwnerId;
     }
 
     /// <summary>The business this context instance is scoped to; <c>null</c> sees no business-owned rows.</summary>
     public Guid? CurrentBusinessId => currentBusinessId;
 
+    /// <summary>
+    /// The signed-in owner (feature 005). Only row-level security uses it: an owner sees the businesses
+    /// and ownership links that are theirs. It never widens the EF business scope.
+    /// </summary>
+    public Guid? CurrentOwnerId { get; }
+
     public DbSet<Business> Businesses => Set<Business>();
+
+    public DbSet<BusinessOwner> BusinessOwners => Set<BusinessOwner>();
 
     protected sealed override void OnModelCreating(ModelBuilder modelBuilder)
     {

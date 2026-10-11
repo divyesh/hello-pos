@@ -23,7 +23,13 @@ public static class OpenApiContract
     public static JsonSchema ResponseSchema(string operationId, string statusCode, string mediaType = "application/json")
     {
         var operation = FindOperation(operationId);
-        var schema = operation["responses"]?[statusCode]?["content"]?[mediaType]?["schema"]
+        var response = operation["responses"]?[statusCode];
+        if ((string?)response?["$ref"] is { } reference && reference.StartsWith("#/components/responses/", StringComparison.Ordinal))
+        {
+            response = Document.Value["components"]?["responses"]?[reference["#/components/responses/".Length..]];
+        }
+
+        var schema = response?["content"]?[mediaType]?["schema"]
             ?? throw new InvalidOperationException(
                 $"Contract has no '{mediaType}' response {statusCode} for operation '{operationId}'.");
 

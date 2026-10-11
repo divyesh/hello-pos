@@ -71,10 +71,13 @@ Versions (2026-10-11, pinned): `Microsoft.AspNetCore.Identity.EntityFrameworkCor
 - New session setting `pos.owner_id` and function `pos.current_owner_id()`, set by the session interceptor
   from the signed-in owner (claim `owner_id`) alongside `pos.business_id`.
 - New table `pos.business_owners (business_id, id, owner_id, created_at)`: business-owned (feature 003
-  conventions), unique `(business_id, owner_id)`, policy
-  `business_scope`: `business_id = pos.current_business_id() OR owner_id = pos.current_owner_id()`.
-- `pos.businesses` policy becomes: `id = pos.current_business_id() OR EXISTS (SELECT 1 FROM pos.business_owners bo WHERE bo.business_id = businesses.id AND bo.owner_id = pos.current_owner_id())`.
+  conventions, policy `business_scope`), unique `(business_id, owner_id)`, plus a read-only policy
+  `owner_read` (`FOR SELECT USING owner_id = pos.current_owner_id()`).
+- `pos.businesses` keeps its `business_scope` policy and gains read-only `owner_read`: `EXISTS (SELECT 1
+  FROM pos.business_owners bo WHERE bo.business_id = businesses.id AND bo.owner_id = pos.current_owner_id())`.
   So a signed-in owner sees exactly their businesses before opening one (FR-012), and nothing else.
+  Owner access is read-only: every write runs in a session acting as the business, after the API has
+  checked ownership, so an owner session cannot plant rows (e.g. an ownership link) in another business.
 - **Creating a business**: the endpoint generates the id, then within one transaction acts as that new
   business (sets the current business to the id it just created) to insert `businesses` and the
   `business_owners` row. The id comes from the server, never from the request.

@@ -1,3 +1,4 @@
+using HelloPos.Kernel.Businesses;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,6 +17,7 @@ public sealed class BusinessConfiguration : IEntityTypeConfiguration<Business>
             t.HasCheckConstraint("ck_businesses_pricing_mode", "pricing_mode IN ('tax_inclusive', 'tax_exclusive')");
             t.HasCheckConstraint("ck_businesses_financial_year_start_month", "financial_year_start_month BETWEEN 1 AND 12");
             t.HasCheckConstraint("ck_businesses_name", "char_length(name) BETWEEN 1 AND 200");
+            t.HasCheckConstraint("ck_businesses_cash_rounding_step", "cash_rounding_step IN (0, 0.05, 0.10, 1.00)");
         });
 
         builder.HasKey(b => b.Id);
@@ -29,6 +31,7 @@ public sealed class BusinessConfiguration : IEntityTypeConfiguration<Business>
                 value => value == "tax_inclusive" ? PricingMode.TaxInclusive : PricingMode.TaxExclusive)
             .HasMaxLength(20);
         builder.Property(b => b.TimeZone).HasMaxLength(64);
+        builder.Property(b => b.CashRoundingStep).HasPrecision(19, 4).HasDefaultValue(0m);
         builder.Property(b => b.CreatedAt).HasDefaultValueSql("now()");
         builder.Property(b => b.UpdatedAt).HasDefaultValueSql("now()");
     }

@@ -1,12 +1,18 @@
+using System.Net;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using HelloPos.Api.Infrastructure;
+using HelloPos.Api.Infrastructure.Identity;
+using HelloPos.Api.Infrastructure.Identity.Email;
 using HelloPos.Api.Infrastructure.Persistence;
 using HelloPos.Api.Infrastructure.Tenancy;
+using HelloPos.Api.Tests.Infrastructure;
 using HelloPos.Api.Tests.Infrastructure.Database;
 using HelloPos.Api.Tests.Tenancy.Samples;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -22,23 +28,46 @@ namespace HelloPos.Api.Tests.Tenancy;
 /// Requests authenticate through a test-only scheme: header <see cref="TestAuthHandler.Header"/>
 /// becomes an authenticated identity with a <c>business_id</c> claim, so the production
 /// <see cref="ClaimsCurrentBusiness"/> is what decides the current business (spec FR-006, FR-007).
+/// Requests without that header use the real owner session cookie (feature 005); each
+/// <see cref="OwnerClient"/> keeps its own cookies. Emails are captured in <see cref="Emails"/>, the
+/// clock is <see cref="Clock"/>, and the owner rate limit is raised unless a test sets it.
 /// </summary>
 public sealed class TenancyApp : IAsyncDisposable
 {
+    public const string DefaultPassword = "a long passphrase nobody uses";
+
+    private const string TestOrSession = "TestOrSession";
+
     private readonly WebApplicationFactory<Program> factory;
 
-    private TenancyApp(DatabaseLogins logins, int maxPoolSize, Action<IServiceCollection, DatabaseLogins>? configureServices)
+    private TenancyApp(
+        DatabaseLogins logins, int maxPoolSize, Action<IServiceCollection, DatabaseLogins>? configureServices,
+        IReadOnlyDictionary<string, string?>? settings)
     {
         Logins = logins;
         AppConnectionString = new NpgsqlConnectionStringBuilder(logins.App) { MaxPoolSize = maxPoolSize }.ConnectionString;
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseSetting("ConnectionStrings:HelloPos", AppConnectionString);
+            builder.UseSetting("RateLimits:OwnerAuthPerMinute", "100000");
+            foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
+            {
+                builder.UseSetting(key, value);
+            }
+
             builder.ConfigureTestServices(services =>
             {
                 services.AddDbContext<SampleDbContext>(o => o.UseHelloPosDatabase(AppConnectionString));
                 services.AddSingleton<IEndpointMapper, SampleEndpoints>();
-                services.AddAuthentication(TestAuthHandler.SchemeName)
+                services.AddSingleton<IEmailSender>(Emails);
+                services.AddSingleton<TimeProvider>(Clock);
+
+                // The test header when present, otherwise the real owner session cookie.
+                services.AddAuthentication(TestOrSession)
+                    .AddPolicyScheme(TestOrSession, TestOrSession, o => o.ForwardDefaultSelector = context =>
+                        context.Request.Headers.ContainsKey(TestAuthHandler.Header)
+                            ? TestAuthHandler.SchemeName
+                            : IdentityConstants.ApplicationScheme)
                     .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
                 configureServices?.Invoke(services, logins);
             });
@@ -49,14 +78,68 @@ public sealed class TenancyApp : IAsyncDisposable
 
     public string AppConnectionString { get; }
 
+    public InMemoryEmailSender Emails { get; } = new();
+
+    public TestClock Clock { get; } = new();
+
     public static async Task<TenancyApp> CreateAsync(
-        PostgresFixture postgres, int maxPoolSize = 20, Action<IServiceCollection, DatabaseLogins>? configureServices = null)
+        PostgresFixture postgres, int maxPoolSize = 20, Action<IServiceCollection, DatabaseLogins>? configureServices = null,
+        IReadOnlyDictionary<string, string?>? settings = null)
     {
         var logins = await postgres.CreateEmptyDatabaseAsync();
         await new Migrator(Microsoft.Extensions.Logging.Abstractions.NullLogger<Migrator>.Instance)
             .RunAsync(logins.Settings, CancellationToken.None);
         await SampleSchema.CreateAsync(logins.Migrator);
-        return new TenancyApp(logins, maxPoolSize, configureServices);
+        return new TenancyApp(logins, maxPoolSize, configureServices, settings);
+    }
+
+    /// <summary>
+    /// A browser-like client for the owner endpoints: keeps its own cookies and sends the CSRF header
+    /// (<c>X-HelloPos-Client: web</c>). Not signed in until it signs in.
+    /// </summary>
+    public HttpClient OwnerClient(bool withClientHeader = true) => OwnerClient(withClientHeader, sessionCookie: null);
+
+    /// <summary>
+    /// With <paramref name="sessionCookie"/> (a <c>name=value</c> pair from a <c>Set-Cookie</c>
+    /// header), every request sends that session and the client stores no cookies of its own.
+    /// </summary>
+    public HttpClient OwnerClient(bool withClientHeader, string? sessionCookie)
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = sessionCookie is null });
+        if (withClientHeader)
+        {
+            client.DefaultRequestHeaders.Add(RequireClientHeaderExtensions.HeaderName, RequireClientHeaderExtensions.WebClient);
+        }
+
+        if (sessionCookie is not null)
+        {
+            client.DefaultRequestHeaders.Add("Cookie", sessionCookie);
+        }
+
+        return client;
+    }
+
+    /// <summary>The session cookie (<c>name=value</c>) a response set, or null.</summary>
+    public static string? SessionCookieOf(HttpResponseMessage response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return response.Headers.TryGetValues("Set-Cookie", out var values)
+            ? values.Select(v => v.Split(';')[0]).LastOrDefault(v => v.StartsWith(IdentitySetup.CookieName + "=", StringComparison.Ordinal))
+            : null;
+    }
+
+    /// <summary>Signs up <paramref name="email"/>, follows the verification link and signs in; returns that client.</summary>
+    public async Task<HttpClient> SignUpVerifiedOwnerAsync(string email, string password = DefaultPassword, string displayName = "Owner")
+    {
+        var client = OwnerClient();
+        await ExpectAsync(HttpStatusCode.Accepted,
+            await client.PostAsJsonAsync("/owner/sign-up", new { displayName, email, password }));
+        var (ownerId, token) = InMemoryEmailSender.LinkOf(Emails.Last(email, OwnerEmails.VerificationKind));
+        await ExpectAsync(HttpStatusCode.NoContent,
+            await client.PostAsJsonAsync("/owner/verify-email", new { ownerId, token }));
+        await ExpectAsync(HttpStatusCode.NoContent,
+            await client.PostAsJsonAsync("/owner/sign-in", new { email, password }));
+        return client;
     }
 
     /// <summary>An HTTP client acting as <paramref name="businessId"/>, or anonymous when null.</summary>
@@ -88,12 +171,22 @@ public sealed class TenancyApp : IAsyncDisposable
             Name = name,
             CountryCode = "IN",
             CurrencyCode = "INR",
-            PricingMode = HelloPos.Api.Features.Businesses.PricingMode.TaxInclusive,
+            PricingMode = HelloPos.Kernel.Businesses.PricingMode.TaxInclusive,
             FinancialYearStartMonth = 4,
             TimeZone = "Asia/Kolkata",
         });
         await db.SaveChangesAsync();
         return id;
+    }
+
+    private static async Task ExpectAsync(HttpStatusCode expected, HttpResponseMessage response)
+    {
+        if (response.StatusCode != expected)
+        {
+            throw new InvalidOperationException(
+                $"{response.RequestMessage?.RequestUri} returned {(int)response.StatusCode}, expected {(int)expected}: "
+                + await response.Content.ReadAsStringAsync());
+        }
     }
 
     public async ValueTask DisposeAsync()
