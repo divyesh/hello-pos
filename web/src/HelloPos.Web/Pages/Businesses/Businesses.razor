@@ -65,7 +65,7 @@
             {
                 <MudPaper Outlined="true" Class="pa-6" Style="max-width: 36rem;">
                     <MudText Typo="Typo.h6" GutterBottom="true">New business</MudText>
-                    <BusinessForm OnSubmit="CreateAsync" ServerErrors="serverErrors" FormError="formError" Busy="busy" />
+                    <BusinessForm OnSubmit="CreateAsync" ServerErrors="serverErrors" FormError="@formError" Busy="busy" />
                 </MudPaper>
             }
             else

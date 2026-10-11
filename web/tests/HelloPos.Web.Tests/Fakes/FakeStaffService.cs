@@ -45,6 +45,31 @@ public sealed class FakeStaffService : IStaffService
         return Task.FromResult(NextAdd);
     }
 
+    public List<(Guid Id, string What)> Changes { get; } = [];
+
+    public OwnerActionResult NextChange { get; set; } = OwnerActionResult.Success;
+
+    public Task<OwnerActionResult> UpdateAsync(Guid pageBusiness, StaffListItem person, string displayName, StaffRole role, CancellationToken cancellationToken = default) =>
+        Change(person, $"update {displayName} {role} v{person.Version}", p => p with { DisplayName = displayName, Role = role });
+
+    public Task<OwnerActionResult> SetActiveAsync(Guid pageBusiness, StaffListItem person, bool active, CancellationToken cancellationToken = default) =>
+        Change(person, $"{(active ? "reactivate" : "deactivate")} v{person.Version}", p => p with { Active = active });
+
+    public Task<OwnerActionResult> SetPinAsync(Guid pageBusiness, StaffListItem person, string posUsername, string pin, CancellationToken cancellationToken = default) =>
+        Change(person, $"pin {posUsername} {pin} v{person.Version}", p => p with { PosUsername = posUsername, HasPin = true });
+
+    private Task<OwnerActionResult> Change(StaffListItem person, string what, Func<StaffListItem, StaffListItem> apply)
+    {
+        Changes.Add((person.Id, what));
+        if (NextChange is OwnerActionResult.Succeeded)
+        {
+            var index = People.FindIndex(p => p.Id == person.Id);
+            People[index] = apply(People[index]) with { Version = People[index].Version + 1 };
+        }
+
+        return Task.FromResult(NextChange);
+    }
+
     public Task<LoadResult<IReadOnlyList<InvitationItem>>> ListInvitationsAsync(Guid pageBusiness, CancellationToken cancellationToken = default) =>
         Task.FromResult<LoadResult<IReadOnlyList<InvitationItem>>>(new LoadResult<IReadOnlyList<InvitationItem>>.Loaded([.. Invitations]));
 

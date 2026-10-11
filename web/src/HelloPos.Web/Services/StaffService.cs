@@ -36,6 +36,12 @@ public interface IStaffService
 
     Task<OwnerActionResult> AddAsync(Guid pageBusiness, string displayName, StaffRole role, string posUsername, string pin, CancellationToken cancellationToken = default);
 
+    Task<OwnerActionResult> UpdateAsync(Guid pageBusiness, StaffListItem person, string displayName, StaffRole role, CancellationToken cancellationToken = default);
+
+    Task<OwnerActionResult> SetActiveAsync(Guid pageBusiness, StaffListItem person, bool active, CancellationToken cancellationToken = default);
+
+    Task<OwnerActionResult> SetPinAsync(Guid pageBusiness, StaffListItem person, string posUsername, string pin, CancellationToken cancellationToken = default);
+
     Task<LoadResult<IReadOnlyList<InvitationItem>>> ListInvitationsAsync(Guid pageBusiness, CancellationToken cancellationToken = default);
 
     Task<OwnerActionResult> InviteAsync(Guid pageBusiness, string email, StaffRole role, string displayName, CancellationToken cancellationToken = default);
@@ -73,6 +79,37 @@ public sealed partial class StaffService(HttpClient http, ILogger<StaffService> 
                 Pin = pin,
             },
             c => c.Headers.Add(BusinessService.BusinessHeader, pageBusiness.ToString()), cancellationToken));
+
+    public Task<OwnerActionResult> UpdateAsync(Guid pageBusiness, StaffListItem person, string displayName, StaffRole role, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(person);
+        return OwnerAccountService.RunAsync(http, logger, "update-staff", () => ApiClients.Create(http).Staff[person.Id].PutAsync(
+            new StaffUpdate
+            {
+                DisplayName = displayName,
+                Role = Enum.Parse<StaffUpdate_role>(role.ToString()),
+                Version = person.Version,
+            },
+            c => c.Headers.Add(BusinessService.BusinessHeader, pageBusiness.ToString()), cancellationToken));
+    }
+
+    public Task<OwnerActionResult> SetActiveAsync(Guid pageBusiness, StaffListItem person, bool active, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(person);
+        var body = new StaffVersion { Version = person.Version };
+        var item = ApiClients.Create(http).Staff[person.Id];
+        return OwnerAccountService.RunAsync(http, logger, active ? "reactivate-staff" : "deactivate-staff", () => active
+            ? item.Reactivate.PostAsync(body, c => c.Headers.Add(BusinessService.BusinessHeader, pageBusiness.ToString()), cancellationToken)
+            : item.Deactivate.PostAsync(body, c => c.Headers.Add(BusinessService.BusinessHeader, pageBusiness.ToString()), cancellationToken));
+    }
+
+    public Task<OwnerActionResult> SetPinAsync(Guid pageBusiness, StaffListItem person, string posUsername, string pin, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(person);
+        return OwnerAccountService.RunAsync(http, logger, "set-staff-pin", () => ApiClients.Create(http).Staff[person.Id].Pin.PutAsync(
+            new StaffPin { PosUsername = posUsername, Pin = pin, Version = person.Version },
+            c => c.Headers.Add(BusinessService.BusinessHeader, pageBusiness.ToString()), cancellationToken));
+    }
 
     public Task<LoadResult<IReadOnlyList<InvitationItem>>> ListInvitationsAsync(Guid pageBusiness, CancellationToken cancellationToken = default) =>
         LoadAsync<IReadOnlyList<InvitationItem>>("list-invitations", async () =>

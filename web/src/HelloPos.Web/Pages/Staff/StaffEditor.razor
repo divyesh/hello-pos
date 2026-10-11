@@ -1,0 +1,132 @@
+@using HelloPos.Kernel.Staff
+@using HelloPos.Web.Pages.Businesses
+
+@* Edit one person (feature 006, US2): name and role, or POS username and PIN. Only actions and roles the
+   kernel rule table allows for the signed-in role are offered; the API checks again. *@
+
+<MudPaper Outlined="true" Class="pa-4 mt-2" data-testid="staff-editor">
+    @if (Mode == StaffEditorMode.Details)
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Edit @Person.DisplayName</MudText>
+        <MudTextField data-testid="edit-name" @bind-Value="displayName" Label="Name" MaxLength="100"
+                      Error="@Has("displayName")" ErrorText="@For("displayName")" />
+        @if (RoleOptions.Count > 1)
+        {
+            <div class="mt-4">
+                <MudText Typo="Typo.caption">Role</MudText>
+                <select data-testid="edit-role" class="hp-select" value="@role" @onchange="e => role = Enum.Parse<StaffRole>((string)e.Value!)">
+                    @foreach (var option in RoleOptions)
+                    {
+                        <option value="@option">@option</option>
+                    }
+                </select>
+                <FieldError Message="@For("role")" />
+            </div>
+        }
+    }
+    else
+    {
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">POS sign-in for @Person.DisplayName</MudText>
+        <MudTextField data-testid="edit-username" @bind-Value="posUsername" Label="POS username"
+                      Error="@Has("posUsername")" ErrorText="@For("posUsername")" />
+        <MudTextField data-testid="edit-pin" @bind-Value="pin" Label="New PIN" InputType="InputType.Password" Class="mt-2"
+                      HelperText="4 to 6 digits. The old PIN stops working at once."
+                      Error="@Has("pin")" ErrorText="@For("pin")" />
+    }
+
+    @if (FormError is not null)
+    {
+        <MudAlert data-testid="edit-error" Severity="Severity.Error" Dense="true" Class="mt-3">@FormError</MudAlert>
+    }
+
+    <div class="mt-4">
+        <MudButton data-testid="save-person" Variant="Variant.Filled" Color="Color.Primary" Disabled="Busy" OnClick="SaveAsync">Save</MudButton>
+        <MudButton data-testid="cancel-edit" Variant="Variant.Text" Class="ml-2" OnClick="OnCancel">Cancel</MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    private string displayName = string.Empty;
+    private StaffRole role;
+    private string posUsername = string.Empty;
+    private string pin = string.Empty;
+    private Dictionary<string, string> localErrors = [];
+
+    [Parameter, EditorRequired]
+    public StaffListItem Person { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public StaffRole ActorRole { get; set; }
+
+    [Parameter]
+    public StaffEditorMode Mode { get; set; }
+
+    [Parameter]
+    public EventCallback<(string DisplayName, StaffRole Role)> OnSaveDetails { get; set; }
+
+    [Parameter]
+    public EventCallback<(string PosUsername, string Pin)> OnSetPin { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public IReadOnlyDictionary<string, string>? ServerErrors { get; set; }
+
+    [Parameter]
+    public string? FormError { get; set; }
+
+    [Parameter]
+    public bool Busy { get; set; }
+
+    /// <summary>The person's current role, plus every role the actor may give them.</summary>
+    private List<StaffRole> RoleOptions =>
+        Enum.GetValues<StaffRole>()
+            .Where(r => r == Person.Role || (StaffRules.Can(ActorRole, StaffAction.ChangeRole, Person.Role, r)
+                && (!StaffRules.RequiresAccount(r) || Person.HasBackOfficeAccess)))
+            .ToList();
+
+    protected override void OnParametersSet()
+    {
+        displayName = Person.DisplayName;
+        role = Person.Role;
+        posUsername = Person.PosUsername ?? string.Empty;
+        pin = string.Empty;
+        localErrors = [];
+    }
+
+    private bool Has(string field) => For(field) is not null;
+
+    private string? For(string field) => localErrors.GetValueOrDefault(field) ?? ServerErrors?.GetValueOrDefault(field);
+
+    private async Task SaveAsync()
+    {
+        localErrors = [];
+        if (Mode == StaffEditorMode.Details)
+        {
+            if (StaffRules.ValidateDisplayName(displayName) is { } nameError)
+            {
+                localErrors["displayName"] = nameError;
+                return;
+            }
+
+            await OnSaveDetails.InvokeAsync((displayName.Trim(), role));
+            return;
+        }
+
+        if (StaffRules.ValidatePosUsername(posUsername) is { } usernameError)
+        {
+            localErrors["posUsername"] = usernameError;
+        }
+
+        if (PinRules.Validate(pin) is { } pinError)
+        {
+            localErrors["pin"] = pinError;
+        }
+
+        if (localErrors.Count == 0)
+        {
+            await OnSetPin.InvokeAsync((posUsername.Trim(), pin));
+        }
+    }
+}

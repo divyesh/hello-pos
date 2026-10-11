@@ -37,6 +37,11 @@ else
         }
     </div>
 
+    @if (changeMessage is not null)
+    {
+        <MudAlert data-testid="change-message" Severity="@(changeFailed ? Severity.Error : Severity.Success)" Dense="true" Class="mb-3">@changeMessage</MudAlert>
+    }
+
     @if (loadError is not null)
     {
         <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
@@ -66,7 +71,31 @@ else
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactive</MudChip>
                             }
+                            @if (Allowed(StaffAction.Rename, person) || Allowed(StaffAction.ChangeRole, person))
+                            {
+                                <MudButton data-testid="edit" Size="Size.Small" Variant="Variant.Text" OnClick="() => Edit(person, StaffEditorMode.Details)">Edit</MudButton>
+                            }
+                            @if (Allowed(StaffAction.SetPin, person))
+                            {
+                                <MudButton data-testid="pin" Size="Size.Small" Variant="Variant.Text" OnClick="() => Edit(person, StaffEditorMode.Pin)">PIN</MudButton>
+                            }
+                            @if (person.Active && Allowed(StaffAction.Deactivate, person))
+                            {
+                                <MudButton data-testid="deactivate" Size="Size.Small" Variant="Variant.Text" Color="Color.Error" Disabled="busy"
+                                           OnClick="() => SetActiveAsync(person, false)">Deactivate</MudButton>
+                            }
+                            @if (!person.Active && Allowed(StaffAction.Reactivate, person))
+                            {
+                                <MudButton data-testid="reactivate" Size="Size.Small" Variant="Variant.Text" Disabled="busy"
+                                           OnClick="() => SetActiveAsync(person, true)">Reactivate</MudButton>
+                            }
                         </div>
+                        @if (editing?.Id == person.Id)
+                        {
+                            <StaffEditor Person="person" ActorRole="actorRole!.Value" Mode="editMode" Busy="busy"
+                                         ServerErrors="editErrors" FormError="@editError"
+                                         OnSaveDetails="SaveDetailsAsync" OnSetPin="SetPinAsync" OnCancel="() => editing = null" />
+                        }
                     </MudListItem>
                 }
             </MudList>
@@ -81,7 +110,7 @@ else
                 {
                     <MudAlert data-testid="added" Severity="Severity.Success" Dense="true" Class="mb-3">@added was added.</MudAlert>
                 }
-                <AddStaffForm @ref="addForm" ActorRole="actorRole!.Value" OnSubmit="AddAsync" ServerErrors="addErrors" FormError="addError" Busy="busy" />
+                <AddStaffForm @ref="addForm" ActorRole="actorRole!.Value" OnSubmit="AddAsync" ServerErrors="addErrors" FormError="@addError" Busy="busy" />
             </MudPaper>
         </MudItem>
 
@@ -151,6 +180,65 @@ else
     private IReadOnlyDictionary<string, string> inviteErrors = new Dictionary<string, string>();
     private string? inviteError;
     private string? invited;
+    private StaffListItem? editing;
+    private StaffEditorMode editMode;
+    private IReadOnlyDictionary<string, string>? editErrors;
+    private string? editError;
+    private string? changeMessage;
+    private bool changeFailed;
+
+    private bool Allowed(StaffAction action, StaffListItem person) =>
+        actorRole is { } actor && StaffRules.Can(actor, action, person.Role,
+            action == StaffAction.ChangeRole ? (person.Role == StaffRole.Cashier ? StaffRole.Manager : StaffRole.Cashier) : null);
+
+    private void Edit(StaffListItem person, StaffEditorMode mode)
+    {
+        editing = person;
+        editMode = mode;
+        editErrors = null;
+        editError = null;
+    }
+
+    private Task SaveDetailsAsync((string DisplayName, StaffRole Role) details) =>
+        ApplyAsync(StaffApi.UpdateAsync(pageBusiness, editing!, details.DisplayName, details.Role), $"{details.DisplayName} was saved.", inEditor: true);
+
+    private Task SetPinAsync((string PosUsername, string Pin) credentials) =>
+        ApplyAsync(StaffApi.SetPinAsync(pageBusiness, editing!, credentials.PosUsername, credentials.Pin), $"The PIN for {editing!.DisplayName} was changed.", inEditor: true);
+
+    private Task SetActiveAsync(StaffListItem person, bool active) =>
+        ApplyAsync(StaffApi.SetActiveAsync(pageBusiness, person, active),
+            $"{person.DisplayName} was {(active ? "reactivated" : "deactivated")}.", inEditor: false);
+
+    /// <summary>Shows the outcome; a refusal (stale edit, last owner) reloads the list so the page shows the truth.</summary>
+    private async Task ApplyAsync(Task<OwnerActionResult> call, string success, bool inEditor)
+    {
+        busy = true;
+        changeMessage = null;
+        editErrors = null;
+        editError = null;
+        var result = await call;
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                (changeMessage, changeFailed, editing) = (success, false, null);
+                await LoadAsync();
+                break;
+            case OwnerActionResult.FieldErrors fields when inEditor:
+                editErrors = fields.Errors;
+                break;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                break;
+            case OwnerActionResult.Failed failed:
+                (changeMessage, changeFailed, editing) = (failed.Message, true, null);
+                await LoadAsync();
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                (changeMessage, changeFailed) = (string.Join(" ", fields.Errors.Values), true);
+                break;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

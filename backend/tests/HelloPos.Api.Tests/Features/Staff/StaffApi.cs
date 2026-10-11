@@ -26,6 +26,27 @@ internal static class StaffApi
     public static Task<HttpResponseMessage> GetAsync(HttpClient client, Guid business, Guid staffId) =>
         SendAsync(client, HttpMethod.Get, $"/staff/{staffId}", business);
 
+    public static Task<HttpResponseMessage> UpdateAsync(HttpClient client, Guid business, Guid staffId, string displayName, string role, int version) =>
+        SendAsync(client, HttpMethod.Put, $"/staff/{staffId}", business,
+            new JsonObject { ["displayName"] = displayName, ["role"] = role, ["version"] = version });
+
+    public static Task<HttpResponseMessage> DeactivateAsync(HttpClient client, Guid business, Guid staffId, int version) =>
+        SendAsync(client, HttpMethod.Post, $"/staff/{staffId}/deactivate", business, new JsonObject { ["version"] = version });
+
+    public static Task<HttpResponseMessage> ReactivateAsync(HttpClient client, Guid business, Guid staffId, int version) =>
+        SendAsync(client, HttpMethod.Post, $"/staff/{staffId}/reactivate", business, new JsonObject { ["version"] = version });
+
+    public static Task<HttpResponseMessage> SetPinAsync(HttpClient client, Guid business, Guid staffId, string posUsername, string pin, int version) =>
+        SendAsync(client, HttpMethod.Put, $"/staff/{staffId}/pin", business,
+            new JsonObject { ["posUsername"] = posUsername, ["pin"] = pin, ["version"] = version });
+
+    /// <summary>The person's current version (for change requests).</summary>
+    public static async Task<int> VersionAsync(HttpClient client, Guid business, Guid staffId)
+    {
+        using var response = await GetAsync(client, business, staffId);
+        return (int)JsonNode.Parse(await response.Content.ReadAsStringAsync(Ct))!["version"]!;
+    }
+
     public static Task<HttpResponseMessage> InviteAsync(HttpClient client, Guid business, string email, string role = "manager", string displayName = "Invited") =>
         SendAsync(client, HttpMethod.Post, "/staff/invitations", business,
             new JsonObject { ["email"] = email, ["role"] = role, ["displayName"] = displayName });

@@ -73,10 +73,10 @@ active, the invitation pending; the invited person accepts and can open the busi
 **Independent test**: promote a cashier to manager; deactivate and confirm the PIN no longer verifies;
 reactivate and confirm it does; reset a PIN; a stale edit is refused.
 
-- [ ] T017 [P] [US2] Contract: `PUT /staff/{staffId}` (`StaffUpdate`: displayName, role, posUsername, version), `POST /staff/{staffId}/deactivate`, `/reactivate` (version), `PUT /staff/{staffId}/pin` (pin, version); 409 responses
-- [ ] T018 [P] [US2] `.../Features/Staff/ChangeStaffTests.cs`: role change, rename, username change saved and audited; deactivate → inactive, `VerifyPin` fails at once (SC-004), still listed under inactive; reactivate → verifies again, same id; PIN reset → old fails, new verifies, `pin_changed_at` set; stale version → 409 `staff-changed`, nothing saved; no delete operation exists; audit rows for every change, none containing a PIN; `ChangeOwnPin` (service) needs the current PIN; isolation harness gains modify cases (update, deactivate, reactivate, set PIN on B's staff → 404, unchanged)
-- [ ] T019 [US2] Slices `Features/Staff/{UpdateStaff,DeactivateStaff,ReactivateStaff,SetStaffPin}.cs` with version checks and audit (makes T018 pass)
-- [ ] T020 [US2] Web: edit staff (name, username, role per kernel rules), deactivate/reactivate, set/reset PIN dialog (PIN never shown again), "changed by someone else, reload" on 409; bUnit tests
+- [X] T017 [P] [US2] Contract: `PUT /staff/{staffId}` (`StaffUpdate`: displayName, role, posUsername, version), `POST /staff/{staffId}/deactivate`, `/reactivate` (version), `PUT /staff/{staffId}/pin` (pin, version); 409 responses
+- [X] T018 [P] [US2] `.../Features/Staff/ChangeStaffTests.cs`: role change, rename, username change saved and audited; deactivate → inactive, `VerifyPin` fails at once (SC-004), still listed under inactive; reactivate → verifies again, same id; PIN reset → old fails, new verifies, `pin_changed_at` set; stale version → 409 `staff-changed`, nothing saved; no delete operation exists; audit rows for every change, none containing a PIN; `ChangeOwnPin` (service) needs the current PIN; isolation harness gains modify cases (update, deactivate, reactivate, set PIN on B's staff → 404, unchanged)
+- [X] T019 [US2] Slices `Features/Staff/{UpdateStaff,DeactivateStaff,ReactivateStaff,SetStaffPin}.cs` with version checks and audit (makes T018 pass)
+- [X] T020 [US2] Web: edit staff (name, username, role per kernel rules), deactivate/reactivate, set/reset PIN dialog (PIN never shown again), "changed by someone else, reload" on 409; bUnit tests
 
 ---
 

@@ -46,6 +46,7 @@ public sealed class BusinessesPageTests : BunitContext
 
         Assert.NotNull(page.Find("[data-testid=no-businesses]"));
         Assert.NotNull(page.Find("[data-testid=save]"));
+        Assert.Empty(page.FindAll("[data-testid=form-error]")); // nothing sent yet: no error
     }
 
     [Fact]

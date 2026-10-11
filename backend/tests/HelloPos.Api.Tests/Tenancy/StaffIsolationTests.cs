@@ -13,6 +13,7 @@ namespace HelloPos.Api.Tests.Tenancy;
 public sealed class StaffIsolationTests(PostgresFixture postgres) : IsolationTests(postgres)
 {
     private readonly Dictionary<Guid, string> sessions = [];
+    private readonly Dictionary<string, Guid> invitations = [];
 
     protected override async Task<(Guid A, Guid B)> CreateBusinessesAsync() =>
         (await OwnerWithOpenBusinessAsync("x@example.com", "Business A"),
@@ -31,9 +32,10 @@ public sealed class StaffIsolationTests(PostgresFixture postgres) : IsolationTes
             ids.Add(Guid.Parse((string)JsonNode.Parse(await response.Content.ReadAsStringAsync(Ct))!["id"]!));
         }
 
+        // Invitations are checked separately: the harness's records are staff ids readable at /staff/{id}.
         using var invited = await StaffApi.InviteAsync(asBusiness, business, $"{label}-invitee@example.com");
         invited.EnsureSuccessStatusCode();
-        ids.Add(Guid.Parse((string)JsonNode.Parse(await invited.Content.ReadAsStringAsync(Ct))!["id"]!));
+        invitations[label] = Guid.Parse((string)JsonNode.Parse(await invited.Content.ReadAsStringAsync(Ct))!["id"]!);
         return ids;
     }
 
@@ -41,10 +43,36 @@ public sealed class StaffIsolationTests(PostgresFixture postgres) : IsolationTes
     public Task ListStaff() => AssertCannotList("GET /staff", c => StaffApi.ListAsync(c, BusinessA, "all"));
 
     [Fact]
-    public Task ListInvitations() => AssertCannotList("GET /staff/invitations", c => StaffApi.ListInvitationsAsync(c, BusinessA));
+    public async Task ListInvitations()
+    {
+        using var asA = AsA();
+        using var response = await StaffApi.ListInvitationsAsync(asA, BusinessA);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Contains(invitations["A"].ToString(), body, StringComparison.Ordinal);
+        if (body.Contains(invitations["B"].ToString(), StringComparison.Ordinal))
+        {
+            throw new IsolationViolationException($"GET /staff/invitations: acting as business A, the response contained business B's invitation {invitations["B"]}.");
+        }
+    }
 
     [Fact]
     public Task GetStaff() => AssertCannotRead("GET /staff/{id}", id => $"/staff/{id}");
+
+    [Fact]
+    public Task UpdateStaff() => AssertCannotModify("PUT /staff/{id}",
+        id => Json(HttpMethod.Put, $"/staff/{id}", new JsonObject { ["displayName"] = "Taken", ["role"] = "manager", ["version"] = 1 }),
+        id => $"/staff/{id}");
+
+    [Fact]
+    public Task DeactivateStaff() => AssertCannotModify("POST /staff/{id}/deactivate",
+        id => Json(HttpMethod.Post, $"/staff/{id}/deactivate", new JsonObject { ["version"] = 1 }),
+        id => $"/staff/{id}");
+
+    [Fact]
+    public Task SetPin() => AssertCannotModify("PUT /staff/{id}/pin",
+        id => Json(HttpMethod.Put, $"/staff/{id}/pin", new JsonObject { ["posUsername"] = "taken", ["pin"] = "9071", ["version"] = 1 }),
+        id => $"/staff/{id}");
 
     [Fact]
     public async Task NamingTheOtherBusinessInTheHeader_IsRefused()
@@ -55,6 +83,9 @@ public sealed class StaffIsolationTests(PostgresFixture postgres) : IsolationTes
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
+
+    private static HttpRequestMessage Json(HttpMethod method, string path, JsonObject body) =>
+        new(method, path) { Content = System.Net.Http.Json.JsonContent.Create(body) };
 
     private async Task<Guid> OwnerWithOpenBusinessAsync(string email, string name)
     {

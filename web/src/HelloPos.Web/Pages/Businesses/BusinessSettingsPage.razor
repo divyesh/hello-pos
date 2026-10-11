@@ -38,7 +38,7 @@ else if (settings is not null)
     }
 
     <MudPaper Outlined="true" Class="pa-6" Style="max-width: 36rem;">
-        <BusinessForm Initial="settings" OnSubmit="SaveAsync" ServerErrors="serverErrors" FormError="formError"
+        <BusinessForm Initial="settings" OnSubmit="SaveAsync" ServerErrors="serverErrors" FormError="@formError"
                       Busy="busy" SubmitText="Save changes" />
     </MudPaper>
 }
