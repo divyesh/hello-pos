@@ -1,0 +1,16 @@
+# Build context for container images is the repository root; send only what images need.
+.git
+.env
+.env.*
+!.env.example
+**/bin
+**/obj
+.artifacts
+android
+web
+specs
+.claude
+.specify
+infra
+scripts
+**/*.user

@@ -49,7 +49,28 @@ Prism 5.15.10 crashes in its default multi-process mode (`Cannot read properties
 
 ## Section 3: real API (User Story 3)
 
-Pending.
+| Check | Result |
+|-------|--------|
+| `up --api` builds the image and waits for `/health` | ✅ `API http://127.0.0.1:5080 (status: available, version 0.1.0-dev)`; build context 24 kB |
+| API reaches the database with the least-privilege login | ✅ `available` with `ConnectionStrings__HelloPos` using `hellopos_app` |
+| Database stopped → `degraded` | ✅ after 1 s; response in 0.03 s; four contract fields only |
+| Database started → `available` | ✅ immediately |
+| API logs in Seq without setup | ✅ request summaries plus `Database probe failed` (Warning) carrying the same trace id as its request |
+| Image runs as non-root | ✅ `User=1654` (chiseled, no shell) |
+| No secrets in the image | ✅ no `.env`; `appsettings*.json` hold only log levels and the dev CORS origin; no settings in image `Env` |
+
+## Section 4: automated tests
+
+✅ `scripts/dotnet.ps1 test --solution backend/HelloPos.slnx`: 15/15, including probe and `/health`
+tests against a real PostgreSQL 18.6 started by Testcontainers inside the SDK container (engine
+socket mounted for `test` runs).
+
+### Issue found and fixed
+
+Against a *hung* database (container paused), the probe took 6 s despite a 2 s cancellation:
+Npgsql's cancel request goes to the same hung server. Fixed: the probe bounds its wait with
+`Task.WaitAsync(2 s)` and abandons the query (cancelled by its own token, failure observed); the
+hung-server test now passes within 3 s.
 
 ## Section 5: Docker
 

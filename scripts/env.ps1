@@ -20,6 +20,7 @@ $ErrorActionPreference = 'Stop'
 
 $engine = if ($env:CONTAINER_ENGINE) { $env:CONTAINER_ENGINE } else { 'podman' }
 $env:PODMAN_COMPOSE_WARNING_LOGS = 'false'   # hide podman's "external compose provider" banner
+$env:COMPOSE_BAKE = 'false'                  # classic builds; Bake needs buildkit, which podman lacks
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $envFile = Join-Path $repoRoot '.env'
 $exampleFile = Join-Path $repoRoot '.env.example'

@@ -16,6 +16,7 @@ set -euo pipefail
 
 engine="${CONTAINER_ENGINE:-podman}"
 export PODMAN_COMPOSE_WARNING_LOGS=false
+export COMPOSE_BAKE=false   # classic builds; Bake needs buildkit, which podman lacks
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="$repo_root/.env"
 # A changed contract changes mock-api's configuration, so compose re-creates it (Prism reloads).

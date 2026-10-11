@@ -9,6 +9,7 @@
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageVersion Include="Serilog.Sinks.Seq" Version="9.1.0" />
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
   </ItemGroup>
 
   <!-- Web -->
@@ -28,5 +29,6 @@
     <PackageVersion Include="Microsoft.OpenApi" Version="3.10.2" />
     <PackageVersion Include="Microsoft.OpenApi.YamlReader" Version="3.10.2" />
     <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
   </ItemGroup>
 </Project>

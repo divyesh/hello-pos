@@ -1,5 +1,6 @@
 using System.Reflection;
 using HelloPos.Api.Infrastructure;
+using HelloPos.Api.Infrastructure.Database;
 
 namespace HelloPos.Api.Features.Health.GetHealth;
 
@@ -18,8 +19,18 @@ public static class GetHealthEndpoint
         return app;
     }
 
-    internal static GetHealthResponse Handle(TimeProvider clock) =>
-        new(Logging.ApplicationName, Version, HealthState.Available, clock.GetUtcNow().UtcDateTime);
+    /// <summary>
+    /// <c>degraded</c> when a configured database is unreachable (FR-013); the response never says why
+    /// (FR-014). The probe is bounded to 2 seconds, so this stays fast (SC-003).
+    /// </summary>
+    internal static async Task<GetHealthResponse> Handle(
+        TimeProvider clock, IDatabaseProbe database, CancellationToken cancellationToken)
+    {
+        var status = await database.IsReachableAsync(cancellationToken).ConfigureAwait(false)
+            ? HealthState.Available
+            : HealthState.Degraded;
+        return new(Logging.ApplicationName, Version, status, clock.GetUtcNow().UtcDateTime);
+    }
 
     private static string ReadVersion()
     {

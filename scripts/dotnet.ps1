@@ -72,5 +72,21 @@ foreach ($name in @('Seq__ServerUrl', 'Seq__ApiKey', 'ASPNETCORE_ENVIRONMENT')) 
     if ($value) { $runArgs += @('-e', "$name=$value") }
 }
 
+# Tests start throwaway containers (Testcontainers, e.g. a real PostgreSQL), so `test` runs get the
+# container engine's socket. Only for `test`: the socket gives full control of the engine.
+if ($rest.Count -gt 0 -and $rest[0] -eq 'test') {
+    $socket = if ($env:HELLOPOS_ENGINE_SOCKET) { $env:HELLOPOS_ENGINE_SOCKET }
+              elseif ($engine -eq 'docker') { '/var/run/docker.sock' }
+              else { '/run/podman/podman.sock' }
+    $runArgs += @(
+        '-v', "${socket}:/var/run/docker.sock",
+        '-e', 'DOCKER_HOST=unix:///var/run/docker.sock',
+        # Published ports of test containers are reached through the host gateway.
+        '-e', 'TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal',
+        # Ryuk (Testcontainers' cleanup sidecar) is unreliable under Podman; tests dispose their containers.
+        '-e', 'TESTCONTAINERS_RYUK_DISABLED=true'
+    )
+}
+
 & $engine @runArgs $image dotnet @rest
 exit $LASTEXITCODE
