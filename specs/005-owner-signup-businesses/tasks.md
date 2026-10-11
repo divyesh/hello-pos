@@ -81,9 +81,9 @@ in-memory email sender that exposes the last email per address.
 ## Phase 6: Polish
 
 - [X] T025 Run backend and web suites; all pass (existing + new)
-- [ ] T026 Run quickstart.md manual steps with Mailpit; record in `checklists/quickstart-results.md`
-- [ ] T027 [P] Update README (owners, Mailpit, sign-in) and `docs/tenancy.md` (owner dimension, `pos.owner_id`)
-- [ ] T028 Re-check the Constitution Check against delivered code; note deviations in plan.md
+- [X] T026 Run quickstart.md manual steps with Mailpit; record in `checklists/quickstart-results.md`
+- [X] T027 [P] Update README (owners, Mailpit, sign-in) and `docs/tenancy.md` (owner dimension, `pos.owner_id`)
+- [X] T028 Re-check the Constitution Check against delivered code; note deviations in plan.md
 
 ## Dependencies
 

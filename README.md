@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: Phase 0 in progress. Roadmap #1 (repository skeleton), #2 (local environment) and #3 (tenancy infrastructure) are done; no business features yet.
+> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 started: #5 owner sign-up and businesses (owners sign up, verify their email, sign in, create, open and edit businesses in the web back office).
 
 ## Applications
 
@@ -143,11 +143,11 @@ Debug builds allow plain HTTP for this; release builds do not.
 
 ### Local environment
 
-One command starts the services development needs (PostgreSQL, a mock API, Seq), with Podman
-or Docker (`CONTAINER_ENGINE=docker`):
+One command starts the services development needs (PostgreSQL, a mock API, Seq, Mailpit), with
+Podman or Docker (`CONTAINER_ENGINE=docker`):
 
 ```text
-scripts/env.ps1 up            # postgres, mock-api, seq; waits until healthy, prints addresses
+scripts/env.ps1 up            # postgres, mock-api, seq, mailpit; waits until healthy, prints addresses
 scripts/env.ps1 up --api      # also builds and runs the real API image
 scripts/env.ps1 status        # services and health
 scripts/env.ps1 logs [svc]    # follow logs
@@ -168,11 +168,20 @@ tables and migrations: [docs/tenancy.md](docs/tenancy.md).
 | PostgreSQL | `localhost:5432` | database `hellopos`; the API uses login `hellopos_app`, which can only connect to it |
 | Mock API | `http://localhost:4010` | serves `contracts/openapi.yaml` from its examples; picks up contract changes on `up` |
 | Seq | `http://localhost:5341` | API logs; no login locally |
+| Mailpit | `http://localhost:8025` (SMTP `1025`) | catches every email the API sends (verification, password reset); nothing reaches real inboxes |
 | API (`up --api`) | `http://localhost:5080` | the deployable image; `/health` says `degraded` when the database is unreachable |
 
 Ports bind to `127.0.0.1` only. To test on a physical Android device, set
 `HELLOPOS_BIND_ADDRESS=0.0.0.0` in `.env` (this also exposes Seq, which has no login, to your
 network; switch back afterwards).
+
+**Try the back office end to end**: `scripts/env.ps1 up --api`, then run the web app
+(`scripts/dotnet.ps1 -Port 5090 run --project web/src/HelloPos.Web`) and open
+`http://localhost:5090/sign-up` (use `localhost`, not `127.0.0.1`: the API accepts browser calls from
+`http://localhost:5090` only). Sign up, follow the link in Mailpit, sign in, create a business and
+open it. The session is an HttpOnly cookie set by the API; requests that change data also send the
+header `X-HelloPos-Client: web` (CSRF guard). Sign-in and sign-up are rate limited to 10 per minute
+per address (`RateLimits:OwnerAuthPerMinute`).
 
 **Build clients against the mock API**: web, set `Api:BaseUrl` to `http://localhost:4010/` in
 `web/src/HelloPos.Web/wwwroot/appsettings.Development.json`; Android, set

@@ -11,8 +11,40 @@ single mistake cannot leak data (Constitution, Principle III):
 | Composite keys | Links include `business_id`, so the database rejects cross-business references | `ConfigureBusinessOwned()` |
 | Row-level security | PostgreSQL itself shows and changes only the session's business, even for raw SQL | `pos.current_business_id()`, `BusinessSessionInterceptor` |
 
-Login arrives with roadmap #7. Until then nothing in production has a current business, so
-business endpoints answer `401`.
+Owners (feature 005) sign in to the web back office and open one of their businesses: the API checks
+ownership, then puts `business_id` in the session cookie, so every layer above works unchanged.
+Staff and device logins arrive with roadmap #7.
+
+## The owner dimension
+
+An owner account (schema `identity`, not business-owned) can own several businesses, linked by the
+business-owned table `pos.business_owners`. Before a business is opened, an owner must still see
+their own businesses (to list and choose one), so the session also carries the signed-in owner:
+
+| Piece | What it does |
+|-------|--------------|
+| `ICurrentOwner` | the `owner_id` claim of the session; never from request data |
+| `pos.owner_id`, `pos.current_owner_id()` | set by `BusinessSessionInterceptor` next to `pos.business_id` |
+| Policy `owner_read` on `businesses` and `business_owners` | **read-only**: an owner sees their own links and the businesses they own |
+
+Owner access never writes. Every change runs in a session acting as the business:
+
+- **Creating a business**: the server generates the id and saves the business and its ownership link
+  in one transaction through a context built with `FixedCurrentBusiness(id)`.
+- **Changing a business**: the owner opens it first (`POST /owner/businesses/{id}/open`, which checks
+  ownership and answers `404` for anything else), then edits it through `/business`.
+
+So an owner session cannot plant a row in a business it is not acting as, for example an ownership
+link to someone else's business. Opening is the one check that matters most: once `business_id` is in
+the session, row-level security trusts it, which is why `OwnerIsolationTests` and
+`OpenAndEditTests` cover it.
+
+Querying across businesses for one owner (the list, the ownership check) uses `AcrossAllBusinesses()`
+with an explicit owner filter; `owner_read` keeps it to that owner even if the filter were wrong.
+
+**Stale tabs**: business pages send `X-HelloPos-Business` with the business they were opened for.
+`RequireSameBusiness()` answers `409 business-changed` when the session has since opened another
+business. The header can only refuse a request; the business still comes from the session.
 
 ## Add a business-owned table
 
@@ -136,6 +168,6 @@ and would make the test meaningless.
 | Login | Used by | Rights |
 |-------|---------|--------|
 | admin (`POSTGRES_USER` locally) | bootstrap only | creates roles |
-| `hellopos_migrator` | `HelloPos.Api migrate` | owns schema `pos`; creates and alters tables |
-| `pos_app` (group, no login) | — | row read/write on `pos` tables (granted by default privileges) |
+| `hellopos_migrator` | `HelloPos.Api migrate` | owns schemas `pos` and `identity`; creates and alters tables |
+| `pos_app` (group, no login) | — | row read/write on `pos` and `identity` tables (granted by default privileges) |
 | `hellopos_app` | the API | member of `pos_app`; no schema rights; subject to row-level security |

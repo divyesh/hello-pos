@@ -22,6 +22,7 @@ builder.Services.AddHelloPosDatabase(builder.Configuration);
 builder.Services.AddOwnerIdentity(builder.Configuration, builder.Environment);
 builder.Services.AddOwnerEmail(builder.Configuration);
 builder.Services.AddEndpointMappers(typeof(Program).Assembly);
+builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
 builder.Services.AddExceptionHandler<PersistenceExceptionHandler>();
 
 var app = builder.Build();

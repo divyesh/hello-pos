@@ -42,7 +42,7 @@ validation implementation (kernel)
 
 | Principle | Applies here | Status |
 |-----------|--------------|--------|
-| I. Money Is Exact | `cash_rounding_step` numeric(19,4); rounding values exact. | Pass |
+| I. Money Is Exact | `cash_rounding_step` numeric(19,4) in the database; on the wire as integer minor units (`cashRoundingStepMinor`: 0, 5, 10, 100), per the money-on-the-wire rule. | Pass |
 | II | No sales. | N/A |
 | III. Tenant Isolation | Owner dimension in RLS; current business only from the cookie after an ownership check; business id from request never authoritative; isolation tests for every business endpoint. | Pass |
 | IV | No sales. | N/A |
@@ -50,10 +50,39 @@ validation implementation (kernel)
 | VI. Test-First | Tests before implementation per story, real PostgreSQL. | Pass |
 | VII. Vertical Slices | `Features/Owners/*` and `Features/Businesses/*` slices; Identity setup in infrastructure; web only via the API; validation shared via the kernel. | Pass |
 | VIII. Secure by Default | HttpOnly SameSite=Strict cookie, CSRF header, lockout, rate limits, slow hashing, breached-password list, sessions revoked on reset, no enumeration. Roles (owner/manager/cashier) arrive in #6. | Pass |
-| IX. No Silent Failures | Problem details for every failure; email send failures logged and surfaced as retryable. | Pass |
+| IX. No Silent Failures | Problem details for every failure, including unreadable request bodies (400, not 500). Email delivery failures are logged (kind only); the response stays `202` so it reveals nothing about the account (FR-005), and the owner can ask for a new link. | Pass (see deviation 5) |
 | X. Simplicity | Built-in Identity and rate limiting, no external IdP, no BFF. | Pass |
 
 Result: **pass** (re-checked after design).
+
+### Re-check against the delivered code (T028)
+
+Result: **pass**. Deviations from this plan, all recorded in research.md or data-model.md where they
+change the design:
+
+1. **Owner access in the database is read-only** (Principle III, tightening research R6). The plan
+   widened the `business_scope` policies to "the session's business or one the owner owns". As built,
+   `business_scope` is unchanged and a separate `FOR SELECT` policy `owner_read` lets an owner read
+   their links and businesses. Writes always run acting as the business, so an owner session cannot
+   plant an ownership link in someone else's business.
+2. **Own token provider** (R5). Identity's `DataProtectorTokenProvider` reads the system clock, so link
+   expiry could not be tested; `OwnerTokenProvider` uses the same protected payload (user, purpose,
+   security stamp) with the injected `TimeProvider`. Lifespans unchanged: 24 h verification, 1 h reset.
+3. **Own session revalidation** (R5). Identity's `SecurityStampValidator` signs out unregistered
+   schemes (two-factor, external) and failed; the cookie's `OnValidatePrincipal` now checks the
+   absolute 7-day limit and compares the security stamp with the stored one on every request.
+4. **Cash rounding on the wire in minor units** (Principle I): `cashRoundingStepMinor` instead of a
+   decimal.
+5. **Email failures**: logged and swallowed rather than surfaced, so sign-up and forgot-password
+   cannot reveal whether an account exists (FR-005 outweighs a visible error here).
+6. **Sign-out ends the current browser's session only.** Other sessions end on expiry or a password
+   reset (which renews the security stamp). Signing out everywhere needs server-side sessions; not
+   required by the spec.
+7. **API registers both database contexts even without a connection string**, so it starts (health
+   only) without a database, as before.
+
+Not done here and still open: Data Protection keys are stored unencrypted at rest in PostgreSQL
+(R4; encryption-at-rest key is launch hardening, #26).
 
 ## Project Structure
 
