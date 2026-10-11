@@ -27,7 +27,7 @@ public sealed class TenancyApp : IAsyncDisposable
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    private TenancyApp(DatabaseLogins logins, int maxPoolSize)
+    private TenancyApp(DatabaseLogins logins, int maxPoolSize, Action<IServiceCollection, DatabaseLogins>? configureServices)
     {
         Logins = logins;
         AppConnectionString = new NpgsqlConnectionStringBuilder(logins.App) { MaxPoolSize = maxPoolSize }.ConnectionString;
@@ -40,6 +40,7 @@ public sealed class TenancyApp : IAsyncDisposable
                 services.AddSingleton<IEndpointMapper, SampleEndpoints>();
                 services.AddAuthentication(TestAuthHandler.SchemeName)
                     .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+                configureServices?.Invoke(services, logins);
             });
         });
     }
@@ -48,13 +49,14 @@ public sealed class TenancyApp : IAsyncDisposable
 
     public string AppConnectionString { get; }
 
-    public static async Task<TenancyApp> CreateAsync(PostgresFixture postgres, int maxPoolSize = 20)
+    public static async Task<TenancyApp> CreateAsync(
+        PostgresFixture postgres, int maxPoolSize = 20, Action<IServiceCollection, DatabaseLogins>? configureServices = null)
     {
         var logins = await postgres.CreateEmptyDatabaseAsync();
         await new Migrator(Microsoft.Extensions.Logging.Abstractions.NullLogger<Migrator>.Instance)
             .RunAsync(logins.Settings, CancellationToken.None);
         await SampleSchema.CreateAsync(logins.Migrator);
-        return new TenancyApp(logins, maxPoolSize);
+        return new TenancyApp(logins, maxPoolSize, configureServices);
     }
 
     /// <summary>An HTTP client acting as <paramref name="businessId"/>, or anonymous when null.</summary>

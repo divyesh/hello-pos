@@ -105,10 +105,10 @@ the minimal sample model they need).
 
 **Goal**: reusable harness; proven to catch leaks.
 
-- [ ] T029 [US3] Write `backend/tests/HelloPos.Api.Tests/Tenancy/IsolationScenario.cs` and `IsolationTests.cs`: scenario seeds businesses A and B with sample categories/products (through the app login, each under its own business); base class offers `AsBusiness(A)` HTTP client and `AssertCannotList`, `AssertCannotRead`, `AssertCannotModify` (update and delete), `AssertCannotReference`, each failing with the operation and the leaked record id (FR-015, FR-016)
-- [ ] T030 [US3] Write `backend/tests/HelloPos.Api.Tests/Tenancy/SampleIsolationTests.cs`: one short file using the harness for every sample operation (SC-002, SC-006)
-- [ ] T031 [US3] Write `backend/tests/HelloPos.Api.Tests/Tenancy/HarnessDetectsLeaksTests.cs`: test-only "leaky" sample endpoints that read and write through a context connected as the **migrator** (table owner, so RLS does not apply) with `AcrossAllBusinesses()`, i.e. with both layers deliberately bypassed; each harness assertion run against them must fail, and the failure message must name the operation and the leaked record id (SC-003)
-- [ ] T032 [US3] Copy contracts/tenancy-developer-guide.md to `docs/tenancy.md`, replacing the indicative test example with the real harness API and adding the exact `dotnet ef migrations add` command through the wrapper (FR-021)
+- [X] T029 [US3] Write `backend/tests/HelloPos.Api.Tests/Tenancy/IsolationScenario.cs` and `IsolationTests.cs`: scenario seeds businesses A and B with sample categories/products (through the app login, each under its own business); base class offers `AsBusiness(A)` HTTP client and `AssertCannotList`, `AssertCannotRead`, `AssertCannotModify` (update and delete), `AssertCannotReference`, each failing with the operation and the leaked record id (FR-015, FR-016)
+- [X] T030 [US3] Write `backend/tests/HelloPos.Api.Tests/Tenancy/SampleIsolationTests.cs`: one short file using the harness for every sample operation (SC-002, SC-006)
+- [X] T031 [US3] Write `backend/tests/HelloPos.Api.Tests/Tenancy/HarnessDetectsLeaksTests.cs`: test-only "leaky" sample endpoints that read and write through a context connected as the **migrator** (table owner, so RLS does not apply) with `AcrossAllBusinesses()`, i.e. with both layers deliberately bypassed; each harness assertion run against them must fail, and the failure message must name the operation and the leaked record id (SC-003)
+- [X] T032 [US3] Copy contracts/tenancy-developer-guide.md to `docs/tenancy.md`, replacing the indicative test example with the real harness API and adding the exact `dotnet ef migrations add` command through the wrapper (FR-021)
 
 ---
 
