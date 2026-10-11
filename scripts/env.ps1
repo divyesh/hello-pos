@@ -81,15 +81,24 @@ function Wait-ForApi([string]$url, [int]$timeoutSeconds) {
 switch ($command) {
     'up' {
         Initialize-EnvFile
-        $composeArgs = @()
-        if ($withApi) { $composeArgs += @('--profile', 'api') }
-        $composeArgs += @('up', '-d', '--wait', '--wait-timeout', '180')
-        if ($withApi) { $composeArgs += '--build' }
-
-        if ((Invoke-Compose $composeArgs) -ne 0) {
+        # 1. Core services, healthy.
+        if ((Invoke-Compose @('up', '-d', '--wait', '--wait-timeout', '180')) -ne 0) {
             Write-Host ''
             Write-Host 'Environment failed to start. Service status:' -ForegroundColor Red
             Invoke-Compose @('ps', '--all', '--format', 'table {{.Service}}\t{{.State}}\t{{.Status}}') | Out-Null
+            exit 1
+        }
+
+        # 2. Schema: bootstrap roles and apply pending migrations (feature 003).
+        Write-Host 'Applying database migrations...'
+        if ((Invoke-Compose @('--profile', 'tools', 'run', '--rm', '--build', 'migrate')) -ne 0) {
+            Write-Host 'Database migration failed; see the output above.' -ForegroundColor Red
+            exit 1
+        }
+
+        # 3. Optionally the API, from the same image.
+        if ($withApi -and (Invoke-Compose @('--profile', 'api', 'up', '-d', '--wait', '--wait-timeout', '180', '--build', 'api')) -ne 0) {
+            Write-Host 'The API container failed to start; see: scripts/env.ps1 logs api' -ForegroundColor Red
             exit 1
         }
 
@@ -113,7 +122,7 @@ switch ($command) {
     }
     'down' {
         Initialize-EnvFile
-        exit (Invoke-Compose @('--profile', 'api', 'down', '--remove-orphans'))
+        exit (Invoke-Compose @('--profile', 'api', '--profile', 'tools', 'down', '--remove-orphans'))
     }
     'reset' {
         Initialize-EnvFile
@@ -121,7 +130,7 @@ switch ($command) {
             $answer = Read-Host 'This deletes ALL local Hello POS data (database and Seq). Type yes to continue'
             if ($answer -ne 'yes') { Write-Host 'Reset cancelled.'; exit 1 }
         }
-        $code = Invoke-Compose @('--profile', 'api', 'down', '--volumes', '--remove-orphans')
+        $code = Invoke-Compose @('--profile', 'api', '--profile', 'tools', 'down', '--volumes', '--remove-orphans')
         if ($code -eq 0) { Write-Host 'Local environment data deleted. Run "scripts/env.ps1 up" to start fresh.' }
         exit $code
     }

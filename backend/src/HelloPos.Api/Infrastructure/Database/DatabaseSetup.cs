@@ -1,10 +1,13 @@
+using HelloPos.Api.Infrastructure.Persistence;
+using HelloPos.Api.Infrastructure.Tenancy;
 using Npgsql;
 
 namespace HelloPos.Api.Infrastructure.Database;
 
 /// <summary>
-/// Database wiring. For now only the health probe uses the database (feature 002); the application
-/// data source, EF Core and tenancy arrive with roadmap #3.
+/// Database wiring for the API process: the health probe (feature 002) and the EF Core context with
+/// the current business (feature 003). The API only ever receives the app login's connection string;
+/// admin and migrator credentials exist only for <c>HelloPos.Api migrate</c>.
 /// </summary>
 public static class DatabaseSetup
 {
@@ -12,12 +15,16 @@ public static class DatabaseSetup
 
     public static IServiceCollection AddHelloPosDatabase(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentBusiness, ClaimsCurrentBusiness>();
+
         var connectionString = configuration.GetConnectionString(ConnectionStringName);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             return services.AddSingleton<IDatabaseProbe, NoDatabaseProbe>();
         }
 
+        services.AddDbContext<HelloPosDbContext>(options => options.UseHelloPosDatabase(connectionString));
         return services.AddSingleton<IDatabaseProbe>(sp => new NpgsqlDatabaseProbe(
             CreateProbeDataSource(connectionString),
             sp.GetRequiredService<ILogger<NpgsqlDatabaseProbe>>()));
@@ -31,7 +38,7 @@ public static class DatabaseSetup
     public static NpgsqlDataSource CreateProbeDataSource(string connectionString)
     {
         var timeoutSeconds = (int)NpgsqlDatabaseProbe.Timeout.TotalSeconds;
-        var builder = new NpgsqlConnectionStringBuilder(connectionString)
+        var builder = new NpgsqlConnectionStringBuilder(Persistence.ConnectionStrings.Normalize(connectionString))
         {
             Timeout = timeoutSeconds,
             CommandTimeout = timeoutSeconds,

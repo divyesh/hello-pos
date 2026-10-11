@@ -53,14 +53,22 @@ usage() { sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 case "$command" in
   up)
     init_env_file
-    args=()
-    $with_api && args+=(--profile api)
-    args+=(up -d --wait --wait-timeout 180)
-    $with_api && args+=(--build)
-    if ! compose "${args[@]}"; then
+    # 1. Core services, healthy.
+    if ! compose up -d --wait --wait-timeout 180; then
       echo
       echo "Environment failed to start. Service status:" >&2
       compose ps --all --format 'table {{.Service}}\t{{.State}}\t{{.Status}}' >&2 || true
+      exit 1
+    fi
+    # 2. Schema: bootstrap roles and apply pending migrations (feature 003).
+    echo "Applying database migrations..."
+    if ! compose --profile tools run --rm --build migrate; then
+      echo "Database migration failed; see the output above." >&2
+      exit 1
+    fi
+    # 3. Optionally the API, from the same image.
+    if $with_api && ! compose --profile api up -d --wait --wait-timeout 180 --build api; then
+      echo "The API container failed to start; see: scripts/env.sh logs api" >&2
       exit 1
     fi
     bind="$(setting HELLOPOS_BIND_ADDRESS)"; [[ "$bind" == "0.0.0.0" ]] && bind=localhost
@@ -84,7 +92,7 @@ case "$command" in
     ;;
   down)
     init_env_file
-    compose --profile api down --remove-orphans
+    compose --profile api --profile tools down --remove-orphans
     ;;
   reset)
     init_env_file
@@ -92,7 +100,7 @@ case "$command" in
       read -r -p "This deletes ALL local Hello POS data (database and Seq). Type yes to continue: " answer
       [[ "$answer" == "yes" ]] || { echo "Reset cancelled."; exit 1; }
     fi
-    compose --profile api down --volumes --remove-orphans
+    compose --profile api --profile tools down --volumes --remove-orphans
     echo "Local environment data deleted. Run \"scripts/env.sh up\" to start fresh."
     ;;
   status)
