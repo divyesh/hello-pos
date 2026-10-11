@@ -29,6 +29,11 @@ csharp_style_var_when_type_is_apparent = true:suggestion
 [**/tests/**.cs]
 dotnet_diagnostic.CA1707.severity = none
 
+# EF Core migrations are generated (then lightly edited): analyzers would fight the generator.
+[backend/src/HelloPos.Api/Infrastructure/Persistence/Migrations/**]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+
 # Kiota output is committed but generated: never fail the build on it.
 [web/src/HelloPos.Web/ApiClient/**]
 generated_code = true

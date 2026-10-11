@@ -82,6 +82,25 @@ services:
         condition: service_started
     # No health check: the chiseled image has no shell or curl; scripts/env checks /health from the host.
 
+  migrate:
+    # One-off: `scripts/env up` runs it after postgres is healthy (feature 003, research R3).
+    # Bootstraps roles as the admin login, then applies migrations as the migrator login.
+    # Only this job ever receives the admin and migrator passwords; the api service never does.
+    profiles: ["tools"]
+    image: localhost/hellopos-api:dev
+    build:
+      context: .
+      dockerfile: backend/src/HelloPos.Api/Dockerfile
+    command: ["migrate"]
+    environment:
+      ConnectionStrings__Admin: "Host=postgres;Port=5432;Database=${HELLOPOS_DB_NAME};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__Migrator: "Host=postgres;Port=5432;Database=${HELLOPOS_DB_NAME};Username=${HELLOPOS_DB_MIGRATOR_USER};Password=${HELLOPOS_DB_MIGRATOR_PASSWORD}"
+      ConnectionStrings__HelloPos: "Host=postgres;Port=5432;Database=${HELLOPOS_DB_NAME};Username=${HELLOPOS_DB_APP_USER};Password=${HELLOPOS_DB_APP_PASSWORD}"
+      Seq__ServerUrl: http://seq:80
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   hellopos-postgres:
   hellopos-seq:

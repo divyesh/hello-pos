@@ -61,6 +61,25 @@ latency at this scale (one indexed equality per table)
 
 Result: **pass**. Re-checked after Phase 1 design: still pass.
 
+### Re-check after implementation (T038)
+
+Still **pass**. Notes and deviations:
+
+- **III**: all five layers delivered and proven against real PostgreSQL as the app login. Sabotage
+  check: removing the session interceptor fails 10 of 12 tenancy tests, removing stamping fails 11.
+  The harness's own negative tests prove each assertion catches a leak that bypasses both layers.
+- **VI**: US1 and US2 tests were written before their implementation (they did not compile until
+  it existed). Because they then passed on first run, the sabotage check above was added to prove
+  they are load-bearing.
+- **VII**: added a small `IEndpointMapper` hook so slices (and test-only slices) register their own
+  endpoints; `Program.cs` stays composition-only.
+- **VIII**: platform bypass role deliberately not created (research R6); `AcrossAllBusinesses()`
+  still sees only the session's business at the database level.
+- **Plan deviations**: `HasBusinessLink` helper dropped in favour of the documented
+  `HasForeignKey(new { BusinessId, X })` pattern (simpler, same result); GSS encryption disabled in
+  one connection-string normalizer; test PostgreSQL allows 500 connections and test apps clear their
+  pools on dispose (the suite creates many short-lived databases).
+
 ## Project Structure
 
 ### Documentation (this feature)
