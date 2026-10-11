@@ -40,6 +40,8 @@ public sealed class InvitationEndpoints : IEndpointMapper
             .RequireSameBusiness();
         owners.MapGet("", ListAsync).WithName("listInvitations");
         owners.MapPost("", InviteAsync).WithName("inviteStaff").RequireClientHeader();
+        owners.MapPost("/{invitationId:guid}/revoke", RevokeAsync).WithName("revokeInvitation").RequireClientHeader();
+        owners.MapPost("/{invitationId:guid}/resend", ResendAsync).WithName("resendInvitation").RequireClientHeader();
 
         app.MapPost("/invitations/preview", PreviewAsync).WithName("previewInvitation")
             .WithTags(StaffEndpoints.Tag).AllowAnonymous().RequireClientHeader().RequireRateLimiting(IdentitySetup.OwnerAuthRateLimit);
@@ -141,6 +143,63 @@ public sealed class InvitationEndpoints : IEndpointMapper
             emails.Invitation(email, invitation.DisplayName, businessName, StaffRoleNames.ToWire(invitation.Role), actor.DisplayName, token),
             loggers.CreateLogger<InvitationEndpoints>(), cancellationToken).ConfigureAwait(false);
         return TypedResults.Created($"/staff/invitations/{invitation.Id}", ToResponse(invitation, now));
+    }
+
+    /// <summary>Revokes a pending invitation: its link stops working at once.</summary>
+    public static async Task<Results<NoContent, ProblemHttpResult>> RevokeAsync(
+        Guid invitationId, ICurrentStaff current, HelloPosDbContext db, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(db);
+        ArgumentNullException.ThrowIfNull(clock);
+        var actor = (await current.GetAsync(cancellationToken).ConfigureAwait(false))!;
+        var invitation = await db.StaffInvitations
+            .SingleOrDefaultAsync(i => i.Id == invitationId && i.Status == InvitationStatus.Pending, cancellationToken)
+            .ConfigureAwait(false);
+        if (invitation is null)
+        {
+            return StaffProblems.NotFound();
+        }
+
+        invitation.Status = InvitationStatus.Revoked;
+        invitation.UpdatedAt = clock.GetUtcNow();
+        db.Record(clock, actor.Id, StaffChangeActions.InvitationRevoked, invitationId: invitation.Id);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return TypedResults.NoContent();
+    }
+
+    /// <summary>Sends a pending (or expired) invitation again with a new link; the old link stops working.</summary>
+    public static async Task<Results<NoContent, ProblemHttpResult>> ResendAsync(
+        Guid invitationId, ICurrentStaff current, HelloPosDbContext db, IEmailSender sender, OwnerEmails emails,
+        TimeProvider clock, ILoggerFactory loggers, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(db);
+        ArgumentNullException.ThrowIfNull(emails);
+        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(loggers);
+        var actor = (await current.GetAsync(cancellationToken).ConfigureAwait(false))!;
+        var invitation = await db.StaffInvitations
+            .SingleOrDefaultAsync(i => i.Id == invitationId && i.Status == InvitationStatus.Pending, cancellationToken)
+            .ConfigureAwait(false);
+        if (invitation is null)
+        {
+            return StaffProblems.NotFound();
+        }
+
+        var now = clock.GetUtcNow();
+        var (token, hash) = InvitationTokens.Create();
+        invitation.TokenHash = hash;
+        invitation.ExpiresAt = now + Lifetime;
+        invitation.UpdatedAt = now;
+        db.Record(clock, actor.Id, StaffChangeActions.InvitationResent, invitationId: invitation.Id);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        var businessName = await db.Businesses.Select(b => b.Name).SingleAsync(cancellationToken).ConfigureAwait(false);
+        await OwnerEndpoints.SendSafelyAsync(sender,
+            emails.Invitation(invitation.Email, invitation.DisplayName, businessName, StaffRoleNames.ToWire(invitation.Role), actor.DisplayName, token),
+            loggers.CreateLogger<InvitationEndpoints>(), cancellationToken).ConfigureAwait(false);
+        return TypedResults.NoContent();
     }
 
     public static async Task<Results<Ok<InvitationPreviewResponse>, ProblemHttpResult>> PreviewAsync(

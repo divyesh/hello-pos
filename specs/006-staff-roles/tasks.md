@@ -85,10 +85,10 @@ reactivate and confirm it does; reset a PIN; a stale edit is refused.
 **Independent test**: a co-owner invited and accepted has full rights; a manager manages cashiers but is
 refused for everything else; the last active owner cannot be removed.
 
-- [ ] T021 [P] [US3] Contract: `POST /staff/invitations/{invitationId}/revoke`, `/resend`; `last-owner` 409 documented on update and deactivate
-- [ ] T022 [P] [US3] `.../Features/Staff/RoleRulesTests.cs`: every refused manager case from the rule table (add/invite manager or owner, change any role, rename/deactivate/set PIN of an owner or manager, raise a cashier) → 403 and nothing changed (SC-003); a manager's allowed cashier actions work; an account linked as cashier gets 403 on back-office staff endpoints; co-owner via invitation can do everything an owner can; last active owner: deactivate or demote → 409 `last-owner`; two owners deactivating each other concurrently (two connections) → exactly one succeeds; self-deactivation with another owner works and the next request is refused; revoke → link 404; resend → old token 404, new one works
-- [ ] T023 [US3] Implement `LastOwnerGuard` use in update and deactivate, `Features/Invitations/{RevokeInvitation,ResendInvitation}.cs`, and any missing rule checks (makes T022 pass)
-- [ ] T024 [US3] Web: role-aware staff page (managers see cashier actions only; owners see invitations with revoke/resend), last-owner message, manager's business view without settings editing; bUnit tests
+- [X] T021 [P] [US3] Contract: `POST /staff/invitations/{invitationId}/revoke`, `/resend`; `last-owner` 409 documented on update and deactivate
+- [X] T022 [P] [US3] `.../Features/Staff/RoleRulesTests.cs`: every refused manager case from the rule table (add/invite manager or owner, change any role, rename/deactivate/set PIN of an owner or manager, raise a cashier) → 403 and nothing changed (SC-003); a manager's allowed cashier actions work; an account linked as cashier gets 403 on back-office staff endpoints; co-owner via invitation can do everything an owner can; last active owner: deactivate or demote → 409 `last-owner`; two owners deactivating each other concurrently (two connections) → exactly one succeeds; self-deactivation with another owner works and the next request is refused; revoke → link 404; resend → old token 404, new one works
+- [X] T023 [US3] Implement `LastOwnerGuard` use in update and deactivate, `Features/Invitations/{RevokeInvitation,ResendInvitation}.cs`, and any missing rule checks (makes T022 pass)
+- [X] T024 [US3] Web: role-aware staff page (managers see cashier actions only; owners see invitations with revoke/resend), last-owner message, manager's business view without settings editing; bUnit tests
 
 ---
 

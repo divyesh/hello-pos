@@ -149,7 +149,19 @@ else
                             @foreach (var invitation in invitations)
                             {
                                 <MudListItem T="string" data-testid="invitation">
-                                    <MudText>@invitation.Email · @invitation.Role.ToString().ToLowerInvariant() · @invitation.Status</MudText>
+                                    <div class="d-flex align-center" style="gap: 8px;">
+                                        <MudText Class="flex-grow-1">@invitation.Email · @invitation.Role.ToString().ToLowerInvariant() · @invitation.Status</MudText>
+                                        @if (invitation.Status is "pending" or "expired")
+                                        {
+                                            <MudButton data-testid="resend" Size="Size.Small" Variant="Variant.Text" Disabled="busy"
+                                                       OnClick="() => InvitationActionAsync(invitation, resend: true)">Resend</MudButton>
+                                        }
+                                        @if (invitation.Status == "pending")
+                                        {
+                                            <MudButton data-testid="revoke" Size="Size.Small" Variant="Variant.Text" Color="Color.Error" Disabled="busy"
+                                                       OnClick="() => InvitationActionAsync(invitation, resend: false)">Revoke</MudButton>
+                                        }
+                                    </div>
                                 </MudListItem>
                             }
                         </MudList>
@@ -190,6 +202,13 @@ else
     private bool Allowed(StaffAction action, StaffListItem person) =>
         actorRole is { } actor && StaffRules.Can(actor, action, person.Role,
             action == StaffAction.ChangeRole ? (person.Role == StaffRole.Cashier ? StaffRole.Manager : StaffRole.Cashier) : null);
+
+    private Task InvitationActionAsync(InvitationItem invitation, bool resend) =>
+        ApplyAsync(resend
+                ? StaffApi.ResendInvitationAsync(pageBusiness, invitation.Id)
+                : StaffApi.RevokeInvitationAsync(pageBusiness, invitation.Id),
+            resend ? $"A new link was sent to {invitation.Email}." : $"The invitation to {invitation.Email} was revoked.",
+            inEditor: false);
 
     private void Edit(StaffListItem person, StaffEditorMode mode)
     {

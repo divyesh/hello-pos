@@ -54,6 +54,12 @@ internal static class StaffApi
     public static Task<HttpResponseMessage> ListInvitationsAsync(HttpClient client, Guid business) =>
         SendAsync(client, HttpMethod.Get, "/staff/invitations", business);
 
+    public static Task<HttpResponseMessage> RevokeAsync(HttpClient client, Guid business, Guid invitationId) =>
+        SendAsync(client, HttpMethod.Post, $"/staff/invitations/{invitationId}/revoke", business);
+
+    public static Task<HttpResponseMessage> ResendAsync(HttpClient client, Guid business, Guid invitationId) =>
+        SendAsync(client, HttpMethod.Post, $"/staff/invitations/{invitationId}/resend", business);
+
     public static Task<HttpResponseMessage> PreviewAsync(HttpClient client, string token) =>
         client.PostAsJsonAsync("/invitations/preview", new { token }, Ct);
 

@@ -80,6 +80,22 @@ public sealed class FakeStaffService : IStaffService
         return Task.FromResult(OwnerActionResult.Success);
     }
 
+    public Task<OwnerActionResult> RevokeInvitationAsync(Guid pageBusiness, Guid invitationId, CancellationToken cancellationToken = default)
+    {
+        var index = Invitations.FindIndex(i => i.Id == invitationId);
+        Invitations[index] = Invitations[index] with { Status = "revoked" };
+        Changes.Add((invitationId, "revoke"));
+        return Task.FromResult(OwnerActionResult.Success);
+    }
+
+    public Task<OwnerActionResult> ResendInvitationAsync(Guid pageBusiness, Guid invitationId, CancellationToken cancellationToken = default)
+    {
+        var index = Invitations.FindIndex(i => i.Id == invitationId);
+        Invitations[index] = Invitations[index] with { Status = "pending" };
+        Changes.Add((invitationId, "resend"));
+        return Task.FromResult(OwnerActionResult.Success);
+    }
+
     public Task<LoadResult<InvitationOffer>> PreviewAsync(string token, CancellationToken cancellationToken = default) =>
         Task.FromResult(NextPreview);
 

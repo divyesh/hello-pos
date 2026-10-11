@@ -636,6 +636,60 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+  /staff/invitations/{invitationId}/revoke:
+    post:
+      tags: [Staff]
+      operationId: revokeInvitation
+      summary: Revoke a pending invitation (owners)
+      description: >
+        Its link stops working at once. Only pending invitations can be revoked.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Done.
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
+  /staff/invitations/{invitationId}/resend:
+    post:
+      tags: [Staff]
+      operationId: resendInvitation
+      summary: Send a pending or expired invitation again (owners)
+      description: >
+        Issues a new link valid for 7 days; the previous link stops working.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Done.
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
   /invitations/preview:
     post:
       tags: [Staff]

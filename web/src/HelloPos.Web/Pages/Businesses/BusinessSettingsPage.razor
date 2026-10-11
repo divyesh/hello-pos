@@ -30,6 +30,16 @@ else if (settings is null && !stale)
 {
     <MudProgressCircular data-testid="loading" Indeterminate="true" Size="Size.Small" />
 }
+else if (settings is not null && OpenBusiness.Role == HelloPos.Kernel.Staff.StaffRole.Manager)
+{
+    @* Managers read the settings; only owners change them (the API refuses anyway). *@
+    <MudPaper Outlined="true" Class="pa-6" Style="max-width: 36rem;" data-testid="read-only-settings">
+        <MudText><b>@settings.Name</b></MudText>
+        <MudText>@settings.CountryCode · @settings.CurrencyCode · prices @(settings.PricingMode == PricingMode.TaxInclusive ? "include tax" : "before tax")</MudText>
+        <MudText>Financial year starts in month @settings.FinancialYearStartMonth · @settings.TimeZone</MudText>
+        <MudText Typo="Typo.body2" Class="mt-3">Only owners can change these settings.</MudText>
+    </MudPaper>
+}
 else if (settings is not null)
 {
     @if (saved)

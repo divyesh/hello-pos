@@ -46,6 +46,10 @@ public interface IStaffService
 
     Task<OwnerActionResult> InviteAsync(Guid pageBusiness, string email, StaffRole role, string displayName, CancellationToken cancellationToken = default);
 
+    Task<OwnerActionResult> RevokeInvitationAsync(Guid pageBusiness, Guid invitationId, CancellationToken cancellationToken = default);
+
+    Task<OwnerActionResult> ResendInvitationAsync(Guid pageBusiness, Guid invitationId, CancellationToken cancellationToken = default);
+
     Task<LoadResult<InvitationOffer>> PreviewAsync(string token, CancellationToken cancellationToken = default);
 
     Task<OwnerActionResult> AcceptAsync(string token, CancellationToken cancellationToken = default);
@@ -131,6 +135,14 @@ public sealed partial class StaffService(HttpClient http, ILogger<StaffService> 
                 DisplayName = displayName,
             },
             c => c.Headers.Add(BusinessService.BusinessHeader, pageBusiness.ToString()), cancellationToken));
+
+    public Task<OwnerActionResult> RevokeInvitationAsync(Guid pageBusiness, Guid invitationId, CancellationToken cancellationToken = default) =>
+        OwnerAccountService.RunAsync(http, logger, "revoke-invitation", () => ApiClients.Create(http).Staff.Invitations[invitationId].Revoke
+            .PostAsync(c => c.Headers.Add(BusinessService.BusinessHeader, pageBusiness.ToString()), cancellationToken));
+
+    public Task<OwnerActionResult> ResendInvitationAsync(Guid pageBusiness, Guid invitationId, CancellationToken cancellationToken = default) =>
+        OwnerAccountService.RunAsync(http, logger, "resend-invitation", () => ApiClients.Create(http).Staff.Invitations[invitationId].Resend
+            .PostAsync(c => c.Headers.Add(BusinessService.BusinessHeader, pageBusiness.ToString()), cancellationToken));
 
     public async Task<LoadResult<InvitationOffer>> PreviewAsync(string token, CancellationToken cancellationToken = default)
     {
