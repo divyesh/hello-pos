@@ -111,10 +111,10 @@ is unreachable; logs reach Seq.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T024 [P] Add a "Local environment" section to `README.md` (FR-016): prerequisites, `scripts/env` commands, service addresses and default ports, `.env` and `HELLOPOS_BIND_ADDRESS` (physical device), pointing web and Android at the mock API, running the real API with `up --api`, how database tests reach the container engine; update the "Logs (Seq)" section to use the environment's Seq
-- [ ] T025 [P] If the delivered scope differs from roadmap #2's description, update `specs/roadmap.md` to match (for example the optional `api` service and the database probe)
+- [X] T024 [P] Add a "Local environment" section to `README.md` (FR-016): prerequisites, `scripts/env` commands, service addresses and default ports, `.env` and `HELLOPOS_BIND_ADDRESS` (physical device), pointing web and Android at the mock API, running the real API with `up --api`, how database tests reach the container engine; update the "Logs (Seq)" section to use the environment's Seq
+- [X] T025 [P] If the delivered scope differs from roadmap #2's description, update `specs/roadmap.md` to match (for example the optional `api` service and the database probe)
 - [ ] T026 Run quickstart.md section 5 with Docker if Docker Desktop is available; otherwise record it as pending in `checklists/quickstart-results.md` (SC-005)
-- [ ] T027 Re-check the plan's Constitution Check against the delivered work and note any deviation in `specs/002-local-environment/plan.md`
+- [X] T027 Re-check the plan's Constitution Check against the delivered work and note any deviation in `specs/002-local-environment/plan.md`
 
 ---
 

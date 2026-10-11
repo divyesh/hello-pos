@@ -60,6 +60,22 @@ non-root, no shell
 
 Result: **pass**. Re-checked after Phase 1 design: still pass.
 
+### Re-check after implementation (T027)
+
+Still **pass**. Deviations and findings:
+
+- **VI**: the probe and `/health` tests ran red before the code that made them green, against real
+  PostgreSQL. They also exposed a real defect (a hung server stalled the probe for 6 s), now fixed.
+- **VIII**: verification found that PostgreSQL grants `CONNECT` on the built-in `postgres` and
+  `template1` databases to everyone; both are revoked so the application login reaches only
+  `hellopos`. Inside the database container, local connections stay trusted (image default); all
+  network connections, including the API's, require the password.
+- **IX**: a failed database init previously left the service "healthy"; the health check now
+  proves the application database exists, so `up` fails loudly.
+- **Tooling**: Prism runs single-process (its multi-process mode crashes on its bundled Node.js).
+- **Not yet verified**: Docker Desktop (SC-005), and web/Android against the mock API (need a
+  browser and an emulator). Recorded in `checklists/quickstart-results.md`.
+
 ## Project Structure
 
 ### Documentation (this feature)

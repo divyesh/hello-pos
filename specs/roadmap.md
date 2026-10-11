@@ -17,8 +17,8 @@ feature exists.
 
 1. **Repository skeleton**: `backend/`, `web/`, `android/`, `contracts/`; .NET 10 solution with a
    vertical-slice layout; Blazor WebAssembly app; Android project; `global.json` pinning the SDK.
-2. **Local environment**: `compose.yaml` for Podman with PostgreSQL, the Prism mock API and Seq (API logs);
-   one-command start; seed script.
+2. **Local environment**: `compose.yaml` for Podman or Docker with PostgreSQL, the Prism mock API, Seq and an optional API container (the deployable image); `/health` reports the database;
+   one-command start, stop and reset (seed data arrives with the features that create business data).
 3. **Tenancy and API infrastructure**: `business_id` conventions, EF Core global query filters,
    composite foreign keys, the cross-tenant isolation test harness, RFC 7807 errors, correlation
    ids, structured logging.

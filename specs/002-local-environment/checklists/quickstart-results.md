@@ -74,4 +74,7 @@ hung-server test now passes within 3 s.
 
 ## Section 5: Docker
 
-Pending.
+⏳ **Pending**: the Docker CLI is installed but the Docker Desktop engine is not running on the
+development machine. The scripts only differ by `CONTAINER_ENGINE=docker` (which calls
+`docker compose` and mounts `/var/run/docker.sock` for tests); run section 1 with Docker Desktop
+started to close SC-005. CI (roadmap #4) runs on Docker and will exercise the same compose file.
