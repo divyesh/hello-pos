@@ -18,6 +18,8 @@ tags:
     description: Service status
   - name: Business
     description: The business open in this session
+  - name: Staff
+    description: People who work at the open business, roles and invitations
   - name: Owner
     description: Owner accounts and sessions (web back office)
 paths:
@@ -360,6 +362,206 @@ paths:
           $ref: '#/components/responses/MissingClientHeader'
         '409':
           $ref: '#/components/responses/BusinessChanged'
+  /staff:
+    get:
+      tags: [Staff]
+      operationId: listStaff
+      summary: People who work at the open business
+      description: Owners and managers. Never includes PINs.
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, inactive, all]
+            default: active
+      responses:
+        '200':
+          description: Staff, by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffMember'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
+    post:
+      tags: [Staff]
+      operationId: addStaff
+      summary: Add a person who signs in on the POS with a username and PIN
+      description: >
+        Owners add cashiers and managers; managers add cashiers. Owners join by invitation only.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewStaffMember'
+      responses:
+        '201':
+          description: Added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffMember'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
+  /staff/{staffId}:
+    get:
+      tags: [Staff]
+      operationId: getStaff
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/StaffId'
+      responses:
+        '200':
+          description: The staff member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffMember'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
+  /staff/invitations:
+    get:
+      tags: [Staff]
+      operationId: listInvitations
+      summary: Invitations of the open business (owners)
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+      responses:
+        '200':
+          description: Pending invitations first, then the most recent others.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/BusinessChanged'
+    post:
+      tags: [Staff]
+      operationId: inviteStaff
+      summary: Invite someone by email as owner or manager (owners)
+      description: >
+        Emails a single-use link valid for 7 days. The answer is the same whether or not the address
+        already has an account.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewInvitation'
+      responses:
+        '201':
+          description: Invited.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          description: Already invited (pending), already a member, or another business is open now.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /invitations/preview:
+    post:
+      tags: [Staff]
+      operationId: previewInvitation
+      summary: What an invitation link offers
+      description: Anonymous. Unknown, used, revoked and expired links all answer 404.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationToken'
+      responses:
+        '200':
+          description: The invitation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationPreview'
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /invitations/accept:
+    post:
+      tags: [Staff]
+      operationId: acceptInvitation
+      summary: Accept an invitation with the signed-in account
+      description: >
+        The account's verified email must be the invited one; otherwise the answer is the same 404 as
+        an unknown link.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationToken'
+      responses:
+        '204':
+          description: Accepted; the business is now in the account's list.
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/MissingClientHeader'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The account already works at this business (already-member).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 components:
   schemas:
     HealthStatus:
@@ -495,6 +697,12 @@ components:
           type: string
           format: uuid
           description: The business opened in this session; absent when none is open.
+        currentRole:
+          type: string
+          enum: [owner, manager]
+          description: >
+            The account's role in the open business; absent when none is open or the account is no
+            longer active staff there.
     BusinessSettings:
       type: object
       additionalProperties: false
@@ -563,8 +771,12 @@ components:
     BusinessSummary:
       type: object
       additionalProperties: false
-      required: [id, name, countryCode, currencyCode]
+      required: [id, name, countryCode, currencyCode, role]
       properties:
+        role:
+          type: string
+          enum: [owner, manager]
+          description: The signed-in account's role in this business.
         id:
           type: string
           format: uuid
@@ -574,6 +786,111 @@ components:
           type: string
           enum: [IN, US, CA]
         currencyCode:
+          type: string
+    StaffMember:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, role, active, hasPin, hasBackOfficeAccess, version, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager, cashier]
+        active:
+          type: boolean
+        posUsername:
+          type: string
+          description: POS sign-in name; absent when the person does not use the POS.
+        hasPin:
+          type: boolean
+        hasBackOfficeAccess:
+          type: boolean
+          description: Linked to a back-office account (owners and invited managers).
+        version:
+          type: integer
+          format: int32
+          description: Send back when changing this person; a stale value is refused (staff-changed).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    NewStaffMember:
+      type: object
+      additionalProperties: false
+      required: [displayName, role, posUsername, pin]
+      properties:
+        displayName:
+          type: string
+          description: 1 to 100 characters.
+        role:
+          type: string
+          enum: [manager, cashier]
+        posUsername:
+          type: string
+          description: 3 to 32 letters, digits, dots, dashes or underscores; unique in the business.
+        pin:
+          type: string
+          description: 4 to 6 digits, not one repeated digit and not a run like 1234.
+    Invitation:
+      type: object
+      additionalProperties: false
+      required: [id, email, role, displayName, status, expiresAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager]
+        displayName:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    NewInvitation:
+      type: object
+      additionalProperties: false
+      required: [email, role, displayName]
+      properties:
+        email:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager]
+        displayName:
+          type: string
+    InvitationToken:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+    InvitationPreview:
+      type: object
+      additionalProperties: false
+      required: [businessName, role, displayName]
+      properties:
+        businessName:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager]
+        displayName:
           type: string
   parameters:
     ClientHeader:
@@ -592,6 +909,13 @@ components:
         The business this page was opened for. When it differs from the session's open business
         (another tab switched), the request is refused with 409 instead of acting for the wrong
         business. It never selects the business.
+      schema:
+        type: string
+        format: uuid
+    StaffId:
+      name: staffId
+      in: path
+      required: true
       schema:
         type: string
         format: uuid
@@ -630,6 +954,18 @@ components:
       description: >
         Another business is open in this session now (type urn:hellopos:problem:business-changed);
         reload the page.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    RoleNotAllowed:
+      description: The caller's role in this business does not allow this.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotFound:
+      description: Not found (also for another business's records).
       content:
         application/problem+json:
           schema:

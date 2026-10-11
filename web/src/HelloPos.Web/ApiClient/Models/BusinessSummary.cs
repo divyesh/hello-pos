@@ -32,6 +32,8 @@ namespace HelloPos.Web.ApiClient.Models
 #else
         public string Name { get; set; }
 #endif
+        /// <summary>The signed-in account&apos;s role in this business.</summary>
+        public global::HelloPos.Web.ApiClient.Models.BusinessSummary_role? Role { get; set; }
         /// <summary>
         /// Creates a new instance of the appropriate class based on discriminator value
         /// </summary>
@@ -54,6 +56,7 @@ namespace HelloPos.Web.ApiClient.Models
                 { "currencyCode", n => { CurrencyCode = n.GetStringValue(); } },
                 { "id", n => { Id = n.GetGuidValue(); } },
                 { "name", n => { Name = n.GetStringValue(); } },
+                { "role", n => { Role = n.GetEnumValue<global::HelloPos.Web.ApiClient.Models.BusinessSummary_role>(); } },
             };
         }
         /// <summary>
@@ -67,6 +70,7 @@ namespace HelloPos.Web.ApiClient.Models
             writer.WriteStringValue("currencyCode", CurrencyCode);
             writer.WriteGuidValue("id", Id);
             writer.WriteStringValue("name", Name);
+            writer.WriteEnumValue<global::HelloPos.Web.ApiClient.Models.BusinessSummary_role>("role", Role);
         }
     }
 }

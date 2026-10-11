@@ -44,17 +44,18 @@ public sealed partial class Migrator(ILogger<Migrator> logger)
         ArgumentNullException.ThrowIfNull(settings);
         await BootstrapAsync(settings, cancellationToken).ConfigureAwait(false);
 
-        var options = new DbContextOptionsBuilder<HelloPosDbContext>()
-            .UseHelloPosDatabase(settings.MigratorConnectionString)
-            .Options;
-        await using var context = new HelloPosDbContext(options, NoCurrentBusiness.Instance);
-        var applied = new List<string>(await MigrateAsync(context, cancellationToken).ConfigureAwait(false));
-
+        // Identity first: business migrations may read accounts (feature 006 copies owners into staff).
         var identityOptions = new DbContextOptionsBuilder<OwnerIdentityDbContext>()
             .UseOwnerIdentityDatabase(settings.MigratorConnectionString)
             .Options;
         await using var identity = new OwnerIdentityDbContext(identityOptions);
-        applied.AddRange(await MigrateAsync(identity, cancellationToken).ConfigureAwait(false));
+        var applied = new List<string>(await MigrateAsync(identity, cancellationToken).ConfigureAwait(false));
+
+        var options = new DbContextOptionsBuilder<HelloPosDbContext>()
+            .UseHelloPosDatabase(settings.MigratorConnectionString)
+            .Options;
+        await using var context = new HelloPosDbContext(options, NoCurrentBusiness.Instance);
+        applied.AddRange(await MigrateAsync(context, cancellationToken).ConfigureAwait(false));
         return applied;
     }
 

@@ -12,6 +12,7 @@ public sealed class OwnerEmails(IOptions<WebSettings> web)
     public const string VerificationKind = "verification";
     public const string AlreadyRegisteredKind = "already-registered";
     public const string PasswordResetKind = "password-reset";
+    public const string InvitationKind = "invitation";
 
     public EmailMessage Verification(string to, string displayName, Guid ownerId, string token) =>
         Build(to, VerificationKind, "Confirm your email for Hello POS", displayName,
@@ -30,6 +31,13 @@ public sealed class OwnerEmails(IOptions<WebSettings> web)
             "Choose a new password for Hello POS. The link works once, for 1 hour, and signs you out everywhere.",
             "Reset password", Link("reset-password", ownerId, token),
             "If you did not ask for this, ignore this email; your password stays the same.");
+
+    /// <summary>Feature 006: an invitation to a back-office role; the link works once, for 7 days.</summary>
+    public EmailMessage Invitation(string to, string displayName, string businessName, string role, string inviterName, string token) =>
+        Build(to, InvitationKind, $"{inviterName} invites you to {businessName} on Hello POS", displayName,
+            $"{inviterName} invites you to join {businessName} as {role}. Sign in or create a Hello POS account with this email address to accept. The link works once, for 7 days.",
+            "Accept invitation", $"{BaseUrl}/accept-invitation?token={UrlEncoder.Default.Encode(token)}",
+            "If you were not expecting this, ignore this email.");
 
     private string BaseUrl => web.Value.BaseUrl.TrimEnd('/');
 

@@ -1,4 +1,5 @@
 using HelloPos.Api.Features.Owners;
+using HelloPos.Api.Features.Staff;
 using HelloPos.Api.Infrastructure;
 using HelloPos.Api.Infrastructure.Persistence;
 using HelloPos.Api.Infrastructure.Tenancy;
@@ -8,9 +9,9 @@ using Microsoft.EntityFrameworkCore;
 namespace HelloPos.Api.Features.Businesses;
 
 /// <summary>
-/// <c>GET /owner/businesses</c> (FR-012): the businesses the signed-in owner owns, by name. Scoped
-/// twice: the query filters on the owner, and row-level security (<c>owner_read</c>) shows the
-/// session only its owner's links and businesses.
+/// <c>GET /owner/businesses</c> (FR-012): the businesses the signed-in account may open (active owner
+/// or manager, feature 006), by name, with the account's role. Scoped twice: the query filters on the
+/// account, and row-level security (<c>owner_read</c>) shows the session only its own staff rows.
 /// </summary>
 public sealed class ListMyBusinesses : IEndpointMapper
 {
@@ -30,16 +31,21 @@ public sealed class ListMyBusinesses : IEndpointMapper
             return TypedResults.Unauthorized();
         }
 
-        // Reviewed bypass of the business scope: ownership links span businesses by design (the owner
-        // has not opened one); the owner filter here and the owner_read policy keep it to this owner.
-        var owned = db.BusinessOwners.AcrossAllBusinesses().Where(o => o.OwnerId == ownerId).Select(o => o.BusinessId);
-        var businesses = await db.Businesses
-            .Where(b => owned.Contains(b.Id))
-            .OrderBy(b => b.Name)
-            .ThenBy(b => b.Id)
-            .Select(b => new BusinessSummaryResponse(b.Id, b.Name, b.CountryCode, b.CurrencyCode))
+        var memberships = await db.BackOfficeMemberships(ownerId)
+            .Select(s => new { s.BusinessId, s.Role })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        return TypedResults.Ok(businesses);
+        var roles = memberships.ToDictionary(m => m.BusinessId, m => m.Role);
+        var ids = roles.Keys.ToList();
+        var businesses = await db.Businesses
+            .Where(b => ids.Contains(b.Id))
+            .OrderBy(b => b.Name)
+            .ThenBy(b => b.Id)
+            .Select(b => new { b.Id, b.Name, b.CountryCode, b.CurrencyCode })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return TypedResults.Ok(businesses
+            .Select(b => new BusinessSummaryResponse(b.Id, b.Name, b.CountryCode, b.CurrencyCode, StaffRoleNames.ToWire(roles[b.Id])))
+            .ToList());
     }
 }

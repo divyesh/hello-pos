@@ -14,6 +14,8 @@ namespace HelloPos.Web.ApiClient.Models
     {
         /// <summary>The business opened in this session; absent when none is open.</summary>
         public Guid? CurrentBusinessId { get; set; }
+        /// <summary>The account&apos;s role in the open business; absent when none is open or the account is no longer active staff there.</summary>
+        public global::HelloPos.Web.ApiClient.Models.OwnerProfile_currentRole? CurrentRole { get; set; }
         /// <summary>The displayName property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
@@ -53,6 +55,7 @@ namespace HelloPos.Web.ApiClient.Models
             return new Dictionary<string, Action<IParseNode>>
             {
                 { "currentBusinessId", n => { CurrentBusinessId = n.GetGuidValue(); } },
+                { "currentRole", n => { CurrentRole = n.GetEnumValue<global::HelloPos.Web.ApiClient.Models.OwnerProfile_currentRole>(); } },
                 { "displayName", n => { DisplayName = n.GetStringValue(); } },
                 { "email", n => { Email = n.GetStringValue(); } },
                 { "emailVerified", n => { EmailVerified = n.GetBoolValue(); } },
@@ -67,6 +70,7 @@ namespace HelloPos.Web.ApiClient.Models
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
             writer.WriteGuidValue("currentBusinessId", CurrentBusinessId);
+            writer.WriteEnumValue<global::HelloPos.Web.ApiClient.Models.OwnerProfile_currentRole>("currentRole", CurrentRole);
             writer.WriteStringValue("displayName", DisplayName);
             writer.WriteStringValue("email", Email);
             writer.WriteBoolValue("emailVerified", EmailVerified);

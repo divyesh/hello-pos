@@ -100,7 +100,7 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("HelloPos.Api.Features.Businesses.BusinessOwner", b =>
+            modelBuilder.Entity("HelloPos.Api.Features.Invitations.StaffInvitation", b =>
                 {
                     b.Property<Guid>("BusinessId")
                         .HasColumnType("uuid")
@@ -110,37 +110,306 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("AcceptedStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("accepted_staff_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<Guid>("OwnerId")
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("InvitedByStaffId")
                         .HasColumnType("uuid")
-                        .HasColumnName("owner_id");
+                        .HasColumnName("invited_by_staff_id");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("normalized_email");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("role");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
 
                     b.HasKey("BusinessId", "Id")
-                        .HasName("pk_business_owners");
+                        .HasName("pk_staff_invitations");
 
-                    b.HasIndex("OwnerId")
-                        .HasDatabaseName("ix_business_owners_owner_id");
-
-                    b.HasIndex("BusinessId", "OwnerId")
+                    b.HasIndex("TokenHash")
                         .IsUnique()
-                        .HasDatabaseName("ix_business_owners_business_id_owner_id");
+                        .HasDatabaseName("ix_staff_invitations_token_hash");
 
-                    b.ToTable("business_owners", "pos");
+                    b.HasIndex("BusinessId", "AcceptedStaffId")
+                        .HasDatabaseName("ix_staff_invitations_business_id_accepted_staff_id");
+
+                    b.HasIndex("BusinessId", "InvitedByStaffId")
+                        .HasDatabaseName("ix_staff_invitations_business_id_invited_by_staff_id");
+
+                    b.HasIndex("BusinessId", "NormalizedEmail")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_invitations_business_id_normalized_email")
+                        .HasFilter("status = 'pending'");
+
+                    b.ToTable("staff_invitations", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_staff_invitations_display_name", "char_length(display_name) BETWEEN 1 AND 100");
+
+                            t.HasCheckConstraint("ck_staff_invitations_role", "role IN ('owner', 'manager')");
+
+                            t.HasCheckConstraint("ck_staff_invitations_status", "status IN ('pending', 'accepted', 'revoked')");
+                        });
                 });
 
-            modelBuilder.Entity("HelloPos.Api.Features.Businesses.BusinessOwner", b =>
+            modelBuilder.Entity("HelloPos.Api.Features.Staff.StaffChange", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid>("ActorStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_staff_id");
+
+                    b.Property<DateTimeOffset>("At")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid?>("InvitationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invitation_id");
+
+                    b.Property<string>("NewValue")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("new_value");
+
+                    b.Property<string>("OldValue")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("old_value");
+
+                    b.Property<Guid?>("StaffMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("staff_member_id");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_staff_changes");
+
+                    b.HasIndex("BusinessId", "ActorStaffId")
+                        .HasDatabaseName("ix_staff_changes_business_id_actor_staff_id");
+
+                    b.HasIndex("BusinessId", "InvitationId")
+                        .HasDatabaseName("ix_staff_changes_business_id_invitation_id");
+
+                    b.HasIndex("BusinessId", "StaffMemberId")
+                        .HasDatabaseName("ix_staff_changes_business_id_staff_member_id");
+
+                    b.ToTable("staff_changes", "pos");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Staff.StaffMember", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("display_name");
+
+                    b.Property<DateTimeOffset?>("PinChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("pin_changed_at");
+
+                    b.Property<string>("PinHash")
+                        .HasColumnType("text")
+                        .HasColumnName("pin_hash");
+
+                    b.Property<string>("PosUsername")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("pos_username");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("role");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("version");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("ak_staff_members_business_id_id");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_staff_members_account_id");
+
+                    b.HasIndex("BusinessId", "AccountId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_members_business_id_account_id")
+                        .HasFilter("account_id IS NOT NULL");
+
+                    b.HasIndex("BusinessId", "PosUsername")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_members_business_id_pos_username")
+                        .HasFilter("pos_username IS NOT NULL");
+
+                    b.ToTable("staff_members", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_staff_members_can_sign_in", "account_id IS NOT NULL OR pos_username IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_staff_members_display_name", "char_length(display_name) BETWEEN 1 AND 100");
+
+                            t.HasCheckConstraint("ck_staff_members_owner_account", "role <> 'owner' OR account_id IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_staff_members_pos_credentials", "(pos_username IS NULL) = (pin_hash IS NULL)");
+
+                            t.HasCheckConstraint("ck_staff_members_pos_username", "pos_username ~ '^[a-z0-9._-]{3,32}$'");
+
+                            t.HasCheckConstraint("ck_staff_members_role", "role IN ('owner', 'manager', 'cashier')");
+                        });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Invitations.StaffInvitation", b =>
                 {
                     b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
                         .WithMany()
                         .HasForeignKey("BusinessId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("fk_business_owners_businesses_business_id");
+                        .HasConstraintName("fk_staff_invitations_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "AcceptedStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_staff_invitations_staff_members_business_id_accepted_staff_");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "InvitedByStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_staff_invitations_staff_members_business_id_invited_by_staf");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Staff.StaffChange", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_staff_changes_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "ActorStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_staff_changes_staff_members_business_id_actor_staff_id");
+
+                    b.HasOne("HelloPos.Api.Features.Invitations.StaffInvitation", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "InvitationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_staff_changes_staff_invitations_business_id_invitation_id");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "StaffMemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_staff_changes_staff_members_business_id_staff_member_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Staff.StaffMember", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_staff_members_businesses_business_id");
                 });
 #pragma warning restore 612, 618
         }

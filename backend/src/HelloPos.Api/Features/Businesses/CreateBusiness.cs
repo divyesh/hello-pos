@@ -1,4 +1,5 @@
 using HelloPos.Api.Features.Owners;
+using HelloPos.Api.Features.Staff;
 using HelloPos.Api.Infrastructure;
 using HelloPos.Api.Infrastructure.Identity;
 using HelloPos.Api.Infrastructure.Persistence;
@@ -11,8 +12,8 @@ namespace HelloPos.Api.Features.Businesses;
 
 /// <summary>
 /// <c>POST /owner/businesses</c> (FR-009–FR-012). The server generates the id, then, in one
-/// transaction acting as that new business (research R6), inserts the business and the creator's
-/// ownership link. Nothing in the request can choose or reach another business.
+/// transaction acting as that new business (research R6), inserts the business and the creator as its
+/// first owner staff member (feature 006). Nothing in the request can choose or reach another business.
 /// </summary>
 public sealed class CreateBusiness : IEndpointMapper
 {
@@ -69,7 +70,23 @@ public sealed class CreateBusiness : IEndpointMapper
 
         await using var asNewBusiness = new HelloPosDbContext(databaseOptions, new FixedCurrentBusiness(business.Id));
         asNewBusiness.Businesses.Add(business);
-        asNewBusiness.BusinessOwners.Add(new BusinessOwner { OwnerId = account.Id, CreatedAt = now });
+        var creator = new StaffMember
+        {
+            DisplayName = account.DisplayName,
+            Role = Kernel.Staff.StaffRole.Owner,
+            AccountId = account.Id,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        asNewBusiness.StaffMembers.Add(creator);
+        asNewBusiness.StaffChanges.Add(new StaffChange
+        {
+            StaffMemberId = creator.Id,
+            ActorStaffId = creator.Id,
+            Action = StaffChangeActions.Added,
+            NewValue = StaffRoleNames.Owner,
+            At = now,
+        });
         await asNewBusiness.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return TypedResults.Created((string?)null, BusinessContracts.ToResponse(business));

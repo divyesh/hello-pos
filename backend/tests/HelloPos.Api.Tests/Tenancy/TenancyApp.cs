@@ -142,6 +142,55 @@ public sealed class TenancyApp : IAsyncDisposable
         return client;
     }
 
+    /// <summary>The signed-in account's id (from <c>/owner/me</c>).</summary>
+    public static async Task<Guid> AccountIdAsync(HttpClient client)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        using var me = await client.GetAsync(new Uri("/owner/me", UriKind.Relative));
+        return (await me.Content.ReadFromJsonAsync<AccountId>())!.OwnerId;
+    }
+
+    /// <summary>Adds a staff member to <paramref name="business"/> directly (acting as the business); returns its id.</summary>
+    public async Task<Guid> AddStaffAsync(
+        Guid business, HelloPos.Kernel.Staff.StaffRole role, Guid? accountId = null, string displayName = "Person",
+        string? posUsername = null, string? pin = null, bool active = true)
+    {
+        await using var db = Db(business);
+        var staff = new HelloPos.Api.Features.Staff.StaffMember
+        {
+            DisplayName = displayName,
+            Role = role,
+            AccountId = accountId,
+            Active = active,
+        };
+        if (posUsername is not null)
+        {
+            new HelloPos.Api.Features.Staff.StaffCredentials(
+                    new PasswordHasher<HelloPos.Api.Features.Staff.StaffMember>(), Clock)
+                .SetPin(staff, posUsername, pin ?? "4826");
+        }
+
+        db.StaffMembers.Add(staff);
+        await db.SaveChangesAsync();
+        return staff.Id;
+    }
+
+    /// <summary>
+    /// A signed-in back-office client for a new account that is <paramref name="role"/> staff of
+    /// <paramref name="business"/>, with that business open.
+    /// </summary>
+    public async Task<(HttpClient Client, Guid StaffId)> SignedInStaffClientAsync(
+        string email, Guid business, HelloPos.Kernel.Staff.StaffRole role)
+    {
+        var client = await SignUpVerifiedOwnerAsync(email, displayName: email.Split('@')[0]);
+        var staffId = await AddStaffAsync(business, role, await AccountIdAsync(client), email.Split('@')[0]);
+        await ExpectAsync(HttpStatusCode.NoContent,
+            await client.PostAsync(new Uri($"/owner/businesses/{business}/open", UriKind.Relative), null));
+        return (client, staffId);
+    }
+
+    private sealed record AccountId(Guid OwnerId);
+
     /// <summary>An HTTP client acting as <paramref name="businessId"/>, or anonymous when null.</summary>
     public HttpClient Client(Guid? businessId = null)
     {

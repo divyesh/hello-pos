@@ -1,4 +1,5 @@
 using HelloPos.Api.Features.Health.GetHealth;
+using HelloPos.Api.Features.Staff;
 using HelloPos.Api.Infrastructure;
 using HelloPos.Api.Infrastructure.Database;
 using HelloPos.Api.Infrastructure.Identity;
@@ -21,6 +22,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHelloPosDatabase(builder.Configuration);
 builder.Services.AddOwnerIdentity(builder.Configuration, builder.Environment);
 builder.Services.AddOwnerEmail(builder.Configuration);
+builder.Services.AddStaff();
 builder.Services.AddEndpointMappers(typeof(Program).Assembly);
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
 builder.Services.AddExceptionHandler<PersistenceExceptionHandler>();

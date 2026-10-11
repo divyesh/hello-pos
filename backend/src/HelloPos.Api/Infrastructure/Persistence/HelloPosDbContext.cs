@@ -1,4 +1,6 @@
 using HelloPos.Api.Features.Businesses;
+using HelloPos.Api.Features.Invitations;
+using HelloPos.Api.Features.Staff;
 using HelloPos.Api.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,7 +55,11 @@ public class HelloPosDbContext : DbContext
 
     public DbSet<Business> Businesses => Set<Business>();
 
-    public DbSet<BusinessOwner> BusinessOwners => Set<BusinessOwner>();
+    public DbSet<StaffMember> StaffMembers => Set<StaffMember>();
+
+    public DbSet<StaffInvitation> StaffInvitations => Set<StaffInvitation>();
+
+    public DbSet<StaffChange> StaffChanges => Set<StaffChange>();
 
     protected sealed override void OnModelCreating(ModelBuilder modelBuilder)
     {

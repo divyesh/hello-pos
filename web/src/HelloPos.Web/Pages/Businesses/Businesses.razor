@@ -44,7 +44,7 @@
                         {
                             <MudListItem T="string" data-testid="business">
                                 <div class="d-flex align-center">
-                                    <MudText Class="flex-grow-1"><b>@business.Name</b> · @business.CountryCode · @business.CurrencyCode</MudText>
+                                    <MudText Class="flex-grow-1"><b>@business.Name</b> · @business.CountryCode · @business.CurrencyCode · <span data-testid="role">@business.Role.ToString().ToLowerInvariant()</span></MudText>
                                     @if (business.Id == OpenBusiness.Id)
                                     {
                                         <MudChip T="string" data-testid="is-open" Size="Size.Small" Color="Color.Primary">Open</MudChip>
@@ -113,11 +113,11 @@
     {
         busy = true;
         openError = null;
-        var result = await OpenBusiness.OpenAsync(business.Id, business.Name);
+        var result = await OpenBusiness.OpenAsync(business.Id, business.Name, business.Role);
         busy = false;
         if (result is OwnerActionResult.Succeeded)
         {
-            Navigation.NavigateTo("business/settings");
+            Navigation.NavigateTo(business.Role == HelloPos.Kernel.Staff.StaffRole.Owner ? "business/settings" : "staff");
         }
         else
         {

@@ -10,6 +10,9 @@ public sealed class OpenBusinessState(IOwnerAccountService accounts, IBusinessSe
 
     public string? Name { get; private set; }
 
+    /// <summary>The signed-in account's role in the open business (owner or manager), from the API.</summary>
+    public Kernel.Staff.StaffRole? Role { get; private set; }
+
     public event Action? Changed;
 
     /// <summary>Reads the open business from the session (after sign-in or a page reload).</summary>
@@ -17,6 +20,7 @@ public sealed class OpenBusinessState(IOwnerAccountService accounts, IBusinessSe
     {
         var session = await accounts.GetSessionAsync().ConfigureAwait(false);
         Id = session?.CurrentBusinessId;
+        Role = session?.CurrentRole;
         Name = null;
         if (Id is { } id && await businesses.GetCurrentAsync(id).ConfigureAwait(false) is CurrentBusinessResult.Loaded loaded)
         {
@@ -26,11 +30,12 @@ public sealed class OpenBusinessState(IOwnerAccountService accounts, IBusinessSe
         Changed?.Invoke();
     }
 
-    public async Task<OwnerActionResult> OpenAsync(Guid id, string name)
+    public async Task<OwnerActionResult> OpenAsync(Guid id, string name, Kernel.Staff.StaffRole role = Kernel.Staff.StaffRole.Owner)
     {
         var result = await businesses.OpenAsync(id).ConfigureAwait(false);
         if (result is OwnerActionResult.Succeeded)
         {
+            Role = role;
             Set(id, name);
         }
 
@@ -50,6 +55,7 @@ public sealed class OpenBusinessState(IOwnerAccountService accounts, IBusinessSe
     {
         Id = null;
         Name = null;
+        Role = null;
         Changed?.Invoke();
     }
 
