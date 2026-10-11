@@ -14,4 +14,13 @@ public sealed class ModelSnapshotTests
         Assert.False(context.Database.HasPendingModelChanges(),
             "The EF model has changes not captured in a migration. Add one with: scripts/dotnet.ps1 ef migrations add <Name> (see docs/tenancy.md).");
     }
+
+    [Fact]
+    public void OwnerIdentityModel_HasNoPendingChanges()
+    {
+        using var context = new DesignTimeOwnerIdentityDbContextFactory().CreateDbContext([]);
+
+        Assert.False(context.Database.HasPendingModelChanges(),
+            "The owner identity model has changes not captured in a migration. Add one with --context OwnerIdentityDbContext.");
+    }
 }

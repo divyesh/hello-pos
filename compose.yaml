@@ -61,6 +61,19 @@ services:
       timeout: 3s
       retries: 24
 
+  mailpit:
+    # Development mail catcher (feature 005): the API's emails (verification, password reset) land
+    # here instead of real inboxes. Web UI on HELLOPOS_MAIL_UI_PORT.
+    image: axllent/mailpit:v1.31.5
+    ports:
+      - "${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_SMTP_PORT}:1025"
+      - "${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_MAIL_UI_PORT}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
   api:
     # Started only with `scripts/env up --api`. The image is the one later environments deploy.
     profiles: ["api"]
@@ -72,6 +85,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__HelloPos: "Host=postgres;Port=5432;Database=${HELLOPOS_DB_NAME};Username=${HELLOPOS_DB_APP_USER};Password=${HELLOPOS_DB_APP_PASSWORD}"
       Seq__ServerUrl: http://seq:80
+      Email__SmtpHost: mailpit
+      Email__SmtpPort: "1025"
+      Email__From: "Hello POS <no-reply@hellopos.local>"
+      Web__BaseUrl: "http://localhost:5090"
     ports:
       - "${HELLOPOS_BIND_ADDRESS}:${HELLOPOS_API_PORT}:8080"
     depends_on:

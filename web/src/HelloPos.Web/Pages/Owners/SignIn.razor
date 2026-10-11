@@ -1,0 +1,99 @@
+@page "/sign-in"
+@inject IOwnerAccountService Accounts
+@inject OwnerAuthenticationStateProvider Session
+@inject NavigationManager Navigation
+
+<PageTitle>Sign in · Hello POS</PageTitle>
+
+<MudPaper Outlined="true" Class="pa-6" Style="max-width: 28rem;">
+    <MudText Typo="Typo.h5" GutterBottom="true">Sign in</MudText>
+    <MudTextField data-testid="email" @bind-Value="email" Label="Email" InputType="InputType.Email" Required="true"
+                  Error="@Has("email")" ErrorText="@For("email")" />
+    <MudTextField data-testid="password" @bind-Value="password" Label="Password" InputType="InputType.Password" Required="true"
+                  Error="@Has("password")" ErrorText="@For("password")" />
+
+    @if (verificationRequired)
+    {
+        <MudAlert data-testid="verification-required" Severity="Severity.Warning" Class="mt-3">
+            Confirm your email address first: follow the link we sent you.
+            @if (resent)
+            {
+                <span data-testid="verification-resent"> A new link is on its way.</span>
+            }
+            else
+            {
+                <MudButton data-testid="resend" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                           Disabled="busy" OnClick="ResendAsync">Send a new link</MudButton>
+            }
+        </MudAlert>
+    }
+
+    @if (formError is not null)
+    {
+        <MudAlert data-testid="form-error" Severity="Severity.Error" Dense="true" Class="mt-3">@formError</MudAlert>
+    }
+
+    <MudButton data-testid="submit" Class="mt-4" Variant="Variant.Filled" Color="Color.Primary"
+               Disabled="busy" OnClick="SubmitAsync">Sign in</MudButton>
+    <MudText Typo="Typo.body2" Class="mt-4">
+        <MudLink Href="forgot-password">Forgot password?</MudLink> ·
+        New to Hello POS? <MudLink Href="sign-up">Create an account</MudLink>
+    </MudText>
+</MudPaper>
+
+@code {
+    private string email = string.Empty;
+    private string password = string.Empty;
+    private IReadOnlyDictionary<string, string> errors = new Dictionary<string, string>();
+    private string? formError;
+    private bool verificationRequired;
+    private bool resent;
+    private bool busy;
+
+    private bool Has(string field) => errors.ContainsKey(field);
+
+    private string? For(string field) => errors.GetValueOrDefault(field);
+
+    private async Task SubmitAsync()
+    {
+        busy = true;
+        formError = null;
+        verificationRequired = false;
+        resent = false;
+        errors = new Dictionary<string, string>();
+        var result = await Accounts.SignInAsync(email, password);
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                password = string.Empty;
+                Session.Refresh();
+                Navigation.NavigateTo("businesses");
+                break;
+            case OwnerActionResult.VerificationRequired:
+                verificationRequired = true;
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                errors = fields.Errors;
+                break;
+            case OwnerActionResult.Failed failed:
+                formError = failed.Message;
+                break;
+        }
+    }
+
+    private async Task ResendAsync()
+    {
+        busy = true;
+        var result = await Accounts.ResendVerificationAsync(email);
+        busy = false;
+        if (result is OwnerActionResult.Failed failed)
+        {
+            formError = failed.Message;
+        }
+        else
+        {
+            resent = true;
+        }
+    }
+}

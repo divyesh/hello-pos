@@ -30,6 +30,13 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .HasColumnName("id")
                         .HasDefaultValueSql("uuidv7()");
 
+                    b.Property<decimal>("CashRoundingStep")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("cash_rounding_step");
+
                     b.Property<string>("CountryCode")
                         .IsRequired()
                         .HasColumnType("char(2)")
@@ -79,6 +86,8 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
 
                     b.ToTable("businesses", "pos", t =>
                         {
+                            t.HasCheckConstraint("ck_businesses_cash_rounding_step", "cash_rounding_step IN (0, 0.05, 0.10, 1.00)");
+
                             t.HasCheckConstraint("ck_businesses_country_code", "country_code IN ('IN', 'US', 'CA')");
 
                             t.HasCheckConstraint("ck_businesses_currency_code", "currency_code ~ '^[A-Z]{3}$'");
@@ -89,6 +98,49 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_businesses_pricing_mode", "pricing_mode IN ('tax_inclusive', 'tax_exclusive')");
                         });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Businesses.BusinessOwner", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_business_owners");
+
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_business_owners_owner_id");
+
+                    b.HasIndex("BusinessId", "OwnerId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_business_owners_business_id_owner_id");
+
+                    b.ToTable("business_owners", "pos");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Businesses.BusinessOwner", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_business_owners_businesses_business_id");
                 });
 #pragma warning restore 612, 618
         }

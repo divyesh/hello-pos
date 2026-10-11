@@ -42,13 +42,22 @@ public abstract class IsolationTests(PostgresFixture postgres) : IAsyncLifetime
     {
     }
 
+    /// <summary>
+    /// Creates businesses A and B. Owner-based slices (feature 005) override this, together with
+    /// <see cref="ClientFor"/>, to use signed-in owners instead of the test business header.
+    /// </summary>
+    protected virtual async Task<(Guid A, Guid B)> CreateBusinessesAsync() =>
+        (await App.CreateBusinessAsync("Business A"), await App.CreateBusinessAsync("Business B"));
+
+    /// <summary>A client acting as <paramref name="business"/>.</summary>
+    protected virtual HttpClient ClientFor(Guid business) => App.Client(business);
+
     public async ValueTask InitializeAsync()
     {
         app = await TenancyApp.CreateAsync(postgres, configureServices: ConfigureServices);
-        BusinessA = await App.CreateBusinessAsync("Business A");
-        BusinessB = await App.CreateBusinessAsync("Business B");
-        using var asA = App.Client(BusinessA);
-        using var asB = App.Client(BusinessB);
+        (BusinessA, BusinessB) = await CreateBusinessesAsync();
+        using var asA = ClientFor(BusinessA);
+        using var asB = ClientFor(BusinessB);
         RecordsOfA = await SeedAsync(asA, "A");
         RecordsOfB = await SeedAsync(asB, "B");
         if (RecordsOfB.Count == 0)
@@ -67,9 +76,9 @@ public abstract class IsolationTests(PostgresFixture postgres) : IAsyncLifetime
         GC.SuppressFinalize(this);
     }
 
-    protected HttpClient AsA() => App.Client(BusinessA);
+    protected HttpClient AsA() => ClientFor(BusinessA);
 
-    protected HttpClient AsB() => App.Client(BusinessB);
+    protected HttpClient AsB() => ClientFor(BusinessB);
 
     /// <summary>Listing as A returns none of B's records.</summary>
     protected async Task AssertCannotList(string operation, Func<HttpClient, Task<HttpResponseMessage>> list)

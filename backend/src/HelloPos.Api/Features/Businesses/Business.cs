@@ -1,8 +1,10 @@
+using HelloPos.Kernel.Businesses;
+
 namespace HelloPos.Api.Features.Businesses;
 
 /// <summary>
 /// The tenant root (spec FR-005). Holds only what later features need for pricing and reporting;
-/// sign-up and management arrive with roadmap #5, owners with #7.
+/// owners create and manage businesses (feature 005), staff arrive with roadmap #7.
 /// </summary>
 public sealed class Business
 {
@@ -24,13 +26,10 @@ public sealed class Business
     /// <summary>IANA time zone, for example <c>Asia/Kolkata</c>.</summary>
     public required string TimeZone { get; set; }
 
+    /// <summary>Cash rounding step in currency units: 0 (none), 0.05, 0.10 or 1.00 (pricing-rules.md §5).</summary>
+    public decimal CashRoundingStep { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
-}
-
-public enum PricingMode
-{
-    TaxExclusive,
-    TaxInclusive,
 }

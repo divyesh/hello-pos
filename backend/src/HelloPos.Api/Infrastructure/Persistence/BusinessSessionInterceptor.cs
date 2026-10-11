@@ -5,7 +5,8 @@ using Npgsql;
 namespace HelloPos.Api.Infrastructure.Persistence;
 
 /// <summary>
-/// Tells PostgreSQL which business the session acts for, so row-level security applies to every
+/// Tells PostgreSQL which business (and, feature 005, which signed-in owner) the session acts for, so
+/// row-level security applies to every
 /// statement, including raw SQL (spec FR-014, research R6). Set when EF opens a connection, reset when
 /// it closes it; Npgsql's pool additionally runs <c>DISCARD ALL</c> when a connection is returned, so
 /// a business can never survive into another request (SC-008). No business means an empty setting,
@@ -15,8 +16,11 @@ public sealed class BusinessSessionInterceptor : DbConnectionInterceptor
 {
     public static readonly BusinessSessionInterceptor Instance = new();
 
-    private const string SetSql = $"SELECT set_config('{RowSecurityMigrationExtensions.SessionSetting}', @business, false)";
-    private const string ResetSql = $"RESET {RowSecurityMigrationExtensions.SessionSetting}";
+    private const string SetSql =
+        $"SELECT set_config('{RowSecurityMigrationExtensions.SessionSetting}', @business, false), " +
+        $"set_config('{RowSecurityMigrationExtensions.OwnerSessionSetting}', @owner, false)";
+    private const string ResetSql =
+        $"RESET {RowSecurityMigrationExtensions.SessionSetting}; RESET {RowSecurityMigrationExtensions.OwnerSessionSetting}";
 
     public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
     {
@@ -61,9 +65,10 @@ public sealed class BusinessSessionInterceptor : DbConnectionInterceptor
 
     private static NpgsqlCommand SetCommand(DbConnection connection, ConnectionEndEventData eventData)
     {
-        var business = (eventData.Context as HelloPosDbContext)?.CurrentBusinessId;
+        var context = eventData.Context as HelloPosDbContext;
         var command = new NpgsqlCommand(SetSql, (NpgsqlConnection)connection);
-        command.Parameters.AddWithValue("business", business?.ToString() ?? string.Empty);
+        command.Parameters.AddWithValue("business", context?.CurrentBusinessId?.ToString() ?? string.Empty);
+        command.Parameters.AddWithValue("owner", context?.CurrentOwnerId?.ToString() ?? string.Empty);
         return command;
     }
 }

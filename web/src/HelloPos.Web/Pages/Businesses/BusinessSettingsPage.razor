@@ -1,0 +1,113 @@
+@page "/business/settings"
+@using HelloPos.Kernel.Businesses
+@inject IBusinessService BusinessApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Business settings · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Business settings</MudText>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session. Nothing was saved.
+        <MudButton data-testid="reload" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">
+        No business is open. <MudLink Href="businesses">Choose one</MudLink>.
+    </MudAlert>
+}
+else if (loadError is not null)
+{
+    <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+}
+else if (settings is null && !stale)
+{
+    <MudProgressCircular data-testid="loading" Indeterminate="true" Size="Size.Small" />
+}
+else if (settings is not null)
+{
+    @if (saved)
+    {
+        <MudAlert data-testid="saved" Severity="Severity.Success" Dense="true" Class="mb-4">Saved.</MudAlert>
+    }
+
+    <MudPaper Outlined="true" Class="pa-6" Style="max-width: 36rem;">
+        <BusinessForm Initial="settings" OnSubmit="SaveAsync" ServerErrors="serverErrors" FormError="formError"
+                      Busy="busy" SubmitText="Save changes" />
+    </MudPaper>
+}
+
+@code {
+    private Guid pageBusiness;
+    private BusinessSettings? settings;
+    private IReadOnlyDictionary<string, string>? serverErrors;
+    private string? loadError;
+    private string? formError;
+    private bool noBusiness;
+    private bool stale;
+    private bool saved;
+    private bool busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        // Every request from this page names the business it was opened for (stale-tab guard).
+        pageBusiness = id;
+        switch (await BusinessApi.GetCurrentAsync(pageBusiness))
+        {
+            case CurrentBusinessResult.Loaded loaded:
+                settings = loaded.Settings;
+                break;
+            case CurrentBusinessResult.BusinessChanged:
+                stale = true;
+                break;
+            case CurrentBusinessResult.Failed failed:
+                loadError = failed.Message;
+                break;
+        }
+    }
+
+    private async Task SaveAsync(BusinessSettings changed)
+    {
+        busy = true;
+        saved = false;
+        serverErrors = null;
+        formError = null;
+        var result = await BusinessApi.UpdateCurrentAsync(pageBusiness, changed);
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                saved = true;
+                OpenBusiness.Renamed(changed.Name);
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                serverErrors = fields.Errors;
+                break;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                break;
+            case OwnerActionResult.Failed failed:
+                formError = failed.Message;
+                break;
+        }
+    }
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

@@ -1,0 +1,66 @@
+# Design draft of the operations this feature adds to contracts/openapi.yaml (merged there by the
+# implementation, which remains the single source of truth). Error responses are RFC 7807 problem
+# details. State-changing requests from the web app send header X-HelloPos-Client: web (CSRF guard);
+# business-scoped ones also send X-HelloPos-Business (stale-tab guard, research R7).
+paths:
+  /owner/sign-up:
+    post:
+      operationId: ownerSignUp
+      tags: [Owner]
+      requestBody: { $ref: '#/components/requestBodies/SignUp' }   # name, email, password
+      responses:
+        '202': { description: Accepted. A verification email (or "already registered" email) is sent. }
+        '400': { description: Validation problem (password rules, missing fields). }
+        '429': { description: Rate limited. }
+  /owner/verify-email:
+    post:
+      operationId: ownerVerifyEmail       # body: ownerId, token
+      responses: { '204': {}, '400': { description: Invalid, used or expired link. } }
+  /owner/resend-verification:
+    post:
+      operationId: ownerResendVerification  # body: email; always 202
+      responses: { '202': {}, '429': {} }
+  /owner/sign-in:
+    post:
+      operationId: ownerSignIn            # body: email, password; sets the session cookie
+      responses:
+        '204': { description: Signed in. }
+        '401': { description: Email or password is incorrect (same for every failure). }
+        '403': { description: verification-required (only with the correct password). }
+        '429': {}
+  /owner/sign-out:
+    post: { operationId: ownerSignOut, responses: { '204': {} } }
+  /owner/forgot-password:
+    post: { operationId: ownerForgotPassword, responses: { '202': {}, '429': {} } }   # always 202
+  /owner/reset-password:
+    post:
+      operationId: ownerResetPassword     # body: ownerId, token, newPassword; ends all sessions
+      responses: { '204': {}, '400': {} }
+  /owner/me:
+    get:
+      operationId: ownerMe                # OwnerProfile: displayName, email, emailVerified, currentBusinessId?
+      responses: { '200': {}, '401': {} }
+  /owner/businesses:
+    get:
+      operationId: ownerListBusinesses    # BusinessSummary[]: id, name, countryCode, currencyCode
+      responses: { '200': {}, '401': {}, '403': {} }
+    post:
+      operationId: ownerCreateBusiness    # BusinessSettings -> 201 Business
+      responses: { '201': {}, '400': {}, '401': {}, '403': {} }
+  /owner/businesses/{businessId}/open:
+    post:
+      operationId: ownerOpenBusiness      # re-issues the cookie with the opened business
+      responses: { '204': {}, '401': {}, '404': { description: Not owned or not existing (identical). } }
+  /business:
+    get:
+      operationId: getCurrentBusiness     # Business (settings of the open business)
+      responses: { '200': {}, '401': {}, '409': { description: business-changed (stale tab). } }
+    put:
+      operationId: updateCurrentBusiness  # BusinessSettings -> 200 Business
+      responses: { '200': {}, '400': {}, '401': {}, '409': {} }
+components:
+  schemas:
+    BusinessSettings:      # name, countryCode, currencyCode, pricingMode, financialYearStartMonth, timeZone, cashRoundingStep
+      type: object
+    Business:              # id + BusinessSettings + createdAt, updatedAt
+      type: object

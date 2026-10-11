@@ -1,0 +1,144 @@
+@using System.Globalization
+@using HelloPos.Kernel.Businesses
+
+@* Business settings form (feature 005, FR-009–FR-011): choosing a country pre-fills its defaults,
+   all editable; the kernel rules the API uses check every field before anything is sent. *@
+
+<MudTextField data-testid="business-name" @bind-Value="name" Label="Business name" Required="true" MaxLength="200"
+              Error="@Has("name")" ErrorText="@For("name")" />
+
+<div class="mt-4">
+    <MudText Typo="Typo.caption">Country</MudText>
+    <select data-testid="country" class="hp-select" value="@country" @onchange="CountryChanged">
+        <option value="">Choose a country</option>
+        @foreach (var option in Countries.All)
+        {
+            <option value="@option.CountryCode">@option.Name</option>
+        }
+    </select>
+    <FieldError Message="@For("countryCode")" />
+</div>
+
+<MudTextField data-testid="currency" @bind-Value="currency" Label="Currency (ISO 4217)" MaxLength="3" Class="mt-2"
+              Error="@Has("currencyCode")" ErrorText="@For("currencyCode")" />
+
+<div class="mt-4">
+    <MudText Typo="Typo.caption">Prices are entered</MudText>
+    <select data-testid="pricing" class="hp-select" value="@pricing" @onchange="e => pricing = Enum.Parse<PricingMode>((string)e.Value!)">
+        <option value="@PricingMode.TaxInclusive">Including tax</option>
+        <option value="@PricingMode.TaxExclusive">Before tax (tax added at checkout)</option>
+    </select>
+    <FieldError Message="@For("pricingMode")" />
+</div>
+
+<div class="mt-4">
+    <MudText Typo="Typo.caption">Financial year starts in</MudText>
+    <select data-testid="fy-month" class="hp-select" value="@month" @onchange="e => month = int.Parse((string)e.Value!, CultureInfo.InvariantCulture)">
+        @for (var m = 1; m <= 12; m++)
+        {
+            <option value="@m">@CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m)</option>
+        }
+    </select>
+    <FieldError Message="@For("financialYearStartMonth")" />
+</div>
+
+<div class="mt-4">
+    <MudText Typo="Typo.caption">Time zone</MudText>
+    <select data-testid="time-zone" class="hp-select" value="@timeZone" @onchange="e => timeZone = (string)e.Value!">
+        @foreach (var zone in Countries.Find(country)?.TimeZones ?? [])
+        {
+            <option value="@zone">@zone</option>
+        }
+    </select>
+    <FieldError Message="@For("timeZone")" />
+</div>
+
+<div class="mt-4">
+    <MudText Typo="Typo.caption">Round cash totals to</MudText>
+    <select data-testid="rounding" class="hp-select" value="@Format(rounding)"
+            @onchange="e => rounding = decimal.Parse((string)e.Value!, CultureInfo.InvariantCulture)">
+        @foreach (var step in Countries.CashRoundingSteps)
+        {
+            <option value="@Format(step)">@(step == 0 ? "No rounding" : $"{step:0.00} {currency}")</option>
+        }
+    </select>
+    <FieldError Message="@For("cashRoundingStep")" />
+</div>
+
+@if (FormError is not null)
+{
+    <MudAlert data-testid="form-error" Severity="Severity.Error" Dense="true" Class="mt-3">@FormError</MudAlert>
+}
+
+<MudButton data-testid="save" Class="mt-4" Variant="Variant.Filled" Color="Color.Primary" Disabled="Busy" OnClick="SubmitAsync">
+    @SubmitText
+</MudButton>
+
+@code {
+    private string name = string.Empty;
+    private string country = string.Empty;
+    private string currency = string.Empty;
+    private PricingMode pricing = PricingMode.TaxExclusive;
+    private int month = 1;
+    private string timeZone = string.Empty;
+    private decimal rounding;
+    private IReadOnlyDictionary<string, string> localErrors = new Dictionary<string, string>();
+
+    [Parameter]
+    public BusinessSettings? Initial { get; set; }
+
+    [Parameter]
+    public EventCallback<BusinessSettings> OnSubmit { get; set; }
+
+    /// <summary>Field errors from the API (kernel field names).</summary>
+    [Parameter]
+    public IReadOnlyDictionary<string, string>? ServerErrors { get; set; }
+
+    [Parameter]
+    public string? FormError { get; set; }
+
+    [Parameter]
+    public bool Busy { get; set; }
+
+    [Parameter]
+    public string SubmitText { get; set; } = "Create business";
+
+    protected override void OnInitialized()
+    {
+        if (Initial is { } initial)
+        {
+            (name, country, currency, pricing, month, timeZone, rounding) = (initial.Name, initial.CountryCode,
+                initial.CurrencyCode, initial.PricingMode, initial.FinancialYearStartMonth, initial.TimeZone, initial.CashRoundingStep);
+        }
+    }
+
+    private bool Has(string field) => For(field) is not null;
+
+    private string? For(string field) =>
+        localErrors.GetValueOrDefault(field) ?? ServerErrors?.GetValueOrDefault(field);
+
+    private static string Format(decimal step) => step.ToString("0.00", CultureInfo.InvariantCulture);
+
+    private void CountryChanged(ChangeEventArgs e)
+    {
+        country = (string?)e.Value ?? string.Empty;
+        if (Countries.Find(country) is { } defaults)
+        {
+            currency = defaults.CurrencyCode;
+            pricing = defaults.PricingMode;
+            month = defaults.FinancialYearStartMonth;
+            timeZone = defaults.DefaultTimeZone;
+            rounding = defaults.CashRoundingStep;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        var settings = new BusinessSettings(name.Trim(), country, currency.Trim().ToUpperInvariant(), pricing, month, timeZone, rounding);
+        localErrors = BusinessSettingsRules.Validate(settings);
+        if (localErrors.Count == 0)
+        {
+            await OnSubmit.InvokeAsync(settings);
+        }
+    }
+}

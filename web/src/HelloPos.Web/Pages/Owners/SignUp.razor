@@ -1,0 +1,70 @@
+@page "/sign-up"
+@inject IOwnerAccountService Accounts
+
+<PageTitle>Create your account · Hello POS</PageTitle>
+
+<MudPaper Outlined="true" Class="pa-6" Style="max-width: 28rem;">
+    @if (done)
+    {
+        <div data-testid="sign-up-done">
+            <MudText Typo="Typo.h5" GutterBottom="true">Check your email</MudText>
+            <MudText>We sent a message to <b>@email</b>. Follow its link to confirm your address, then sign in.</MudText>
+            <MudButton Href="sign-in" Class="mt-4" Variant="Variant.Filled" Color="Color.Primary">Go to sign in</MudButton>
+        </div>
+    }
+    else
+    {
+        <MudText Typo="Typo.h5" GutterBottom="true">Create your account</MudText>
+        <MudTextField data-testid="display-name" @bind-Value="displayName" Label="Your name" Required="true"
+                      Error="@Has("displayName")" ErrorText="@For("displayName")" MaxLength="100" />
+        <MudTextField data-testid="email" @bind-Value="email" Label="Email" InputType="InputType.Email" Required="true"
+                      Error="@Has("email")" ErrorText="@For("email")" />
+        <MudTextField data-testid="password" @bind-Value="password" Label="Password" InputType="InputType.Password" Required="true"
+                      HelperText="At least 12 characters. A memorable phrase works well."
+                      Error="@Has("password")" ErrorText="@For("password")" />
+        @if (formError is not null)
+        {
+            <MudAlert data-testid="form-error" Severity="Severity.Error" Dense="true" Class="mt-3">@formError</MudAlert>
+        }
+        <MudButton data-testid="submit" Class="mt-4" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="busy" OnClick="SubmitAsync">Create account</MudButton>
+        <MudText Typo="Typo.body2" Class="mt-4">Already have an account? <MudLink Href="sign-in">Sign in</MudLink></MudText>
+    }
+</MudPaper>
+
+@code {
+    private string displayName = string.Empty;
+    private string email = string.Empty;
+    private string password = string.Empty;
+    private IReadOnlyDictionary<string, string> errors = new Dictionary<string, string>();
+    private string? formError;
+    private bool busy;
+    private bool done;
+
+    private bool Has(string field) => errors.ContainsKey(field);
+
+    private string? For(string field) => errors.GetValueOrDefault(field);
+
+    private async Task SubmitAsync()
+    {
+        busy = true;
+        formError = null;
+        errors = new Dictionary<string, string>();
+        var result = await Accounts.SignUpAsync(displayName, email, password);
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                done = true;
+                password = string.Empty;
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                errors = fields.Errors;
+                break;
+            case OwnerActionResult.Failed failed:
+                formError = failed.Message;
+                break;
+        }
+
+        busy = false;
+    }
+}

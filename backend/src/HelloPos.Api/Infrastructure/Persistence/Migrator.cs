@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using HelloPos.Api.Infrastructure.Identity;
 using HelloPos.Api.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -29,7 +30,8 @@ public sealed class MigrationFailedException : Exception
 
 /// <summary>
 /// Applies the schema (research R2, R3): an idempotent bootstrap as the admin login creates the roles,
-/// then each pending migration runs as the migrator login, which owns schema <c>pos</c>. The API
+/// then each pending migration runs as the migrator login, which owns schemas <c>pos</c> and
+/// <c>identity</c> (feature 005). The API
 /// process never runs this; it runs as <c>HelloPos.Api migrate</c>, in tests, and in deploy jobs.
 /// </summary>
 public sealed partial class Migrator(ILogger<Migrator> logger)
@@ -46,7 +48,14 @@ public sealed partial class Migrator(ILogger<Migrator> logger)
             .UseHelloPosDatabase(settings.MigratorConnectionString)
             .Options;
         await using var context = new HelloPosDbContext(options, NoCurrentBusiness.Instance);
-        return await MigrateAsync(context, cancellationToken).ConfigureAwait(false);
+        var applied = new List<string>(await MigrateAsync(context, cancellationToken).ConfigureAwait(false));
+
+        var identityOptions = new DbContextOptionsBuilder<OwnerIdentityDbContext>()
+            .UseOwnerIdentityDatabase(settings.MigratorConnectionString)
+            .Options;
+        await using var identity = new OwnerIdentityDbContext(identityOptions);
+        applied.AddRange(await MigrateAsync(identity, cancellationToken).ConfigureAwait(false));
+        return applied;
     }
 
     /// <summary>

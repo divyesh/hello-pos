@@ -30,7 +30,7 @@ csharp_style_var_when_type_is_apparent = true:suggestion
 dotnet_diagnostic.CA1707.severity = none
 
 # EF Core migrations are generated (then lightly edited): analyzers would fight the generator.
-[backend/src/HelloPos.Api/Infrastructure/Persistence/Migrations/**]
+[backend/src/HelloPos.Api/Infrastructure/{Persistence,Identity}/Migrations/**]
 generated_code = true
 dotnet_analyzer_diagnostic.severity = none
 

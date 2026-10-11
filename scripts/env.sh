@@ -77,6 +77,7 @@ case "$command" in
     echo "  Database   $bind:$(setting HELLOPOS_PG_PORT)  (database $(setting HELLOPOS_DB_NAME), app login $(setting HELLOPOS_DB_APP_USER))"
     echo "  Mock API   http://$bind:$(setting HELLOPOS_MOCK_PORT)"
     echo "  Seq        http://$bind:$(setting HELLOPOS_SEQ_PORT)"
+    echo "  Mail (dev) http://$bind:$(setting HELLOPOS_MAIL_UI_PORT)  (all emails from the API land here)"
     if $with_api; then
       url="http://$bind:$(setting HELLOPOS_API_PORT)/health"
       for _ in $(seq 1 30); do

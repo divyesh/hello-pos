@@ -1,0 +1,9 @@
+@if (!string.IsNullOrEmpty(Message))
+{
+    <MudText Typo="Typo.caption" Color="Color.Error" Class="field-error">@Message</MudText>
+}
+
+@code {
+    [Parameter]
+    public string? Message { get; set; }
+}

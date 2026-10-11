@@ -129,6 +129,7 @@ Done when: an owner reconciles a day's sales and tax from the web reports.
 
 ## Later (not v1)
 
+- "Sign in with Google" for owners (clarification of #5; the account model already allows external logins).
 - Payment provider integration for India (Razorpay or Pine Labs).
 - Manager mode in the Android app (if a client asks).
 - Scale integration for weighed items.
