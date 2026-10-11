@@ -1,0 +1,156 @@
+# Hello POS continuous integration (feature 004).
+# Six checks on every pull request to main and every push to main; job names are the status checks
+# that branch protection requires (specs/004-continuous-integration/contracts/ci-checks.md).
+# Read-only, no secrets, fork-safe; every action pinned to a full commit SHA (tag in the comment).
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', '**/*.csproj', '.config/dotnet-tools.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+      # Includes the real-PostgreSQL tests: Testcontainers uses the runner's Docker.
+      - name: Test
+        run: dotnet test --solution backend/HelloPos.slnx -- --report-xunit-trx --results-directory "$GITHUB_WORKSPACE/TestResults/backend"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-test-results
+          path: TestResults/backend
+          if-no-files-found: ignore
+
+  web:
+    name: web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', '**/*.csproj', '.config/dotnet-tools.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - name: Test
+        run: dotnet test --solution web/HelloPos.Web.slnx -- --report-xunit-trx --results-directory "$GITHUB_WORKSPACE/TestResults/web"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web-test-results
+          path: TestResults/web
+          if-no-files-found: ignore
+
+  android:
+    name: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      # Caches Gradle and validates the committed wrapper JAR.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Build and unit test
+        run: ./gradlew assembleDebug testDebugUnitTest --console=plain
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-test-results
+          path: |
+            android/app/build/reports/tests
+            android/app/build/test-results
+          if-no-files-found: ignore
+
+  contract:
+    name: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Contract is a valid API description
+        run: npx --yes @redocly/cli@2.62.1 lint contracts/openapi.yaml
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', '**/*.csproj', '.config/dotnet-tools.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - name: Committed web client matches the contract
+        run: |
+          dotnet tool restore
+          # Without the lock file Kiota regenerates everything, so hand edits are overwritten too.
+          rm web/src/HelloPos.Web/ApiClient/kiota-lock.json
+          dotnet kiota generate --language CSharp --class-name HelloPosApiClient \
+            --namespace-name HelloPos.Web.ApiClient --openapi contracts/openapi.yaml \
+            --output web/src/HelloPos.Web/ApiClient --exclude-backward-compatible --log-level Warning
+          git add -A web/src/HelloPos.Web/ApiClient
+          if ! git diff --cached --exit-code --stat -- web/src/HelloPos.Web/ApiClient; then
+            echo "::error title=Web API client out of date::The committed client in web/src/HelloPos.Web/ApiClient does not match contracts/openapi.yaml (files above)."
+            echo "Regenerate it, commit the result and push:"
+            echo "  scripts/dotnet.ps1 tool restore"
+            echo "  scripts/dotnet.ps1 kiota generate --language CSharp --class-name HelloPosApiClient --namespace-name HelloPos.Web.ApiClient --openapi contracts/openapi.yaml --output web/src/HelloPos.Web/ApiClient --exclude-backward-compatible"
+            exit 1
+          fi
+
+  image:
+    name: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build the API image (not published)
+        run: docker build -f backend/src/HelloPos.Api/Dockerfile -t hellopos-api:ci .
+
+  environment:
+    name: environment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: compose.yaml is valid for every profile
+        run: |
+          cp .env.example .env
+          docker compose --profile api --profile tools config --quiet
