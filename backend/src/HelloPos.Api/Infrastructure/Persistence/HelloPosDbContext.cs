@@ -86,6 +86,8 @@ public class HelloPosDbContext : DbContext
 
     public DbSet<CatalogChange> CatalogChanges => Set<CatalogChange>();
 
+    public DbSet<CatalogRemoval> CatalogRemovals => Set<CatalogRemoval>();
+
     public DbSet<CatalogImport> CatalogImports => Set<CatalogImport>();
 
     protected sealed override void OnModelCreating(ModelBuilder modelBuilder)

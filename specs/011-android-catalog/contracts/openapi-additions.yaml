@@ -1,0 +1,74 @@
+# Additions to contracts/openapi.yaml for feature #13 (summary; the full definitions go into the contract
+# first, then the code). Device credential (paired, not revoked); business from the credential only.
+paths:
+  /pos/catalog:
+    get:
+      operationId: posCatalog
+      tags: [Pos]
+      security: [{ deviceCredential: [] }]
+      parameters:
+        - { name: since, in: query, required: false, schema: { type: integer, format: int64, minimum: 0 } }
+      responses:
+        '200': { description: The catalog (full) or what changed after `since`. CatalogSync, gzip/br. }
+        '401': { description: Unknown or revoked device. ProblemDetails }
+        '429': { description: Too many requests from this device. ProblemDetails }
+
+components:
+  schemas:
+    CatalogSync:
+      type: object
+      additionalProperties: false
+      required: [mode, revision, serverTime, business, taxProfiles, categories, products, discounts, removedDiscountIds]
+      properties:
+        mode: { type: string, enum: [full, changes] }
+        revision: { type: integer, format: int64 }
+        serverTime: { type: string, format: date-time }
+        business: { $ref: '#/components/schemas/CatalogSettings' }
+        taxProfiles: { type: array, items: { $ref: '#/components/schemas/SyncTaxProfile' } }
+        categories: { type: array, items: { $ref: '#/components/schemas/SyncCategory' } }
+        products: { type: array, items: { $ref: '#/components/schemas/SyncProduct' } }
+        discounts: { type: array, items: { $ref: '#/components/schemas/SyncDiscount' } }
+        removedDiscountIds: { type: array, items: { type: string, format: uuid } }   # empty in full
+    CatalogSettings:
+      required: [currency, pricingMode, timeZone, cashRoundingStep, depositsTaxable]
+      properties:
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        pricingMode: { type: string, enum: [tax_inclusive, tax_exclusive] }   # as in BusinessSettings
+        timeZone: { type: string }                       # IANA
+        cashRoundingStep: { type: integer, format: int64 }   # minor units
+        depositsTaxable: { type: boolean }
+    SyncTaxProfile:
+      required: [id, name, kind, active, versions]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        kind: { type: string, enum: [taxable, zeroRated, exempt] }
+        active: { type: boolean }
+        versions:                                        # every version, past and future
+          type: array
+          items:
+            required: [id, effectiveFrom, components]
+            properties:
+              id: { type: string, format: uuid }
+              effectiveFrom: { type: string, format: date }
+              components: { type: array, items: { $ref: '#/components/schemas/TaxComponent' } }
+    SyncCategory:
+      required: [id, name, sortOrder, defaultTaxProfileId, active]
+    SyncProduct:
+      required: [id, name, categoryId, unit, openPrice, minQuantity, step, depositPerUnit, active, barcodes]
+      properties:
+        sku: { type: string }                             # optional
+        taxProfileId: { type: string, format: uuid }      # optional override of the category default
+        unitPrice: { type: integer, format: int64 }       # minor units; absent for open price
+        minAge: { type: integer, format: int32 }          # optional
+        depositPerUnit: { type: integer, format: int64 }
+        barcodes: { type: array, items: { type: string } }  # normalized (UPC-A as EAN-13)
+        # unit, minQuantity, step as in Product
+    SyncDiscount:
+      required: [id, productId, kind, from]
+      properties:
+        kind: { type: string, enum: [percent, fixed] }
+        percent: { type: string }                         # when kind = percent, invariant decimal
+        amountOff: { type: integer, format: int64 }       # when kind = fixed, minor units per unit
+        from: { type: string, format: date }
+        to: { type: string, format: date }                # optional, inclusive

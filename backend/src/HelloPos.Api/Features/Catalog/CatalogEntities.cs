@@ -36,6 +36,9 @@ public sealed class TaxProfile : IBusinessOwned
 
     public int Version { get; set; } = 1;
 
+    /// <summary>Transaction that last changed this row or its children (set by the database; feature #13, research R1).</summary>
+    public long Revision { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
@@ -86,6 +89,9 @@ public sealed class Category : IBusinessOwned
 
     public int Version { get; set; } = 1;
 
+    /// <summary>Transaction that last changed this row or its children (set by the database; feature #13, research R1).</summary>
+    public long Revision { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
@@ -130,6 +136,9 @@ public sealed class Product : IBusinessOwned
 
     public int Version { get; set; } = 1;
 
+    /// <summary>Transaction that last changed this row or its children (set by the database; feature #13, research R1).</summary>
+    public long Revision { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
@@ -169,6 +178,24 @@ public sealed class ItemDiscount : IBusinessOwned
     public DateOnly? ToDate { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Transaction that last changed this row or its children (set by the database; feature #13, research R1).</summary>
+    public long Revision { get; set; }
+}
+
+/// <summary>A removed catalog row, so tills holding it can drop it (feature #13); insert-only, written by a trigger.</summary>
+public sealed class CatalogRemoval : IBusinessOwned
+{
+    public Guid BusinessId { get; set; }
+
+    public Guid Id { get; init; }
+
+    /// <summary><c>item_discount</c>: the only catalog rows that are ever deleted.</summary>
+    public required string Entity { get; init; }
+
+    public Guid EntityId { get; init; }
+
+    public long Revision { get; init; }
 }
 
 /// <summary>Append-only catalog history (FR-015); the app login may insert and read only.</summary>
@@ -226,6 +253,7 @@ public sealed class TaxProfileConfiguration : IEntityTypeConfiguration<TaxProfil
             t.HasCheckConstraint("ck_tax_profiles_name", $"char_length(name) BETWEEN 1 AND {CatalogRules.TaxProfileNameMaxLength}");
         });
         builder.ConfigureBusinessOwned();
+        builder.ConfigureCatalogRevision();
         builder.Property(p => p.Name).HasMaxLength(CatalogRules.TaxProfileNameMaxLength);
         builder.Property(p => p.NormalizedName).HasMaxLength(CatalogRules.TaxProfileNameMaxLength);
         builder.Property(p => p.Kind).HasMaxLength(12);
@@ -282,6 +310,7 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.ToTable("categories", t =>
             t.HasCheckConstraint("ck_categories_name", $"char_length(name) BETWEEN 1 AND {CatalogRules.CategoryNameMaxLength}"));
         builder.ConfigureBusinessOwned();
+        builder.ConfigureCatalogRevision();
         builder.Property(c => c.Name).HasMaxLength(CatalogRules.CategoryNameMaxLength);
         builder.Property(c => c.NormalizedName).HasMaxLength(CatalogRules.CategoryNameMaxLength);
         builder.Property(c => c.Version).IsConcurrencyToken().HasDefaultValue(1);
@@ -310,6 +339,7 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             t.HasCheckConstraint("ck_products_deposit", "deposit_per_unit >= 0");
         });
         builder.ConfigureBusinessOwned();
+        builder.ConfigureCatalogRevision();
         builder.Property(p => p.Name).HasMaxLength(CatalogRules.ProductNameMaxLength);
         builder.Property(p => p.Sku).HasMaxLength(CatalogRules.SkuMaxLength);
         builder.Property(p => p.NormalizedSku).HasMaxLength(CatalogRules.SkuMaxLength);
@@ -369,6 +399,7 @@ public sealed class ItemDiscountConfiguration : IEntityTypeConfiguration<ItemDis
             t.HasCheckConstraint("ck_item_discounts_period", "to_date IS NULL OR to_date >= from_date");
         });
         builder.ConfigureBusinessOwned();
+        builder.ConfigureCatalogRevision();
         builder.Property(d => d.Kind).HasMaxLength(7);
         builder.Property(d => d.Value).HasPrecision(19, 4);
         builder.Property(d => d.CreatedAt).HasDefaultValueSql("now()");
@@ -376,6 +407,34 @@ public sealed class ItemDiscountConfiguration : IEntityTypeConfiguration<ItemDis
             .HasForeignKey(d => new { d.BusinessId, d.ProductId })
             .HasPrincipalKey(p => new { p.BusinessId, p.Id })
             .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class CatalogRemovalConfiguration : IEntityTypeConfiguration<CatalogRemoval>
+{
+    public void Configure(EntityTypeBuilder<CatalogRemoval> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        builder.ToTable("catalog_removals", t => t.HasCheckConstraint("ck_catalog_removals_entity", "entity IN ('item_discount')"));
+        builder.ConfigureBusinessOwned();
+        builder.Property(r => r.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Property(r => r.Entity).HasMaxLength(20);
+        builder.HasIndex(r => new { r.BusinessId, r.Revision });
+    }
+}
+
+public static class CatalogRevisionConfiguration
+{
+    /// <summary>
+    /// <c>revision</c> is written by database triggers only (research R1): EF never sends it and reads it
+    /// back after saving. Indexed for "changed since" reads.
+    /// </summary>
+    public static void ConfigureCatalogRevision<T>(this EntityTypeBuilder<T> builder)
+        where T : class, IBusinessOwned
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        builder.Property<long>("Revision").HasDefaultValue(0L).ValueGeneratedOnAddOrUpdate();
+        builder.HasIndex(nameof(IBusinessOwned.BusinessId), "Revision");
     }
 }
 

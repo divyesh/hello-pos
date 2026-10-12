@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.android.junit5)
     alias(libs.plugins.openapi.generator)
+    alias(libs.plugins.room)
 }
 
 // Shared contract (Constitution, Principle V): the Retrofit client is generated from it on every build.
@@ -46,7 +47,13 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // Robolectric runs the catalog database tests on the JVM (feature #13, research R11).
+    testOptions.unitTests.isIncludeAndroidResources = true
 }
+
+// Exported Room schemas are committed so every change to the catalog database is reviewed.
+room { schemaDirectory("$projectDir/schemas") }
 
 openApiGenerate {
     generatorName.set("kotlin")
@@ -109,6 +116,10 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.lifecycle.process)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter.api)
@@ -119,4 +130,7 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.konsist)
     testImplementation(libs.json.schema.validator)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.junit4)
+    testRuntimeOnly(libs.junit.vintage.engine)
 }

@@ -27,7 +27,7 @@ class AuthInterceptor(private val devices: DeviceStore, private val sessions: Se
         const val DEVICE_SCHEME = "Device"
         const val BEARER_SCHEME = "Bearer"
         private val DEVICE_PATHS =
-            listOf("/pos/sign-in", "/pos/refresh", "/pos/device", "/pos/offline-access", "/pos/sessions/offline", "/pos/attempts")
+            listOf("/pos/sign-in", "/pos/refresh", "/pos/device", "/pos/offline-access", "/pos/sessions/offline", "/pos/attempts", "/pos/catalog")
         private val ANONYMOUS_PATHS = listOf("/pos/pair", "/health")
     }
 }

@@ -7,4 +7,5 @@ plugins {
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.android.junit5) apply false
     alias(libs.plugins.openapi.generator) apply false
+    alias(libs.plugins.room) apply false
 }

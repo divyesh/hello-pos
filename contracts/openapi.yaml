@@ -1140,6 +1140,40 @@ paths:
           $ref: '#/components/responses/ValidationProblem'
         '401':
           description: The device is not registered or was revoked.
+  /pos/catalog:
+    get:
+      tags: [Pos]
+      operationId: posCatalog
+      summary: This business's catalog for selling offline
+      description: >
+        Without `since` (or when the server can no longer describe the changes after it), the whole
+        catalog (`mode: full`). With `since` = the revision the device holds, only the tax profiles,
+        categories, products and discounts changed after it, each whole, plus removed discounts
+        (`mode: changes`). Read in one consistent snapshot; apply all or nothing. The business comes from
+        the device credential. Compressed when the client accepts it.
+      security:
+        - deviceCredential: []
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '200':
+          description: The catalog or its changes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogSync'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          description: The device is not registered or was revoked.
+        '429':
+          description: Too many requests from this device.
   /catalog/tax-profiles:
     get:
       tags: [Catalog]
@@ -3119,6 +3153,192 @@ components:
                 type: string
               new:
                 type: string
+    CatalogSync:
+      type: object
+      additionalProperties: false
+      required: [mode, revision, serverTime, business, taxProfiles, categories, products, discounts, removedDiscountIds]
+      properties:
+        mode:
+          type: string
+          enum: [full, changes]
+          description: full replaces the device's copy; changes applies on top of `since`.
+        revision:
+          type: integer
+          format: int64
+          description: The copy's revision once applied; send it as `since` next time.
+        serverTime:
+          type: string
+          format: date-time
+        business:
+          $ref: '#/components/schemas/CatalogSettings'
+        taxProfiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncTaxProfile'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncCategory'
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncProduct'
+        discounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncDiscount'
+        removedDiscountIds:
+          type: array
+          description: Discounts removed after `since`; empty in full mode.
+          items:
+            type: string
+            format: uuid
+    CatalogSettings:
+      type: object
+      additionalProperties: false
+      required: [currency, pricingMode, timeZone, cashRoundingStep, depositsTaxable]
+      properties:
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        pricingMode:
+          type: string
+          enum: [tax_inclusive, tax_exclusive]
+        timeZone:
+          type: string
+          description: IANA time zone; dates of tax versions and discounts are in it.
+        cashRoundingStep:
+          type: integer
+          format: int64
+          description: Minor units.
+        depositsTaxable:
+          type: boolean
+    SyncTaxProfile:
+      type: object
+      additionalProperties: false
+      required: [id, name, kind, active, versions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [taxable, zeroRated, exempt]
+        active:
+          type: boolean
+        versions:
+          type: array
+          description: Every version, past and future.
+          items:
+            $ref: '#/components/schemas/SyncTaxProfileVersion'
+    SyncTaxProfileVersion:
+      type: object
+      additionalProperties: false
+      required: [id, effectiveFrom, components]
+      properties:
+        id:
+          type: string
+          format: uuid
+        effectiveFrom:
+          type: string
+          format: date
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxComponent'
+    SyncCategory:
+      type: object
+      additionalProperties: false
+      required: [id, name, sortOrder, defaultTaxProfileId, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        defaultTaxProfileId:
+          type: string
+          format: uuid
+        active:
+          type: boolean
+    SyncProduct:
+      type: object
+      additionalProperties: false
+      required: [id, name, categoryId, unit, openPrice, minQuantity, step, depositPerUnit, active, barcodes]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sku:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        taxProfileId:
+          type: string
+          format: uuid
+          description: Present only when the product overrides its category's tax profile.
+        unit:
+          type: string
+          enum: [piece, g, kg, ml, l]
+        unitPrice:
+          type: integer
+          format: int64
+          description: Minor units; absent for open-price products.
+        openPrice:
+          type: boolean
+        minQuantity:
+          type: string
+        step:
+          type: string
+        minAge:
+          type: integer
+          format: int32
+        depositPerUnit:
+          type: integer
+          format: int64
+        active:
+          type: boolean
+        barcodes:
+          type: array
+          description: Normalized codes (UPC-A in its 13-digit EAN form).
+          items:
+            type: string
+    SyncDiscount:
+      type: object
+      additionalProperties: false
+      required: [id, productId, kind, fromDate]
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [percent, fixed]
+        percent:
+          type: string
+          description: When kind is percent; invariant decimal string.
+        amountOff:
+          type: integer
+          format: int64
+          description: When kind is fixed; minor units off each unit.
+        fromDate:
+          type: string
+          format: date
+        toDate:
+          type: string
+          format: date
+          description: Inclusive; absent when open-ended.
   parameters:
     ClientHeader:
       name: X-HelloPos-Client

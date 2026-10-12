@@ -119,6 +119,28 @@ The catalog is the first large set of business-owned tables, and a good example 
   `db.CurrentBusinessId` (`CatalogSupport.BusinessAsync`).
 - `pos.catalog_changes` is append-only for the app login, like `staff_changes`.
 
+## Catalog on tills (feature #13)
+
+Tills download their business's catalog with `GET /pos/catalog` and keep a copy for offline selling.
+
+- **The business comes from the device credential only** (`PosAuthentication.DevicePolicy`); a revoked till
+  gets 401. Row-level security scopes every query, so a till paired to A never receives B's rows, in full
+  or change downloads (`Tenancy/CatalogSyncIsolationTests`).
+- **Change tracking lives in the database.** Triggers stamp each catalog root (`tax_profiles`,
+  `categories`, `products`, `item_discounts`) with the writing transaction's id (`pg_current_xact_id()`);
+  children stamp their root (a barcode its product, a tax version or component its profile), and a deleted
+  discount is written to `catalog_removals`. Nothing in a slice has to remember it, so a new catalog write
+  (#28 promotions, imports) is covered automatically as long as it writes these tables.
+- **Reading changes.** A download is read in one `REPEATABLE READ` snapshot together with
+  `pg_snapshot_xmin(pg_current_snapshot())`, the oldest transaction still running. That is the till's next
+  `since`; rows with `revision >= since` are returned next time. No commit is ever skipped, whatever order
+  transactions finish in; a row may be sent twice, which is harmless because tills replace whole roots.
+- **New catalog tables** that tills need: add a `revision` column with the stamping trigger (or a trigger
+  that stamps its root), and include the table in `CatalogSync`.
+- **On the till** the copy records its business; every read erases it if the till is now paired to
+  another business or not at all, and unpairing erases it explicitly. App data is excluded from backups and
+  device-to-device transfer (`res/xml/data_extraction_rules.xml`).
+
 ## Add a business-owned table
 
 1. The entity implements `IBusinessOwned` and creates its id with `Guid.CreateVersion7()`:

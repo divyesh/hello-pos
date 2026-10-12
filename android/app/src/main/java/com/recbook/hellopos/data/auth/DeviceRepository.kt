@@ -6,6 +6,7 @@ import com.recbook.hellopos.core.security.KeyProvider
 import com.recbook.hellopos.core.session.DeviceRegistration
 import com.recbook.hellopos.core.session.DeviceStore
 import com.recbook.hellopos.core.session.SessionStore
+import com.recbook.hellopos.data.catalog.CatalogStore
 import com.recbook.hellopos.data.remote.generated.apis.PosApi
 import com.recbook.hellopos.data.remote.generated.models.PosPairRequest
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,7 @@ class DefaultDeviceRepository @Inject constructor(
     private val keys: KeyProvider,
     private val offline: OfflineAccessRepository,
     private val pending: PendingAttempts,
+    private val catalog: CatalogStore,
 ) : DeviceRepository {
 
     override val registration: StateFlow<DeviceRegistration?> = devices.registration
@@ -88,5 +90,6 @@ class DefaultDeviceRepository @Inject constructor(
         offline.clear()
         pending.drop(PendingAttempts.MAX)
         devices.clear()
+        catalog.erase()
     }
 }
