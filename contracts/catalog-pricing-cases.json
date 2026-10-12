@@ -1,0 +1,758 @@
+{
+  "$schema": "./catalog-pricing-cases.schema.json",
+  "version": 1,
+  "description": "A catalog as a till downloads it (CatalogSync) and one-line sales priced from it at given instants. Both the server (CatalogPricing + engine) and the till (CatalogPriceFeed + engine) must give the expected values. Hand-derived: half-up rounding to the minor unit, tax per component.",
+  "catalogs": [
+    {
+      "id": "ontario-exclusive",
+      "catalog": {
+        "mode": "full",
+        "revision": 1,
+        "serverTime": "2026-10-12T16:00:00Z",
+        "business": {
+          "currency": "CAD",
+          "pricingMode": "tax_exclusive",
+          "timeZone": "America/Toronto",
+          "cashRoundingStep": 5,
+          "depositsTaxable": false
+        },
+        "taxProfiles": [
+          {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "name": "HST",
+            "kind": "taxable",
+            "active": true,
+            "versions": [
+              {
+                "id": "00000000-0000-4000-8000-000000000111",
+                "effectiveFrom": "2026-01-01",
+                "components": [
+                  {
+                    "label": "HST",
+                    "ratePercent": "13"
+                  }
+                ]
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000112",
+                "effectiveFrom": "2026-11-01",
+                "components": [
+                  {
+                    "label": "HST",
+                    "ratePercent": "15"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000102",
+            "name": "Zero-rated",
+            "kind": "zeroRated",
+            "active": true,
+            "versions": [
+              {
+                "id": "00000000-0000-4000-8000-000000000121",
+                "effectiveFrom": "2026-01-01",
+                "components": []
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000103",
+            "name": "Exempt",
+            "kind": "exempt",
+            "active": true,
+            "versions": [
+              {
+                "id": "00000000-0000-4000-8000-000000000131",
+                "effectiveFrom": "2026-01-01",
+                "components": []
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000104",
+            "name": "GST 5%",
+            "kind": "taxable",
+            "active": true,
+            "versions": [
+              {
+                "id": "00000000-0000-4000-8000-000000000141",
+                "effectiveFrom": "2026-01-01",
+                "components": [
+                  {
+                    "label": "CGST",
+                    "ratePercent": "2.5"
+                  },
+                  {
+                    "label": "SGST",
+                    "ratePercent": "2.5"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "categories": [
+          {
+            "id": "00000000-0000-4000-8000-000000000201",
+            "name": "Drinks",
+            "sortOrder": 1,
+            "defaultTaxProfileId": "00000000-0000-4000-8000-000000000101",
+            "active": true
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000202",
+            "name": "Snacks",
+            "sortOrder": 2,
+            "defaultTaxProfileId": "00000000-0000-4000-8000-000000000101",
+            "active": true
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000203",
+            "name": "Produce",
+            "sortOrder": 3,
+            "defaultTaxProfileId": "00000000-0000-4000-8000-000000000102",
+            "active": true
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000204",
+            "name": "Services",
+            "sortOrder": 4,
+            "defaultTaxProfileId": "00000000-0000-4000-8000-000000000103",
+            "active": true
+          }
+        ],
+        "products": [
+          {
+            "id": "00000000-0000-4000-8000-000000000301",
+            "name": "Cola 355 ml",
+            "categoryId": "00000000-0000-4000-8000-000000000201",
+            "unit": "piece",
+            "openPrice": false,
+            "minQuantity": "1",
+            "step": "1",
+            "depositPerUnit": 10,
+            "active": true,
+            "barcodes": [
+              "0067000004568"
+            ],
+            "sku": "COLA",
+            "unitPrice": 199
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000302",
+            "name": "Chips",
+            "categoryId": "00000000-0000-4000-8000-000000000202",
+            "unit": "piece",
+            "openPrice": false,
+            "minQuantity": "1",
+            "step": "1",
+            "depositPerUnit": 0,
+            "active": true,
+            "barcodes": [
+              "4060000000017"
+            ],
+            "unitPrice": 349
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000303",
+            "name": "Water 500 ml",
+            "categoryId": "00000000-0000-4000-8000-000000000201",
+            "unit": "piece",
+            "openPrice": false,
+            "minQuantity": "1",
+            "step": "1",
+            "depositPerUnit": 10,
+            "active": true,
+            "barcodes": [
+              "96385074"
+            ],
+            "unitPrice": 99
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000304",
+            "name": "Bananas",
+            "categoryId": "00000000-0000-4000-8000-000000000203",
+            "unit": "kg",
+            "openPrice": false,
+            "minQuantity": "0.005",
+            "step": "0.005",
+            "depositPerUnit": 0,
+            "active": true,
+            "barcodes": [
+              "4011"
+            ],
+            "unitPrice": 149
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000305",
+            "name": "Custom cake",
+            "categoryId": "00000000-0000-4000-8000-000000000202",
+            "unit": "piece",
+            "openPrice": true,
+            "minQuantity": "1",
+            "step": "1",
+            "depositPerUnit": 0,
+            "active": true,
+            "barcodes": [],
+            "taxProfileId": "00000000-0000-4000-8000-000000000104"
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000306",
+            "name": "Gift wrapping",
+            "categoryId": "00000000-0000-4000-8000-000000000204",
+            "unit": "piece",
+            "openPrice": false,
+            "minQuantity": "1",
+            "step": "1",
+            "depositPerUnit": 0,
+            "active": true,
+            "barcodes": [],
+            "unitPrice": 500
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000307",
+            "name": "Tea",
+            "categoryId": "00000000-0000-4000-8000-000000000201",
+            "unit": "piece",
+            "openPrice": false,
+            "minQuantity": "1",
+            "step": "1",
+            "depositPerUnit": 0,
+            "active": true,
+            "barcodes": [],
+            "taxProfileId": "00000000-0000-4000-8000-000000000104",
+            "unitPrice": 450
+          }
+        ],
+        "discounts": [
+          {
+            "id": "00000000-0000-4000-8000-000000000401",
+            "productId": "00000000-0000-4000-8000-000000000302",
+            "kind": "percent",
+            "percent": "10",
+            "fromDate": "2026-10-15",
+            "toDate": "2026-10-20"
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000402",
+            "productId": "00000000-0000-4000-8000-000000000303",
+            "kind": "fixed",
+            "amountOff": 20,
+            "fromDate": "2026-10-13"
+          }
+        ],
+        "removedDiscountIds": []
+      },
+      "checks": [
+        {
+          "id": "cola-one",
+          "description": "1 x 1.99, HST 13% of 1.99 = 0.2587 -> 0.26; deposit 0.10 untaxed; 1.99 + 0.10 + 0.26",
+          "productId": "00000000-0000-4000-8000-000000000301",
+          "at": "2026-10-12T16:00:00Z",
+          "quantity": "1",
+          "expected": {
+            "taxProfile": "HST",
+            "lineAmount": 199,
+            "itemDiscount": 0,
+            "deposit": 10,
+            "taxes": [
+              {
+                "label": "HST",
+                "ratePercent": "13",
+                "amount": 26
+              }
+            ],
+            "taxTotal": 26,
+            "total": 235
+          }
+        },
+        {
+          "id": "cola-six-before-rate-change",
+          "description": "6 x 1.99 = 11.94 on 2026-10-31 local: HST 13% = 1.5522 -> 1.55; deposit 0.60",
+          "productId": "00000000-0000-4000-8000-000000000301",
+          "at": "2026-11-01T03:30:00Z",
+          "quantity": "6",
+          "expected": {
+            "taxProfile": "HST",
+            "lineAmount": 1194,
+            "itemDiscount": 0,
+            "deposit": 60,
+            "taxes": [
+              {
+                "label": "HST",
+                "ratePercent": "13",
+                "amount": 155
+              }
+            ],
+            "taxTotal": 155,
+            "total": 1409
+          }
+        },
+        {
+          "id": "cola-six-after-rate-change",
+          "description": "Same at 00:30 local on 2026-11-01: HST 15% = 1.791 -> 1.79",
+          "productId": "00000000-0000-4000-8000-000000000301",
+          "at": "2026-11-01T04:30:00Z",
+          "quantity": "6",
+          "expected": {
+            "taxProfile": "HST",
+            "lineAmount": 1194,
+            "itemDiscount": 0,
+            "deposit": 60,
+            "taxes": [
+              {
+                "label": "HST",
+                "ratePercent": "15",
+                "amount": 179
+              }
+            ],
+            "taxTotal": 179,
+            "total": 1433
+          }
+        },
+        {
+          "id": "chips-before-discount",
+          "description": "2 x 3.49 = 6.98 on 2026-10-12 (discount starts 10-15): HST 0.9074 -> 0.91",
+          "productId": "00000000-0000-4000-8000-000000000302",
+          "at": "2026-10-12T16:00:00Z",
+          "quantity": "2",
+          "expected": {
+            "taxProfile": "HST",
+            "lineAmount": 698,
+            "itemDiscount": 0,
+            "deposit": 0,
+            "taxes": [
+              {
+                "label": "HST",
+                "ratePercent": "13",
+                "amount": 91
+              }
+            ],
+            "taxTotal": 91,
+            "total": 789
+          }
+        },
+        {
+          "id": "chips-last-discount-day",
+          "description": "23:30 local on 10-20 (UTC 10-21): 10% of 6.98 = 0.698 -> 0.70; net 6.28; HST 0.8164 -> 0.82",
+          "productId": "00000000-0000-4000-8000-000000000302",
+          "at": "2026-10-21T03:30:00Z",
+          "quantity": "2",
+          "expected": {
+            "taxProfile": "HST",
+            "lineAmount": 698,
+            "itemDiscount": 70,
+            "deposit": 0,
+            "taxes": [
+              {
+                "label": "HST",
+                "ratePercent": "13",
+                "amount": 82
+              }
+            ],
+            "taxTotal": 82,
+            "total": 710
+          }
+        },
+        {
+          "id": "chips-after-discount",
+          "description": "00:30 local on 10-21: discount over; as before it started",
+          "productId": "00000000-0000-4000-8000-000000000302",
+          "at": "2026-10-21T04:30:00Z",
+          "quantity": "2",
+          "expected": {
+            "taxProfile": "HST",
+            "lineAmount": 698,
+            "itemDiscount": 0,
+            "deposit": 0,
+            "taxes": [
+              {
+                "label": "HST",
+                "ratePercent": "13",
+                "amount": 91
+              }
+            ],
+            "taxTotal": 91,
+            "total": 789
+          }
+        },
+        {
+          "id": "water-before-fixed-discount",
+          "description": "3 x 0.99 = 2.97 on 10-12 (0.20 off from 10-13): HST 0.3861 -> 0.39; deposit 0.30",
+          "productId": "00000000-0000-4000-8000-000000000303",
+          "at": "2026-10-12T16:00:00Z",
+          "quantity": "3",
+          "expected": {
+            "taxProfile": "HST",
+            "lineAmount": 297,
+            "itemDiscount": 0,
+            "deposit": 30,
+            "taxes": [
+              {
+                "label": "HST",
+                "ratePercent": "13",
+                "amount": 39
+              }
+            ],
+            "taxTotal": 39,
+            "total": 366
+          }
+        },
+        {
+          "id": "water-fixed-discount",
+          "description": "On 10-20: 0.20 x 3 = 0.60 off; net 2.37; HST 0.3081 -> 0.31; deposit 0.30 not discounted",
+          "productId": "00000000-0000-4000-8000-000000000303",
+          "at": "2026-10-21T03:30:00Z",
+          "quantity": "3",
+          "expected": {
+            "taxProfile": "HST",
+            "lineAmount": 297,
+            "itemDiscount": 60,
+            "deposit": 30,
+            "taxes": [
+              {
+                "label": "HST",
+                "ratePercent": "13",
+                "amount": 31
+              }
+            ],
+            "taxTotal": 31,
+            "total": 298
+          }
+        },
+        {
+          "id": "bananas-weighed-zero-rated",
+          "description": "0.375 kg x 1.49 = 0.55875 -> 0.56; zero-rated, no tax rows",
+          "productId": "00000000-0000-4000-8000-000000000304",
+          "at": "2026-10-12T16:00:00Z",
+          "quantity": "0.375",
+          "expected": {
+            "taxProfile": "Zero-rated",
+            "lineAmount": 56,
+            "itemDiscount": 0,
+            "deposit": 0,
+            "taxes": [],
+            "taxTotal": 0,
+            "total": 56
+          }
+        },
+        {
+          "id": "cake-open-price-override",
+          "description": "Entered 25.00; product override GST 5%: CGST 2.5% = 0.625 -> 0.63, SGST 0.63",
+          "productId": "00000000-0000-4000-8000-000000000305",
+          "at": "2026-10-12T16:00:00Z",
+          "quantity": "1",
+          "enteredPrice": 2500,
+          "expected": {
+            "taxProfile": "GST 5%",
+            "lineAmount": 2500,
+            "itemDiscount": 0,
+            "deposit": 0,
+            "taxes": [
+              {
+                "label": "CGST",
+                "ratePercent": "2.5",
+                "amount": 63
+              },
+              {
+                "label": "SGST",
+                "ratePercent": "2.5",
+                "amount": 63
+              }
+            ],
+            "taxTotal": 126,
+            "total": 2626
+          }
+        },
+        {
+          "id": "gift-wrap-exempt",
+          "description": "2 x 5.00 exempt (category default): no tax",
+          "productId": "00000000-0000-4000-8000-000000000306",
+          "at": "2026-10-12T16:00:00Z",
+          "quantity": "2",
+          "expected": {
+            "taxProfile": "Exempt",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "deposit": 0,
+            "taxes": [],
+            "taxTotal": 0,
+            "total": 1000
+          }
+        },
+        {
+          "id": "tea-override-in-drinks",
+          "description": "Drinks default HST, product override GST 5%: 4.50 x 2.5% = 0.1125 -> 0.11 each",
+          "productId": "00000000-0000-4000-8000-000000000307",
+          "at": "2026-10-12T16:00:00Z",
+          "quantity": "1",
+          "expected": {
+            "taxProfile": "GST 5%",
+            "lineAmount": 450,
+            "itemDiscount": 0,
+            "deposit": 0,
+            "taxes": [
+              {
+                "label": "CGST",
+                "ratePercent": "2.5",
+                "amount": 11
+              },
+              {
+                "label": "SGST",
+                "ratePercent": "2.5",
+                "amount": 11
+              }
+            ],
+            "taxTotal": 22,
+            "total": 472
+          }
+        }
+      ]
+    },
+    {
+      "id": "india-inclusive",
+      "catalog": {
+        "mode": "full",
+        "revision": 1,
+        "serverTime": "2026-10-31T18:00:00Z",
+        "business": {
+          "currency": "INR",
+          "pricingMode": "tax_inclusive",
+          "timeZone": "Asia/Kolkata",
+          "cashRoundingStep": 100,
+          "depositsTaxable": true
+        },
+        "taxProfiles": [
+          {
+            "id": "00000000-0000-4000-8000-000000000501",
+            "name": "GST 5%",
+            "kind": "taxable",
+            "active": true,
+            "versions": [
+              {
+                "id": "00000000-0000-4000-8000-000000000511",
+                "effectiveFrom": "2026-01-01",
+                "components": [
+                  {
+                    "label": "CGST",
+                    "ratePercent": "2.5"
+                  },
+                  {
+                    "label": "SGST",
+                    "ratePercent": "2.5"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000502",
+            "name": "GST 18%",
+            "kind": "taxable",
+            "active": true,
+            "versions": [
+              {
+                "id": "00000000-0000-4000-8000-000000000521",
+                "effectiveFrom": "2026-01-01",
+                "components": [
+                  {
+                    "label": "CGST",
+                    "ratePercent": "9"
+                  },
+                  {
+                    "label": "SGST",
+                    "ratePercent": "9"
+                  }
+                ]
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000522",
+                "effectiveFrom": "2026-11-01",
+                "components": [
+                  {
+                    "label": "CGST",
+                    "ratePercent": "6"
+                  },
+                  {
+                    "label": "SGST",
+                    "ratePercent": "6"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "categories": [
+          {
+            "id": "00000000-0000-4000-8000-000000000601",
+            "name": "Food",
+            "sortOrder": 1,
+            "defaultTaxProfileId": "00000000-0000-4000-8000-000000000501",
+            "active": true
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000602",
+            "name": "Cold drinks",
+            "sortOrder": 2,
+            "defaultTaxProfileId": "00000000-0000-4000-8000-000000000502",
+            "active": true
+          }
+        ],
+        "products": [
+          {
+            "id": "00000000-0000-4000-8000-000000000701",
+            "name": "Juice 1 l",
+            "categoryId": "00000000-0000-4000-8000-000000000602",
+            "unit": "piece",
+            "openPrice": false,
+            "minQuantity": "1",
+            "step": "1",
+            "depositPerUnit": 1000,
+            "active": true,
+            "barcodes": [
+              "8901234567890"
+            ],
+            "unitPrice": 11800
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000702",
+            "name": "Basmati rice",
+            "categoryId": "00000000-0000-4000-8000-000000000601",
+            "unit": "kg",
+            "openPrice": false,
+            "minQuantity": "0.5",
+            "step": "0.5",
+            "depositPerUnit": 0,
+            "active": true,
+            "barcodes": [],
+            "unitPrice": 6000
+          }
+        ],
+        "discounts": [
+          {
+            "id": "00000000-0000-4000-8000-000000000801",
+            "productId": "00000000-0000-4000-8000-000000000702",
+            "kind": "percent",
+            "percent": "5",
+            "fromDate": "2026-10-01",
+            "toDate": "2026-10-31"
+          }
+        ],
+        "removedDiscountIds": []
+      },
+      "checks": [
+        {
+          "id": "juice-gst18-deposit-taxed",
+          "description": "Gross 118.00 + taxed deposit 10.00 = 128.00 at 18% (9+9): 128 x 9 / 118 = 9.7627 -> 9.76 each; tax inside the total",
+          "productId": "00000000-0000-4000-8000-000000000701",
+          "at": "2026-10-31T18:00:00Z",
+          "quantity": "1",
+          "expected": {
+            "taxProfile": "GST 18%",
+            "lineAmount": 11800,
+            "itemDiscount": 0,
+            "deposit": 1000,
+            "taxes": [
+              {
+                "label": "CGST",
+                "ratePercent": "9",
+                "amount": 976
+              },
+              {
+                "label": "SGST",
+                "ratePercent": "9",
+                "amount": 976
+              }
+            ],
+            "taxTotal": 1952,
+            "total": 12800
+          }
+        },
+        {
+          "id": "juice-after-rate-change",
+          "description": "00:30 on 11-01 local (UTC still 10-31): 12% (6+6): 128 x 6 / 112 = 6.857 -> 6.86 each",
+          "productId": "00000000-0000-4000-8000-000000000701",
+          "at": "2026-10-31T19:00:00Z",
+          "quantity": "1",
+          "expected": {
+            "taxProfile": "GST 18%",
+            "lineAmount": 11800,
+            "itemDiscount": 0,
+            "deposit": 1000,
+            "taxes": [
+              {
+                "label": "CGST",
+                "ratePercent": "6",
+                "amount": 686
+              },
+              {
+                "label": "SGST",
+                "ratePercent": "6",
+                "amount": 686
+              }
+            ],
+            "taxTotal": 1372,
+            "total": 12800
+          }
+        },
+        {
+          "id": "rice-discount-last-day",
+          "description": "1.5 kg x 60.00 = 90.00; 5% off = 4.50; gross 85.50 at 5%: 85.50 x 2.5 / 105 = 2.0357 -> 2.04 each",
+          "productId": "00000000-0000-4000-8000-000000000702",
+          "at": "2026-10-31T18:00:00Z",
+          "quantity": "1.5",
+          "expected": {
+            "taxProfile": "GST 5%",
+            "lineAmount": 9000,
+            "itemDiscount": 450,
+            "deposit": 0,
+            "taxes": [
+              {
+                "label": "CGST",
+                "ratePercent": "2.5",
+                "amount": 204
+              },
+              {
+                "label": "SGST",
+                "ratePercent": "2.5",
+                "amount": 204
+              }
+            ],
+            "taxTotal": 408,
+            "total": 8550
+          }
+        },
+        {
+          "id": "rice-discount-ended",
+          "description": "Next local day: 90.00 at 5%: 90 x 2.5 / 105 = 2.1428 -> 2.14 each",
+          "productId": "00000000-0000-4000-8000-000000000702",
+          "at": "2026-10-31T19:00:00Z",
+          "quantity": "1.5",
+          "expected": {
+            "taxProfile": "GST 5%",
+            "lineAmount": 9000,
+            "itemDiscount": 0,
+            "deposit": 0,
+            "taxes": [
+              {
+                "label": "CGST",
+                "ratePercent": "2.5",
+                "amount": 214
+              },
+              {
+                "label": "SGST",
+                "ratePercent": "2.5",
+                "amount": 214
+              }
+            ],
+            "taxTotal": 428,
+            "total": 9000
+          }
+        }
+      ]
+    }
+  ]
+}

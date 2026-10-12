@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). #7 login and sessions (owners and managers register POS devices on the web; staff sign in on Android with username and PIN, also offline; idle lock; own PIN change). Phase 2 (#8 billing) is specified and parked; Phase 3 in progress: #10 pricing engine, #11 catalog setup (tax profiles with dated rates, categories, products with barcodes, scheduled discounts, CSV import and price-list export).
+> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). #7 login and sessions (owners and managers register POS devices on the web; staff sign in on Android with username and PIN, also offline; idle lock; own PIN change). Phase 2 (#8 billing) is specified and parked; Phase 3 in progress: #10 pricing engine, #11 catalog setup (tax profiles with dated rates, categories, products with barcodes, scheduled discounts, CSV import and price-list export), #13 catalog on Android (tills keep the catalog for offline lookup and pricing).
 
 ## Applications
 
@@ -234,6 +234,16 @@ In the web back office (owners and managers), open **Catalog**:
    unchanged or with errors; nothing is saved until a file without errors is imported, all at once.
    Rows match existing products by SKU, then barcode. **Export price list** on the products page writes the
    same format, so an export imports back with no changes.
+
+### The catalog on a till
+
+A paired till downloads its business's catalog and keeps it, so it can look up and price products with
+no network. It refreshes at start, when someone signs in, every 5 minutes while the app is open (only
+what changed), and on **Refresh now**. On Android, Home → **Catalog** shows the categories and products,
+"Catalog updated …", and finds a product by name or by barcode or PLU code (typed, or from a scanner that
+types the code and Enter). A warning appears when the copy is more than 24 hours old or the till's clock
+is more than 5 minutes off; nothing is blocked. Prices on the till match the server's for the same moment
+(shared cases in `contracts/catalog-pricing-cases.json`). Unpairing a till erases its catalog.
 
 ### Changing how sales are priced
 

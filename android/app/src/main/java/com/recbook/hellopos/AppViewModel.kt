@@ -1,5 +1,7 @@
 package com.recbook.hellopos
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.recbook.hellopos.core.session.IdleTracker
@@ -7,6 +9,7 @@ import com.recbook.hellopos.data.auth.DeviceRepository
 import com.recbook.hellopos.data.auth.OfflineAccessRepository
 import com.recbook.hellopos.data.auth.SessionRepository
 import com.recbook.hellopos.data.auth.repeatEvery
+import com.recbook.hellopos.data.catalog.CatalogRefreshScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +31,7 @@ class AppViewModel @Inject constructor(
     private val sessions: SessionRepository,
     private val offline: OfflineAccessRepository,
     private val idle: IdleTracker,
+    private val catalogRefresh: CatalogRefreshScheduler,
 ) : ViewModel() {
 
     val destination: StateFlow<Destination> =
@@ -44,6 +48,13 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch { devices.verify() }
         viewModelScope.launch { whileRegistered { repeatEvery(OfflineAccessRepository.REFRESH_PERIOD) { offline.refresh() } } }
         viewModelScope.launch { whileRegistered { repeatEvery(SYNC_PERIOD) { sessions.sync() } } }
+        viewModelScope.launch {
+            catalogRefresh.run(
+                paired = devices.registration.map { it != null },
+                signedIn = sessions.session.map { it != null },
+                foreground = ProcessLifecycleOwner.get().lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.STARTED) },
+            )
+        }
         viewModelScope.launch {
             sessions.session.map { it != null }.distinctUntilChanged().collectLatest { signedIn ->
                 idle.unlock() // a new person (or nobody) starts unlocked

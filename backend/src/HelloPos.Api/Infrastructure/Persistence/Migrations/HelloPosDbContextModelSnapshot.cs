@@ -215,6 +215,43 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("catalog_imports", "pos");
                 });
 
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.CatalogRemoval", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Entity")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("entity");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entity_id");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_catalog_removals");
+
+                    b.HasIndex("BusinessId", "Revision")
+                        .HasDatabaseName("ix_catalog_removals_business_id_revision");
+
+                    b.ToTable("catalog_removals", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_catalog_removals_entity", "entity IN ('item_discount')");
+                        });
+                });
+
             modelBuilder.Entity("HelloPos.Api.Features.Catalog.Category", b =>
                 {
                     b.Property<Guid>("BusinessId")
@@ -251,6 +288,12 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(60)")
                         .HasColumnName("normalized_name");
 
+                    b.Property<long>("Revision")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("revision");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer")
                         .HasColumnName("sort_order");
@@ -277,6 +320,9 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                     b.HasIndex("BusinessId", "NormalizedName")
                         .IsUnique()
                         .HasDatabaseName("ix_categories_business_id_normalized_name");
+
+                    b.HasIndex("BusinessId", "Revision")
+                        .HasDatabaseName("ix_categories_business_id_revision");
 
                     b.ToTable("categories", "pos", t =>
                         {
@@ -314,6 +360,12 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("product_id");
 
+                    b.Property<long>("Revision")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("revision");
+
                     b.Property<DateOnly?>("ToDate")
                         .HasColumnType("date")
                         .HasColumnName("to_date");
@@ -328,6 +380,9 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("BusinessId", "ProductId")
                         .HasDatabaseName("ix_item_discounts_business_id_product_id");
+
+                    b.HasIndex("BusinessId", "Revision")
+                        .HasDatabaseName("ix_item_discounts_business_id_revision");
 
                     b.ToTable("item_discounts", "pos", t =>
                         {
@@ -392,6 +447,12 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("open_price");
 
+                    b.Property<long>("Revision")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("revision");
+
                     b.Property<string>("Sku")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
@@ -440,6 +501,9 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_products_business_id_normalized_sku")
                         .HasFilter("normalized_sku IS NOT NULL");
+
+                    b.HasIndex("BusinessId", "Revision")
+                        .HasDatabaseName("ix_products_business_id_revision");
 
                     b.HasIndex("BusinessId", "TaxProfileId")
                         .HasDatabaseName("ix_products_business_id_tax_profile_id");
@@ -586,6 +650,12 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(60)")
                         .HasColumnName("normalized_name");
 
+                    b.Property<long>("Revision")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("revision");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -605,6 +675,9 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                     b.HasIndex("BusinessId", "NormalizedName")
                         .IsUnique()
                         .HasDatabaseName("ix_tax_profiles_business_id_normalized_name");
+
+                    b.HasIndex("BusinessId", "Revision")
+                        .HasDatabaseName("ix_tax_profiles_business_id_revision");
 
                     b.ToTable("tax_profiles", "pos", t =>
                         {
@@ -1164,6 +1237,16 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_catalog_imports_staff_members_business_id_actor_staff_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.CatalogRemoval", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_catalog_removals_businesses_business_id");
                 });
 
             modelBuilder.Entity("HelloPos.Api.Features.Catalog.Category", b =>

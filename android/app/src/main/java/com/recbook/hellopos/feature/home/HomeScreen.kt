@@ -19,13 +19,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.recbook.hellopos.core.designsystem.HelloPosTheme
 
 @Composable
-fun HomeScreen(onChangePin: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(onChangePin: () -> Unit, onCatalog: () -> Unit, viewModel: HomeViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    state?.let { HomeContent(it, onSignOut = viewModel::signOut, onChangePin = onChangePin) }
+    state?.let { HomeContent(it, onSignOut = viewModel::signOut, onChangePin = onChangePin, onCatalog = onCatalog) }
 }
 
 @Composable
-fun HomeContent(state: HomeUiState, onSignOut: () -> Unit, onChangePin: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeContent(state: HomeUiState, onSignOut: () -> Unit, onChangePin: () -> Unit, onCatalog: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
@@ -38,6 +38,7 @@ fun HomeContent(state: HomeUiState, onSignOut: () -> Unit, onChangePin: () -> Un
             Text("Signed in offline. The session is confirmed when the connection returns.", color = MaterialTheme.colorScheme.tertiary)
         }
         Text("Selling arrives in a later release.", style = MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick = onCatalog) { Text("Catalog") }
         OutlinedButton(onClick = onChangePin) { Text("Change PIN") }
         Button(onClick = onSignOut) { Text("Sign out") }
     }
@@ -46,5 +47,5 @@ fun HomeContent(state: HomeUiState, onSignOut: () -> Unit, onChangePin: () -> Un
 @Preview(widthDp = 960, heightDp = 600)
 @Composable
 private fun HomeContentPreview() {
-    HelloPosTheme { HomeContent(HomeUiState("Ravi", "Cashier", "Patel Grocers"), {}, {}) }
+    HelloPosTheme { HomeContent(HomeUiState("Ravi", "Cashier", "Patel Grocers"), {}, {}, {}) }
 }
