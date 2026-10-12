@@ -1,8 +1,6 @@
 package com.recbook.hellopos
 
 import android.os.Bundle
-import android.view.KeyEvent
-import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -52,15 +50,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Any touch or key press counts as activity for the idle lock (clarification Q3).
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+    // Any touch, key press or trackball event counts as activity for the idle lock (clarification Q3).
+    override fun onUserInteraction() {
+        super.onUserInteraction()
         idle.onInteraction()
-        return super.dispatchTouchEvent(event)
-    }
-
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        idle.onInteraction()
-        return super.dispatchKeyEvent(event)
     }
 }
 

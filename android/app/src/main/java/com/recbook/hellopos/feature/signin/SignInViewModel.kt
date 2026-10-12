@@ -94,7 +94,7 @@ class SignInViewModel @Inject constructor(
     }
 
     private fun lockedMessage(username: String, until: java.time.Instant): String {
-        val minutes = Duration.between(clock.instant(), until).toSeconds().let { (it + 59) / 60 }.coerceAtLeast(1)
+        val minutes = Duration.between(clock.instant(), until).seconds.let { (it + 59) / 60 }.coerceAtLeast(1)
         return "Too many wrong PINs for $username. Try again in $minutes minute${if (minutes == 1L) "" else "s"} or ask a manager."
     }
 

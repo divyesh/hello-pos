@@ -152,7 +152,13 @@ public sealed class RoleRulesTests(PostgresFixture postgres)
             DeactivateAsync(owner, shop.Id, partnerId, 1),
             DeactivateAsync(partner, shop.Id, ownerId, 1));
 
-        Assert.Equal([HttpStatusCode.OK, HttpStatusCode.Conflict], results.Select(r => r.StatusCode).Order());
+        // One wins. The other is refused: 409 when both checks overlap (last-owner lock), or 403 when the
+        // winner finished first and the loser is already inactive. Either way exactly one owner remains.
+        var statuses = results.Select(r => r.StatusCode).ToList();
+        Assert.True(
+            statuses.Count(s => s == HttpStatusCode.OK) == 1
+                && statuses.Count(s => s is HttpStatusCode.Conflict or HttpStatusCode.Forbidden) == 1,
+            $"Expected one OK and one 409/403, got {string.Join(", ", statuses)}");
         var survivor = results[0].StatusCode == HttpStatusCode.OK ? owner : partner;
         var people = JsonNode.Parse(await (await StaffApi.ListAsync(survivor, shop.Id)).Content.ReadAsStringAsync(Ct))!.AsArray();
         Assert.Single(people, p => (string?)p!["role"] == "owner" && (bool?)p["active"] == true);

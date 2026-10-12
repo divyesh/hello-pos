@@ -4,7 +4,8 @@ Domain rules for how a sale is priced. Every feature that touches money follows 
 `contracts/pricing-cases.json` turns each rule into test cases that both the .NET and Kotlin
 suites run (Constitution, Principle I).
 
-Status: agreed 2026-10-10. Open questions are listed at the end.
+Status: agreed 2026-10-10; open questions resolved or deferred 2026-10-11 by the pricing engine
+(feature #10, `specs/009-pricing-engine/`). Remaining deferrals are listed at the end.
 
 ## 1. Money
 
@@ -22,6 +23,12 @@ Status: agreed 2026-10-10. Open questions are listed at the end.
 - **Open-price products**: the cashier enters the price at checkout (e.g. a custom cake).
 - **Price override** on a normal product requires manager or owner approval. Every override is
   recorded in the sale's audit trail (who approved it, original and new price).
+- Quantities are always positive. A sale never contains return lines: returns are refunds (#19), and
+  an exchange is a refund plus a new sale.
+- **Container deposits**: a product may carry a deposit per unit (e.g. 0.10 per can). The line's deposit
+  = deposit per unit × quantity, rounded, shown separately. Deposits are never discounted and are left
+  out of the tip percentage base. A business setting decides whether deposits are taxable; if so the
+  deposit is taxed with the line's tax profile.
 
 ## 3. Tax profiles
 
@@ -52,22 +59,30 @@ For each sale:
    per line. Line net = line amount − item discount, never below zero.
 3. **Order discount**: a percentage applies to the sum of line nets; a fixed amount is capped at
    that sum. It is then spread across lines in proportion to their line net. The allocation uses
-   the largest-remainder method, so the parts add up exactly to the order discount.
-4. **Taxable amount per line** = line net − its share of the order discount.
+   the largest-remainder method, so the parts add up exactly to the order discount: each share is
+   rounded down to the minor unit, and the leftover units go one each to the lines with the largest
+   remainders; equal remainders go to the earlier line. Deposits take no part in this.
+4. **Taxable amount per line** = line net − its share of the order discount (+ the line's deposit when
+   deposits are taxable). For a tax-inclusive business this is the line's gross amount.
 5. **Tax, rounded once per invoice**:
    - Tax-exclusive: group lines by tax component (label and rate), add up their taxable amounts,
      multiply by the rate, and round once per component.
    - Tax-inclusive: group lines by tax profile and add up their gross amounts G. For a profile
      with total rate R, each component's tax = G × rate ÷ (1 + R), rounded once per component.
-6. **Tip** (optional): an amount, or a preset percentage of the pre-tax subtotal after
-   discounts. Rounded. Tips are never taxed.
-7. **Total**:
-   - Tax-exclusive: taxable subtotal + tax + tip.
-   - Tax-inclusive: gross subtotal after discounts + tip (the tax is already inside).
-8. **Cash rounding**: applies only when paying in cash. Each business sets a step (none, 0.05,
-   0.10, or 1.00). The cash due is the total rounded to the nearest step, with ties rounding up.
-   The difference is shown as a separate "Rounding" line. Card payments are always exact.
-9. **Change** = cash tendered − cash due.
+6. **Tip** (optional): an amount, or a preset percentage of the products' pre-tax subtotal after
+   discounts (deposits excluded). Rounded. Tips are never taxed. For a tax-inclusive business the
+   pre-tax subtotal is, per tax profile, its product gross × 100 ÷ (100 + R), rounded once per profile.
+7. **Total** (deposits are part of the subtotal):
+   - Tax-exclusive: taxable subtotal + deposits not already in it + tax + tip.
+   - Tax-inclusive: gross subtotal after discounts + deposits not already in it + tip (the tax is
+     already inside).
+8. **Payments and cash rounding**: a sale may be paid by several payments in order. Card and other
+   payments are exact and may not exceed the remaining balance. Each business sets a cash step (none,
+   0.05, 0.10, or 1.00). A cash payment that settles the remaining balance pays that balance rounded to
+   the nearest step, with ties rounding up; the difference is shown as a separate "Rounding" line. A
+   cash payment smaller than that is applied exactly, with no rounding. Example: total 30.42, card
+   20.00, then cash settles 10.42 → 10.40 (rounding −0.02).
+9. **Change** = cash tendered − the (rounded) balance it settled.
 
 The backend recalculates steps 1–9 for every sale and rejects any sale whose submitted totals
 differ (Constitution, Principle I).
@@ -81,19 +96,21 @@ differ (Constitution, Principle I).
   kitchen and for calling orders.
 - Both come from concurrency-safe sequences per business (Constitution, Principle II).
 
-## Open questions
+## Resolved and deferred questions
 
-- **Split payments**: can one sale be paid partly in cash and partly by card? If so, how does
-  cash rounding apply to the cash part?
-- **Refunds**: are partial refunds (some items, or part of an amount) needed, or only full
-  refunds? How are tax and rounding reversed?
-- **Discount limit**: the default limit above which an order discount needs approval (for
-  example 10%).
-- **Discount and tax-inclusive order**: for a tax-inclusive business, does an order discount
-  reduce the tax-inclusive price? The current rules assume yes.
-- **Container deposits** (retail, roadmap #11/#14): a deposit is a separate line per item sold.
-  Is it taxed? (Varies by province and state: likely a per-business or per-tax-profile setting.)
-  Is it discountable? (Assumed no.) Is it refunded with the item? (Assumed yes.)
-- **Multi-buy promotions** (roadmap #28): where they sit in the calculation order relative to item
-  and order discounts (assumed: after item discounts, before the order discount), how the promotion
-  amount is spread across lines for tax and refunds, and whether a product can be in two promotions.
+Resolved 2026-10-11 (feature #10):
+
+- **Split payments**: allowed; rounding only on the cash payment that settles the balance (step 8).
+- **Discount and tax-inclusive order**: an order discount reduces the tax-inclusive price; tax is then
+  extracted from the reduced gross (confirmed).
+- **Container deposits**: priced now (section 2). Not discountable; taxable per business setting;
+  refunded with the item when refunds exist (#19).
+- **Return lines in a sale**: not allowed (section 2).
+
+Deferred:
+
+- **Refunds**: partial refunds and how tax and rounding are reversed — decided in refunds (#19).
+- **Discount limit**: the default limit above which an order discount needs approval — decided in
+  business settings (#12). The engine only computes amounts.
+- **Multi-buy promotions**: their place in the calculation order, how the promotion amount is spread
+  for tax and refunds, and whether a product can be in two promotions — decided in promotions (#28).
