@@ -66,7 +66,7 @@ a self-hosted instance with billing switched off is never restricted.
 
 Goal: a business can set up everything it sells.
 
-10. **Pricing engine**: the shared pricing module in C# (used by the API and the web app) and
+10. **Pricing engine** (done, `specs/009-pricing-engine/`): the shared pricing module in C# (used by the API and the web app) and
    Kotlin, driven by `contracts/pricing-cases.json`, implementing `specs/pricing-rules.md`.
 11. **Catalog setup** (web): categories, products, units, open-price items, tax profiles,
    scheduled item discounts, CSV import; per product: one or more barcodes (UPC/EAN, PLU),

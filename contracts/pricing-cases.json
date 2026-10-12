@@ -1,5 +1,5077 @@
 {
   "$schema": "./pricing-cases.schema.json",
-  "version": 1,
-  "cases": []
+  "version": 2,
+  "cases": [
+    {
+      "id": "excl-single-line-hst",
+      "description": "1 x 10.00, HST 13% = 1.30",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1000,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1000,
+            "amount": 130
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1000,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1000,
+        "taxTotal": 130,
+        "tip": 0,
+        "total": 1130,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1130
+      }
+    },
+    {
+      "id": "excl-two-lines-hst",
+      "description": "2 x 3.49 + 1.25 kg x 4.00 = 11.98; HST 13% = 1.5574 -> 1.56; paid by card",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "payments": [
+          {
+            "method": "card",
+            "amount": 1354
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 349,
+            "quantity": "2",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 400,
+            "quantity": "1.25",
+            "unit": "kg",
+            "step": "0.005",
+            "minQuantity": "0.005",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 698,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 698,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 500,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1198,
+            "amount": 156
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1198,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1198,
+        "taxTotal": 156,
+        "tip": 0,
+        "total": 1354,
+        "payments": [
+          {
+            "method": "card",
+            "applied": 1354,
+            "rounding": 0,
+            "change": 0
+          }
+        ],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "excl-weighed-rounds-half-up",
+      "description": "0.333 kg x 2.99 = 0.99567 -> 1.00; HST 0.13",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 299,
+            "quantity": "0.333",
+            "unit": "kg",
+            "step": "0.001",
+            "minQuantity": "0.001",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 100,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 100,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 100,
+            "amount": 13
+          }
+        ],
+        "baseByKind": {
+          "taxable": 100,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 100,
+        "taxTotal": 13,
+        "tip": 0,
+        "total": 113,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 113
+      }
+    },
+    {
+      "id": "excl-weighed-exact-half",
+      "description": "0.5 kg x 3.49 = 1.745 -> 1.75 (half up); HST 0.2275 -> 0.23",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 349,
+            "quantity": "0.5",
+            "unit": "kg",
+            "step": "0.001",
+            "minQuantity": "0.001",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 175,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 175,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 175,
+            "amount": 23
+          }
+        ],
+        "baseByKind": {
+          "taxable": 175,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 175,
+        "taxTotal": 23,
+        "tip": 0,
+        "total": 198,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 198
+      }
+    },
+    {
+      "id": "excl-gst-pst-components",
+      "description": "19.99: GST 5% = 0.9995 -> 1.00, PST 7% = 1.3993 -> 1.40",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1999,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST+PST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "GST",
+                  "ratePercent": "5"
+                },
+                {
+                  "label": "PST",
+                  "ratePercent": "7"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1999,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1999,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "GST",
+            "ratePercent": "5",
+            "base": 1999,
+            "amount": 100
+          },
+          {
+            "label": "PST",
+            "ratePercent": "7",
+            "base": 1999,
+            "amount": 140
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1999,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1999,
+        "taxTotal": 240,
+        "tip": 0,
+        "total": 2239,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 2239
+      }
+    },
+    {
+      "id": "excl-tax-rounded-once-per-component",
+      "description": "3 lines of 0.10: per line 0.013 would round to 0.01 x 3 = 0.03; once per sale 0.30 x 13% = 0.039 -> 0.04",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 10,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 10,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "c",
+            "unitPrice": 10,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 10,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 10,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 10,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 10,
+            "deposit": 0
+          },
+          {
+            "id": "c",
+            "lineAmount": 10,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 10,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 30,
+            "amount": 4
+          }
+        ],
+        "baseByKind": {
+          "taxable": 30,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 30,
+        "taxTotal": 4,
+        "tip": 0,
+        "total": 34,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 34
+      }
+    },
+    {
+      "id": "excl-mixed-profiles",
+      "description": "10.00 HST (1.30) + 5.00 GST+PST (0.25 + 0.35); rows in order of first appearance",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 500,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST+PST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "GST",
+                  "ratePercent": "5"
+                },
+                {
+                  "label": "PST",
+                  "ratePercent": "7"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1000,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 500,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1000,
+            "amount": 130
+          },
+          {
+            "label": "GST",
+            "ratePercent": "5",
+            "base": 500,
+            "amount": 25
+          },
+          {
+            "label": "PST",
+            "ratePercent": "7",
+            "base": 500,
+            "amount": 35
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1500,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1500,
+        "taxTotal": 190,
+        "tip": 0,
+        "total": 1690,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1690
+      }
+    },
+    {
+      "id": "excl-component-shared-by-profiles",
+      "description": "GST in two profiles is grouped by label and rate: GST 5% on 4.00 + 6.00 = 0.50; PST 7% on 6.00 = 0.42",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 400,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "GST",
+                  "ratePercent": "5"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 600,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST+PST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "GST",
+                  "ratePercent": "5"
+                },
+                {
+                  "label": "PST",
+                  "ratePercent": "7"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 400,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 400,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 600,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 600,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "GST",
+            "ratePercent": "5",
+            "base": 1000,
+            "amount": 50
+          },
+          {
+            "label": "PST",
+            "ratePercent": "7",
+            "base": 600,
+            "amount": 42
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1000,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1000,
+        "taxTotal": 92,
+        "tip": 0,
+        "total": 1092,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1092
+      }
+    },
+    {
+      "id": "excl-zero-rated-and-exempt",
+      "description": "3.00 zero-rated, 2 x 1.50 exempt, 10.00 HST: tax only on HST; bases reported by kind",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 300,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Zero-rated",
+              "kind": "zeroRated",
+              "components": []
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 150,
+            "quantity": "2",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          },
+          {
+            "id": "c",
+            "unitPrice": 1000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 300,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 300,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 300,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 300,
+            "deposit": 0
+          },
+          {
+            "id": "c",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1000,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1000,
+            "amount": 130
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1000,
+          "zeroRated": 300,
+          "exempt": 300
+        },
+        "subtotal": 1600,
+        "taxTotal": 130,
+        "tip": 0,
+        "total": 1730,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1730
+      }
+    },
+    {
+      "id": "excl-open-price",
+      "description": "Open-price cake entered at 25.00; HST 3.25",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 2500,
+            "quantity": "1",
+            "openPrice": true,
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 2500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 2500,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 2500,
+            "amount": 325
+          }
+        ],
+        "baseByKind": {
+          "taxable": 2500,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 2500,
+        "taxTotal": 325,
+        "tip": 0,
+        "total": 2825,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 2825
+      }
+    },
+    {
+      "id": "excl-price-override",
+      "description": "Override 12.99 -> 9.99 (original carried, new used): 2 x 9.99 = 19.98; HST 2.5974 -> 2.60",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 999,
+            "quantity": "2",
+            "originalUnitPrice": 1299,
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1998,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1998,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1998,
+            "amount": 260
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1998,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1998,
+        "taxTotal": 260,
+        "tip": 0,
+        "total": 2258,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 2258
+      }
+    },
+    {
+      "id": "disc-item-percent",
+      "description": "3 x 4.99 = 14.97; 10% = 1.497 -> 1.50; net 13.47; HST 1.7511 -> 1.75",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 499,
+            "quantity": "3",
+            "itemDiscount": {
+              "kind": "percent",
+              "value": "10"
+            },
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1497,
+            "itemDiscount": 150,
+            "orderDiscountShare": 0,
+            "taxable": 1347,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1347,
+            "amount": 175
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1347,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1347,
+        "taxTotal": 175,
+        "tip": 0,
+        "total": 1522,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1522
+      }
+    },
+    {
+      "id": "disc-item-fixed-per-unit",
+      "description": "3 x 4.99 with 0.50 off each = 1.50; net 13.47; HST 1.75",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 499,
+            "quantity": "3",
+            "itemDiscount": {
+              "kind": "fixed",
+              "value": 50
+            },
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1497,
+            "itemDiscount": 150,
+            "orderDiscountShare": 0,
+            "taxable": 1347,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1347,
+            "amount": 175
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1347,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1347,
+        "taxTotal": 175,
+        "tip": 0,
+        "total": 1522,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1522
+      }
+    },
+    {
+      "id": "disc-item-fixed-weighed",
+      "description": "1.255 kg x 8.00 = 10.04; 1.00/kg off x 1.255 = 1.255 -> 1.26; net 8.78; HST 1.1414 -> 1.14",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 800,
+            "quantity": "1.255",
+            "unit": "kg",
+            "step": "0.005",
+            "minQuantity": "0.005",
+            "itemDiscount": {
+              "kind": "fixed",
+              "value": 100
+            },
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1004,
+            "itemDiscount": 126,
+            "orderDiscountShare": 0,
+            "taxable": 878,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 878,
+            "amount": 114
+          }
+        ],
+        "baseByKind": {
+          "taxable": 878,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 878,
+        "taxTotal": 114,
+        "tip": 0,
+        "total": 992,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 992
+      }
+    },
+    {
+      "id": "disc-item-capped-at-line",
+      "description": "2.00 with 3.00 off: discount capped at 2.00, net 0, tax 0 (the HST row stays with base 0)",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 200,
+            "quantity": "1",
+            "itemDiscount": {
+              "kind": "fixed",
+              "value": 300
+            },
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 200,
+            "itemDiscount": 200,
+            "orderDiscountShare": 0,
+            "taxable": 0,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 0,
+            "amount": 0
+          }
+        ],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 0,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 0,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "disc-item-hundred-percent",
+      "description": "2 x 5.00 at 100% off: net 0",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 500,
+            "quantity": "2",
+            "itemDiscount": {
+              "kind": "percent",
+              "value": "100"
+            },
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1000,
+            "itemDiscount": 1000,
+            "orderDiscountShare": 0,
+            "taxable": 0,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 0,
+            "amount": 0
+          }
+        ],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 0,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 0,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "disc-order-percent",
+      "description": "10.00 + 5.00, order 10% = 1.50 spread 1.00 / 0.50; HST on 13.50 = 1.755 -> 1.76",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "percent",
+          "value": "10"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 500,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 100,
+            "taxable": 900,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 50,
+            "taxable": 450,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1350,
+            "amount": 176
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1350,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1350,
+        "taxTotal": 176,
+        "tip": 0,
+        "total": 1526,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1526
+      }
+    },
+    {
+      "id": "disc-order-fixed",
+      "description": "10.00 + 5.00, 1.00 off: exact shares 0.6667 / 0.3333 -> floors 0.66 / 0.33, leftover cent to the larger remainder (a); HST on 14.00 = 1.82",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "fixed",
+          "value": 100
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 500,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 67,
+            "taxable": 933,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 33,
+            "taxable": 467,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1400,
+            "amount": 182
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1400,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1400,
+        "taxTotal": 182,
+        "tip": 0,
+        "total": 1582,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1582
+      }
+    },
+    {
+      "id": "disc-order-fixed-capped",
+      "description": "3.00 with 5.00 off: capped at 3.00",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "fixed",
+          "value": 500
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 300,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 300,
+            "itemDiscount": 0,
+            "orderDiscountShare": 300,
+            "taxable": 0,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 0,
+            "amount": 0
+          }
+        ],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 0,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 0,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "spread-three-way-tie",
+      "description": "3 x 1.00, 1.00 off: 0.3333 each -> 0.33 x 3, leftover cent to the first line on a tie; HST on 2.00 = 0.26",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "fixed",
+          "value": 100
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "c",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 100,
+            "itemDiscount": 0,
+            "orderDiscountShare": 34,
+            "taxable": 66,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 100,
+            "itemDiscount": 0,
+            "orderDiscountShare": 33,
+            "taxable": 67,
+            "deposit": 0
+          },
+          {
+            "id": "c",
+            "lineAmount": 100,
+            "itemDiscount": 0,
+            "orderDiscountShare": 33,
+            "taxable": 67,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 200,
+            "amount": 26
+          }
+        ],
+        "baseByKind": {
+          "taxable": 200,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 200,
+        "taxTotal": 26,
+        "tip": 0,
+        "total": 226,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 226
+      }
+    },
+    {
+      "id": "spread-tie-skips-whole-share",
+      "description": "1.00, 2.00, 1.00 with 0.02 off: exact 0.005 / 0.01 / 0.005 -> floors 0 / 1 / 0, leftover cent to a (tie with c, a first); HST 3.98 x 13% = 0.5174 -> 0.52",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "fixed",
+          "value": 2
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 200,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "c",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 100,
+            "itemDiscount": 0,
+            "orderDiscountShare": 1,
+            "taxable": 99,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 200,
+            "itemDiscount": 0,
+            "orderDiscountShare": 1,
+            "taxable": 199,
+            "deposit": 0
+          },
+          {
+            "id": "c",
+            "lineAmount": 100,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 100,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 398,
+            "amount": 52
+          }
+        ],
+        "baseByKind": {
+          "taxable": 398,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 398,
+        "taxTotal": 52,
+        "tip": 0,
+        "total": 450,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 450
+      }
+    },
+    {
+      "id": "spread-zero-net-line",
+      "description": "2.00 at 100% off (net 0) + 8.00; order 10% of 8.00 = 0.80, all on b; HST 7.20 x 13% = 0.936 -> 0.94",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "percent",
+          "value": "10"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 200,
+            "quantity": "1",
+            "itemDiscount": {
+              "kind": "percent",
+              "value": "100"
+            },
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 800,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 200,
+            "itemDiscount": 200,
+            "orderDiscountShare": 0,
+            "taxable": 0,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 800,
+            "itemDiscount": 0,
+            "orderDiscountShare": 80,
+            "taxable": 720,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 720,
+            "amount": 94
+          }
+        ],
+        "baseByKind": {
+          "taxable": 720,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 720,
+        "taxTotal": 94,
+        "tip": 0,
+        "total": 814,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 814
+      }
+    },
+    {
+      "id": "spread-after-item-discounts",
+      "description": "2 x 6.00 = 12.00 less 25% = 9.00, plus 3.00; order 5% of 12.00 = 0.60 -> 0.45 / 0.15; GST 11.40 x 5% = 0.57, PST 0.798 -> 0.80",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "percent",
+          "value": "5"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 600,
+            "quantity": "2",
+            "itemDiscount": {
+              "kind": "percent",
+              "value": "25"
+            },
+            "taxProfile": {
+              "name": "GST+PST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "GST",
+                  "ratePercent": "5"
+                },
+                {
+                  "label": "PST",
+                  "ratePercent": "7"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 300,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST+PST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "GST",
+                  "ratePercent": "5"
+                },
+                {
+                  "label": "PST",
+                  "ratePercent": "7"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1200,
+            "itemDiscount": 300,
+            "orderDiscountShare": 45,
+            "taxable": 855,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 300,
+            "itemDiscount": 0,
+            "orderDiscountShare": 15,
+            "taxable": 285,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "GST",
+            "ratePercent": "5",
+            "base": 1140,
+            "amount": 57
+          },
+          {
+            "label": "PST",
+            "ratePercent": "7",
+            "base": 1140,
+            "amount": 80
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1140,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1140,
+        "taxTotal": 137,
+        "tip": 0,
+        "total": 1277,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1277
+      }
+    },
+    {
+      "id": "tip-amount",
+      "description": "20.00, HST 2.60, tip 3.00 (never taxed)",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "tip": {
+          "amount": 300
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 2000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 2000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 2000,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 2000,
+            "amount": 260
+          }
+        ],
+        "baseByKind": {
+          "taxable": 2000,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 2000,
+        "taxTotal": 260,
+        "tip": 300,
+        "total": 2560,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 2560
+      }
+    },
+    {
+      "id": "tip-percent-after-discount",
+      "description": "20.00 less 10% order = 18.00; tip 15% of 18.00 = 2.70; HST 2.34",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "percent",
+          "value": "10"
+        },
+        "tip": {
+          "percentOfSubtotal": "15"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 2000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 2000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 200,
+            "taxable": 1800,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1800,
+            "amount": 234
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1800,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1800,
+        "taxTotal": 234,
+        "tip": 270,
+        "total": 2304,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 2304
+      }
+    },
+    {
+      "id": "tip-percent-rounds",
+      "description": "9.99: tip 18% = 1.7982 -> 1.80; HST 1.2987 -> 1.30",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "tip": {
+          "percentOfSubtotal": "18"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 999,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 999,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 999,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 999,
+            "amount": 130
+          }
+        ],
+        "baseByKind": {
+          "taxable": 999,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 999,
+        "taxTotal": 130,
+        "tip": 180,
+        "total": 1309,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1309
+      }
+    },
+    {
+      "id": "dep-untaxed",
+      "description": "6 cans x 1.99 = 11.94 + deposit 0.10 each = 0.60 (untaxed); HST 11.94 x 13% = 1.5522 -> 1.55",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 199,
+            "quantity": "6",
+            "depositPerUnit": 10,
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1194,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1194,
+            "deposit": 60
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1194,
+            "amount": 155
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1194,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1254,
+        "taxTotal": 155,
+        "tip": 0,
+        "total": 1409,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1409
+      }
+    },
+    {
+      "id": "dep-taxed",
+      "description": "Same with deposits taxable: HST on 12.54 = 1.6302 -> 1.63",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "depositsTaxable": true,
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 199,
+            "quantity": "6",
+            "depositPerUnit": 10,
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1194,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1194,
+            "deposit": 60
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1254,
+            "amount": 163
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1254,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1254,
+        "taxTotal": 163,
+        "tip": 0,
+        "total": 1417,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1417
+      }
+    },
+    {
+      "id": "dep-never-discounted",
+      "description": "6 x 1.99 = 11.94 less 50% = 5.97 (deposit 0.60 untouched); order 1.00 off all on the product: 4.97; HST 0.6461 -> 0.65",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "fixed",
+          "value": 100
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 199,
+            "quantity": "6",
+            "depositPerUnit": 10,
+            "itemDiscount": {
+              "kind": "percent",
+              "value": "50"
+            },
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1194,
+            "itemDiscount": 597,
+            "orderDiscountShare": 100,
+            "taxable": 497,
+            "deposit": 60
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 497,
+            "amount": 65
+          }
+        ],
+        "baseByKind": {
+          "taxable": 497,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 557,
+        "taxTotal": 65,
+        "tip": 0,
+        "total": 622,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 622
+      }
+    },
+    {
+      "id": "dep-excluded-from-tip",
+      "description": "10.00 + deposit 0.25; tip 10% of 10.00 only = 1.00; HST 1.30",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "tip": {
+          "percentOfSubtotal": "10"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1000,
+            "quantity": "1",
+            "depositPerUnit": 25,
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1000,
+            "deposit": 25
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 1000,
+            "amount": 130
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1000,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1025,
+        "taxTotal": 130,
+        "tip": 100,
+        "total": 1255,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1255
+      }
+    },
+    {
+      "id": "cur-jpy-no-minor-digits",
+      "description": "JPY: 3 x 149 = 447; tax 10% = 44.7 -> 45",
+      "input": {
+        "currency": "JPY",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 149,
+            "quantity": "3",
+            "taxProfile": {
+              "name": "Consumption",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "Consumption tax",
+                  "ratePercent": "10"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 447,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 447,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "Consumption tax",
+            "ratePercent": "10",
+            "base": 447,
+            "amount": 45
+          }
+        ],
+        "baseByKind": {
+          "taxable": 447,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 447,
+        "taxTotal": 45,
+        "tip": 0,
+        "total": 492,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 492
+      }
+    },
+    {
+      "id": "cur-kwd-three-minor-digits",
+      "description": "KWD (fils): 2 x 1.250 = 2.500; 0.75 x 1.333 = 0.99975 -> 1.000; tax 5% of 3.500 = 0.175",
+      "input": {
+        "currency": "KWD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1250,
+            "quantity": "2",
+            "taxProfile": {
+              "name": "Tax",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "Tax",
+                  "ratePercent": "5"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 1333,
+            "quantity": "0.75",
+            "step": "0.25",
+            "minQuantity": "0.25",
+            "taxProfile": {
+              "name": "Tax",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "Tax",
+                  "ratePercent": "5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 2500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 2500,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1000,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "Tax",
+            "ratePercent": "5",
+            "base": 3500,
+            "amount": 175
+          }
+        ],
+        "baseByKind": {
+          "taxable": 3500,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 3500,
+        "taxTotal": 175,
+        "tip": 0,
+        "total": 3675,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 3675
+      }
+    },
+    {
+      "id": "excl-usd-sales-tax",
+      "description": "USD: 12.49 + 2 x 3.25 = 18.99; sales tax 8.875% = 1.6853625 -> 1.69",
+      "input": {
+        "currency": "USD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1249,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "NYC",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "Sales tax",
+                  "ratePercent": "8.875"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 325,
+            "quantity": "2",
+            "taxProfile": {
+              "name": "NYC",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "Sales tax",
+                  "ratePercent": "8.875"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1249,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1249,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 650,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 650,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "Sales tax",
+            "ratePercent": "8.875",
+            "base": 1899,
+            "amount": 169
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1899,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1899,
+        "taxTotal": 169,
+        "tip": 0,
+        "total": 2068,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 2068
+      }
+    },
+    {
+      "id": "incl-single-gst5",
+      "description": "105.00 incl. GST 5%: CGST = 105.00 x 2.5 / 105 = 2.50, SGST 2.50",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 10500,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 10500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 10500,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          }
+        ],
+        "baseByKind": {
+          "taxable": 10500,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 10500,
+        "taxTotal": 500,
+        "tip": 0,
+        "total": 10500,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 10500
+      }
+    },
+    {
+      "id": "incl-extraction-rounds",
+      "description": "99.00 incl. GST 18%: CGST = 99.00 x 9 / 118 = 7.550847 -> 7.55, SGST 7.55",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 9900,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 18%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "9"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "9"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 9900,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 9900,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 9900,
+            "amount": 755
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 9900,
+            "amount": 755
+          }
+        ],
+        "baseByKind": {
+          "taxable": 9900,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 9900,
+        "taxTotal": 1510,
+        "tip": 0,
+        "total": 9900,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 9900
+      }
+    },
+    {
+      "id": "incl-rounded-once-per-profile",
+      "description": "3 x 10.00 at GST 5%: per line 0.238 -> 0.24 x 3 = 0.72; once per profile 30.00 x 2.5 / 105 = 0.714 -> 0.71",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 1000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          },
+          {
+            "id": "c",
+            "unitPrice": 1000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1000,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1000,
+            "deposit": 0
+          },
+          {
+            "id": "c",
+            "lineAmount": 1000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1000,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 3000,
+            "amount": 71
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 3000,
+            "amount": 71
+          }
+        ],
+        "baseByKind": {
+          "taxable": 3000,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 3000,
+        "taxTotal": 142,
+        "tip": 0,
+        "total": 3000,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 3000
+      }
+    },
+    {
+      "id": "incl-two-profiles",
+      "description": "2 x 52.50 at GST 5% (CGST/SGST 2.50 each) + 118.00 at GST 18% (9.00 each); rows per profile, in order of first appearance",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 5250,
+            "quantity": "2",
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 11800,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 18%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "9"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "9"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 10500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 10500,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 11800,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 11800,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          },
+          {
+            "label": "CGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 11800,
+            "amount": 900
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 11800,
+            "amount": 900
+          }
+        ],
+        "baseByKind": {
+          "taxable": 22300,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 22300,
+        "taxTotal": 2300,
+        "tip": 0,
+        "total": 22300,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 22300
+      }
+    },
+    {
+      "id": "incl-same-component-two-profiles",
+      "description": "Two profiles with identical CGST/SGST 2.5%: rounded per profile. 10.25 x 2.5 / 105 = 0.24405 -> 0.24 in each (pooled it would be 0.488 -> 0.49)",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1025,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Food 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 1025,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Apparel 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1025,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1025,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 1025,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1025,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "Food 5%",
+            "base": 1025,
+            "amount": 24
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "Food 5%",
+            "base": 1025,
+            "amount": 24
+          },
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "Apparel 5%",
+            "base": 1025,
+            "amount": 24
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "Apparel 5%",
+            "base": 1025,
+            "amount": 24
+          }
+        ],
+        "baseByKind": {
+          "taxable": 2050,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 2050,
+        "taxTotal": 96,
+        "tip": 0,
+        "total": 2050,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 2050
+      }
+    },
+    {
+      "id": "incl-order-discount",
+      "description": "105.00 (GST 5%) + 118.00 (GST 18%), order 10% = 22.30 spread 10.50 / 11.80; tax from the reduced gross: 94.50 x 2.5 / 105 = 2.25, 106.20 x 9 / 118 = 8.10",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "orderDiscount": {
+          "kind": "percent",
+          "value": "10"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 10500,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 11800,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 18%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "9"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "9"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 10500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 1050,
+            "taxable": 9450,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 11800,
+            "itemDiscount": 0,
+            "orderDiscountShare": 1180,
+            "taxable": 10620,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 9450,
+            "amount": 225
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 9450,
+            "amount": 225
+          },
+          {
+            "label": "CGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 10620,
+            "amount": 810
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 10620,
+            "amount": 810
+          }
+        ],
+        "baseByKind": {
+          "taxable": 20070,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 20070,
+        "taxTotal": 2070,
+        "tip": 0,
+        "total": 20070,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 20070
+      }
+    },
+    {
+      "id": "incl-item-discount",
+      "description": "3 x 40.00 = 120.00 less 15% = 102.00 incl. GST 12%: CGST = 102.00 x 6 / 112 = 5.4643 -> 5.46",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 4000,
+            "quantity": "3",
+            "itemDiscount": {
+              "kind": "percent",
+              "value": "15"
+            },
+            "taxProfile": {
+              "name": "GST 12%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "6"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "6"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 12000,
+            "itemDiscount": 1800,
+            "orderDiscountShare": 0,
+            "taxable": 10200,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "6",
+            "profile": "GST 12%",
+            "base": 10200,
+            "amount": 546
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "6",
+            "profile": "GST 12%",
+            "base": 10200,
+            "amount": 546
+          }
+        ],
+        "baseByKind": {
+          "taxable": 10200,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 10200,
+        "taxTotal": 1092,
+        "tip": 0,
+        "total": 10200,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 10200
+      }
+    },
+    {
+      "id": "incl-zero-rated-and-exempt",
+      "description": "50.00 nil-rated, 20.00 exempt, 105.00 at GST 5%: only the GST profile has tax",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 5000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Nil-rated",
+              "kind": "zeroRated",
+              "components": []
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 2000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          },
+          {
+            "id": "c",
+            "unitPrice": 10500,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 5000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 5000,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 2000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 2000,
+            "deposit": 0
+          },
+          {
+            "id": "c",
+            "lineAmount": 10500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 10500,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          }
+        ],
+        "baseByKind": {
+          "taxable": 10500,
+          "zeroRated": 5000,
+          "exempt": 2000
+        },
+        "subtotal": 17500,
+        "taxTotal": 500,
+        "tip": 0,
+        "total": 17500,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 17500
+      }
+    },
+    {
+      "id": "incl-tip-percent",
+      "description": "118.00 incl. GST 18%: pre-tax 118.00 x 100 / 118 = 100.00; tip 10% = 10.00",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "tip": {
+          "percentOfSubtotal": "10"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 11800,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 18%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "9"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "9"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 11800,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 11800,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 11800,
+            "amount": 900
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 11800,
+            "amount": 900
+          }
+        ],
+        "baseByKind": {
+          "taxable": 11800,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 11800,
+        "taxTotal": 1800,
+        "tip": 1000,
+        "total": 12800,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 12800
+      }
+    },
+    {
+      "id": "incl-tip-percent-two-profiles",
+      "description": "Pre-tax per profile: 105.00 x 100 / 105 = 100.00; 100.00 x 100 / 118 = 84.7458 -> 84.75; tip 5% of 184.75 = 9.2375 -> 9.24. GST 18% on 100.00: 100 x 9 / 118 = 7.627 -> 7.63",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "tip": {
+          "percentOfSubtotal": "5"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 10500,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          },
+          {
+            "id": "b",
+            "unitPrice": 10000,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "GST 18%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "9"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "9"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 10500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 10500,
+            "deposit": 0
+          },
+          {
+            "id": "b",
+            "lineAmount": 10000,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 10000,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          },
+          {
+            "label": "CGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 10000,
+            "amount": 763
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "9",
+            "profile": "GST 18%",
+            "base": 10000,
+            "amount": 763
+          }
+        ],
+        "baseByKind": {
+          "taxable": 20500,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 20500,
+        "taxTotal": 2026,
+        "tip": 924,
+        "total": 21424,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 21424
+      }
+    },
+    {
+      "id": "incl-deposit-untaxed",
+      "description": "2 x 21.00 incl. GST 5% + deposit 5.00 each (untaxed): CGST 42.00 x 2.5 / 105 = 1.00",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 2100,
+            "quantity": "2",
+            "depositPerUnit": 500,
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 4200,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 4200,
+            "deposit": 1000
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 4200,
+            "amount": 100
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 4200,
+            "amount": 100
+          }
+        ],
+        "baseByKind": {
+          "taxable": 4200,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 5200,
+        "taxTotal": 200,
+        "tip": 0,
+        "total": 5200,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 5200
+      }
+    },
+    {
+      "id": "incl-deposit-taxed",
+      "description": "Same with deposits taxable: CGST on 52.00 = 1.2381 -> 1.24",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "depositsTaxable": true,
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 2100,
+            "quantity": "2",
+            "depositPerUnit": 500,
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 4200,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 4200,
+            "deposit": 1000
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 5200,
+            "amount": 124
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 5200,
+            "amount": 124
+          }
+        ],
+        "baseByKind": {
+          "taxable": 5200,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 5200,
+        "taxTotal": 248,
+        "tip": 0,
+        "total": 5200,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 5200
+      }
+    },
+    {
+      "id": "incl-deposit-excluded-from-tip",
+      "description": "105.00 incl. GST 5% + deposit 5.00; tip 10% of the products pre-tax 100.00 = 10.00",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "tip": {
+          "percentOfSubtotal": "10"
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 10500,
+            "quantity": "1",
+            "depositPerUnit": 500,
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 10500,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 10500,
+            "deposit": 500
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 10500,
+            "amount": 250
+          }
+        ],
+        "baseByKind": {
+          "taxable": 10500,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 11000,
+        "taxTotal": 500,
+        "tip": 1000,
+        "total": 12000,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 12000
+      }
+    },
+    {
+      "id": "incl-kwd-single-component",
+      "description": "KWD: 1.050 incl. VAT 5%: 1.050 x 5 / 105 = 0.050",
+      "input": {
+        "currency": "KWD",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1050,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "VAT 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "VAT",
+                  "ratePercent": "5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1050,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1050,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "VAT",
+            "ratePercent": "5",
+            "profile": "VAT 5%",
+            "base": 1050,
+            "amount": 50
+          }
+        ],
+        "baseByKind": {
+          "taxable": 1050,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 1050,
+        "taxTotal": 50,
+        "tip": 0,
+        "total": 1050,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 1050
+      }
+    },
+    {
+      "id": "incl-full-discount",
+      "description": "105.00 at 100% off: gross 0, tax 0",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxInclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 10500,
+            "quantity": "1",
+            "itemDiscount": {
+              "kind": "percent",
+              "value": "100"
+            },
+            "taxProfile": {
+              "name": "GST 5%",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "CGST",
+                  "ratePercent": "2.5"
+                },
+                {
+                  "label": "SGST",
+                  "ratePercent": "2.5"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 10500,
+            "itemDiscount": 10500,
+            "orderDiscountShare": 0,
+            "taxable": 0,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "CGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 0,
+            "amount": 0
+          },
+          {
+            "label": "SGST",
+            "ratePercent": "2.5",
+            "profile": "GST 5%",
+            "base": 0,
+            "amount": 0
+          }
+        ],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 0,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 0,
+        "payments": [],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "cash-step5-rounds-down",
+      "description": "Total 10.42, step 0.05: due 10.40 (rounding -0.02); 20.00 tendered, change 9.60",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 5,
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 2000
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1042,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1042,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1042,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 1042
+        },
+        "subtotal": 1042,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 1042,
+        "cashDue": 1040,
+        "payments": [
+          {
+            "method": "cash",
+            "applied": 1040,
+            "rounding": -2,
+            "change": 960
+          }
+        ],
+        "cashRounding": -2,
+        "change": 960,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "cash-step5-rounds-up",
+      "description": "Total 10.43, step 0.05: due 10.45 (rounding +0.02); exact cash, no change",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 5,
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 1045
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1043,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1043,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1043,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 1043
+        },
+        "subtotal": 1043,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 1043,
+        "cashDue": 1045,
+        "payments": [
+          {
+            "method": "cash",
+            "applied": 1045,
+            "rounding": 2,
+            "change": 0
+          }
+        ],
+        "cashRounding": 2,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "cash-step10-tie-rounds-up",
+      "description": "Total 10.45, step 0.10: exactly halfway, rounds up to 10.50; 20.00 tendered, change 9.50",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 10,
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 2000
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1045,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1045,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1045,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 1045
+        },
+        "subtotal": 1045,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 1045,
+        "cashDue": 1050,
+        "payments": [
+          {
+            "method": "cash",
+            "applied": 1050,
+            "rounding": 5,
+            "change": 950
+          }
+        ],
+        "cashRounding": 5,
+        "change": 950,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "cash-step100-rupee",
+      "description": "INR 123.49, step 1.00: due 123.00 (rounding -0.49)",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 100,
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 12300
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 12349,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 12349,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 12349,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 12349
+        },
+        "subtotal": 12349,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 12349,
+        "cashDue": 12300,
+        "payments": [
+          {
+            "method": "cash",
+            "applied": 12300,
+            "rounding": -49,
+            "change": 0
+          }
+        ],
+        "cashRounding": -49,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "cash-step100-tie",
+      "description": "INR 123.50, step 1.00: halfway rounds up to 124.00; 150.00 tendered, change 26.00",
+      "input": {
+        "currency": "INR",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 100,
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 15000
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 12350,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 12350,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 12350,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 12350
+        },
+        "subtotal": 12350,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 12350,
+        "cashDue": 12400,
+        "payments": [
+          {
+            "method": "cash",
+            "applied": 12400,
+            "rounding": 50,
+            "change": 2600
+          }
+        ],
+        "cashRounding": 50,
+        "change": 2600,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "cash-no-step",
+      "description": "No cash step: cash is exact; 20.00 tendered for 10.42, change 9.58 (no cashDue)",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 2000
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1042,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1042,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1042,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 1042
+        },
+        "subtotal": 1042,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 1042,
+        "payments": [
+          {
+            "method": "cash",
+            "applied": 1042,
+            "rounding": 0,
+            "change": 958
+          }
+        ],
+        "cashRounding": 0,
+        "change": 958,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "cash-card-is-exact",
+      "description": "Step 0.05 but paid by card: exact 10.42, no rounding (cashDue still shown as 10.40)",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 5,
+        "payments": [
+          {
+            "method": "card",
+            "amount": 1042
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1042,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1042,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1042,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 1042
+        },
+        "subtotal": 1042,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 1042,
+        "cashDue": 1040,
+        "payments": [
+          {
+            "method": "card",
+            "applied": 1042,
+            "rounding": 0,
+            "change": 0
+          }
+        ],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "split-card-then-cash-settles",
+      "description": "Total 30.42: card 20.00, then cash settles the remaining 10.42 -> 10.40 (rounding -0.02); 20.00 tendered, change 9.60",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 5,
+        "payments": [
+          {
+            "method": "card",
+            "amount": 2000
+          },
+          {
+            "method": "cash",
+            "tendered": 2000
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 3042,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 3042,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 3042,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 3042
+        },
+        "subtotal": 3042,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 3042,
+        "cashDue": 3040,
+        "payments": [
+          {
+            "method": "card",
+            "applied": 2000,
+            "rounding": 0,
+            "change": 0
+          },
+          {
+            "method": "cash",
+            "applied": 1040,
+            "rounding": -2,
+            "change": 960
+          }
+        ],
+        "cashRounding": -2,
+        "change": 960,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "split-cash-partial-then-card",
+      "description": "Total 30.42: 20.00 cash does not settle (due 30.40), applied exactly; card pays the remaining 10.42",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 5,
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 2000
+          },
+          {
+            "method": "card",
+            "amount": 1042
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 3042,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 3042,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 3042,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 3042
+        },
+        "subtotal": 3042,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 3042,
+        "cashDue": 3040,
+        "payments": [
+          {
+            "method": "cash",
+            "applied": 2000,
+            "rounding": 0,
+            "change": 0
+          },
+          {
+            "method": "card",
+            "applied": 1042,
+            "rounding": 0,
+            "change": 0
+          }
+        ],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "split-card-covers-all",
+      "description": "Total 30.42 fully on card: no cash part, no rounding",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 5,
+        "payments": [
+          {
+            "method": "card",
+            "amount": 3042
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 3042,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 3042,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 3042,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 3042
+        },
+        "subtotal": 3042,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 3042,
+        "cashDue": 3040,
+        "payments": [
+          {
+            "method": "card",
+            "applied": 3042,
+            "rounding": 0,
+            "change": 0
+          }
+        ],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "cash-partial-leaves-remaining",
+      "description": "Total 10.43 (due 10.45): 10.00 cash is partial and exact; 0.43 still owed",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 5,
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 1000
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1043,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 1043,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 1043,
+            "deposit": 0
+          }
+        ],
+        "taxes": [],
+        "baseByKind": {
+          "taxable": 0,
+          "zeroRated": 0,
+          "exempt": 1043
+        },
+        "subtotal": 1043,
+        "taxTotal": 0,
+        "tip": 0,
+        "total": 1043,
+        "cashDue": 1045,
+        "payments": [
+          {
+            "method": "cash",
+            "applied": 1000,
+            "rounding": 0,
+            "change": 0
+          }
+        ],
+        "cashRounding": 0,
+        "change": 0,
+        "remaining": 43
+      }
+    },
+    {
+      "id": "cash-with-tax-and-tip",
+      "description": "9.99 + HST 1.30 + tip 1.00 = 12.29, step 0.05: due 12.30 (+0.01); 20.00 tendered, change 7.70",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 5,
+        "tip": {
+          "amount": 100
+        },
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 2000
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 999,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "HST",
+              "kind": "taxable",
+              "components": [
+                {
+                  "label": "HST",
+                  "ratePercent": "13"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "id": "a",
+            "lineAmount": 999,
+            "itemDiscount": 0,
+            "orderDiscountShare": 0,
+            "taxable": 999,
+            "deposit": 0
+          }
+        ],
+        "taxes": [
+          {
+            "label": "HST",
+            "ratePercent": "13",
+            "base": 999,
+            "amount": 130
+          }
+        ],
+        "baseByKind": {
+          "taxable": 999,
+          "zeroRated": 0,
+          "exempt": 0
+        },
+        "subtotal": 999,
+        "taxTotal": 130,
+        "tip": 100,
+        "total": 1229,
+        "cashDue": 1230,
+        "payments": [
+          {
+            "method": "cash",
+            "applied": 1230,
+            "rounding": 1,
+            "change": 770
+          }
+        ],
+        "cashRounding": 1,
+        "change": 770,
+        "remaining": 0
+      }
+    },
+    {
+      "id": "err-card-exceeds-balance",
+      "description": "Card 11.00 for a 10.42 sale: refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1042,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ],
+        "payments": [
+          {
+            "method": "card",
+            "amount": 1100
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "paymentExceedsBalance"
+      }
+    },
+    {
+      "id": "err-payment-after-settled",
+      "description": "Card settles 10.42, then more cash: refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1042,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ],
+        "payments": [
+          {
+            "method": "card",
+            "amount": 1042
+          },
+          {
+            "method": "cash",
+            "tendered": 100
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "paymentAfterSettled"
+      }
+    },
+    {
+      "id": "err-cash-short-of-rounded-due",
+      "description": "Balance 10.43 rounds to 10.45 cash due; 10.44 tendered neither settles it nor fits as a partial payment: refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "cashRoundingStep": 5,
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 1043,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ],
+        "payments": [
+          {
+            "method": "cash",
+            "tendered": 1044
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidPayment",
+        "field": "payments[0]"
+      }
+    },
+    {
+      "id": "err-empty-sale",
+      "description": "A sale without lines is refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": []
+      },
+      "expectedError": {
+        "code": "emptySale"
+      }
+    },
+    {
+      "id": "err-unknown-currency",
+      "description": "XYZ is not a supported currency",
+      "input": {
+        "currency": "XYZ",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "unknownCurrency"
+      }
+    },
+    {
+      "id": "err-duplicate-line-id",
+      "description": "Two lines with id a",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          },
+          {
+            "id": "a",
+            "unitPrice": 200,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "duplicateLineId",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-negative-price",
+      "description": "A negative unit price is refused (no return lines)",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": -100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidPrice",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-negative-deposit",
+      "description": "A negative deposit is refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "depositPerUnit": -10,
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidPrice",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-zero-quantity",
+      "description": "Quantity 0 is refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "0",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidQuantity",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-negative-quantity",
+      "description": "A negative quantity (a return) is refused: returns are refunds",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "-1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidQuantity",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-four-decimal-quantity",
+      "description": "1.2345 kg has more than 3 decimals",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1.2345",
+            "unit": "kg",
+            "step": "0.0005",
+            "minQuantity": "0.0005",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidQuantity",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-below-minimum",
+      "description": "0.05 kg is below the minimum 0.1 kg",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "0.05",
+            "unit": "kg",
+            "step": "0.01",
+            "minQuantity": "0.1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "belowMinimumQuantity",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-not-multiple-of-step",
+      "description": "1.3 is not a multiple of the 0.25 step",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1.3",
+            "step": "0.25",
+            "minQuantity": "0.25",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "notMultipleOfStep",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-fractional-pieces",
+      "description": "1.5 pieces when the step is 1",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1.5",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "notMultipleOfStep",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-item-discount-over-100",
+      "description": "An item discount of 101% is refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "itemDiscount": {
+              "kind": "percent",
+              "value": "101"
+            },
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidDiscount",
+        "lineId": "a"
+      }
+    },
+    {
+      "id": "err-negative-order-discount",
+      "description": "A negative fixed order discount is refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "orderDiscount": {
+          "kind": "fixed",
+          "value": -50
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidDiscount",
+        "field": "orderDiscount"
+      }
+    },
+    {
+      "id": "err-negative-tip",
+      "description": "A negative tip is refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "tip": {
+          "amount": -1
+        },
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidTip",
+        "field": "tip"
+      }
+    },
+    {
+      "id": "err-zero-card-payment",
+      "description": "A card payment of 0 is refused",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "payments": [
+          {
+            "method": "card",
+            "amount": 0
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidPayment",
+        "field": "payments[0]"
+      }
+    },
+    {
+      "id": "err-cash-without-tendered",
+      "description": "A cash payment must say what was tendered",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "payments": [
+          {
+            "method": "cash",
+            "amount": 100
+          }
+        ],
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 100,
+            "quantity": "1",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "invalidPayment",
+        "field": "payments[0]"
+      }
+    },
+    {
+      "id": "err-amount-out-of-range",
+      "description": "2 x the largest int64 price overflows the wire format: refused, never wrapped",
+      "input": {
+        "currency": "CAD",
+        "pricing": "taxExclusive",
+        "lines": [
+          {
+            "id": "a",
+            "unitPrice": 9223372036854775807,
+            "quantity": "2",
+            "taxProfile": {
+              "name": "Exempt",
+              "kind": "exempt",
+              "components": []
+            }
+          }
+        ]
+      },
+      "expectedError": {
+        "code": "amountOutOfRange"
+      }
+    }
+  ]
 }

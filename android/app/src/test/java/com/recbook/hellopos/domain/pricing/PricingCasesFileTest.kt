@@ -37,9 +37,17 @@ class PricingCasesFileTest {
 
     @Test
     fun `malformed case is rejected`() {
-        val malformed = """{ "version": 1, "cases": [ { "id": "Bad Id" } ] }"""
+        val malformed = """{ "version": 2, "cases": [ { "id": "Bad Id" } ] }"""
 
         assertTrue(validate(malformed).isNotEmpty())
+    }
+
+    @Test
+    fun `a case with both expected and expectedError is rejected`() {
+        val both = """{ "version": 2, "cases": [ { "id": "both", "description": "d", "input": { "currency": "CAD", "pricing": "taxExclusive", "lines": [] }, "expected": { "lines": [], "taxes": [], "baseByKind": { "taxable": 0, "zeroRated": 0, "exempt": 0 }, "subtotal": 0, "taxTotal": 0, "tip": 0, "total": 0, "payments": [], "cashRounding": 0, "change": 0, "remaining": 0 }, "expectedError": { "code": "emptySale" } } ] }"""
+
+        assertTrue(validate(both).isNotEmpty())
+        assertTrue(validate(both.replace(", \"expectedError\": { \"code\": \"emptySale\" }", "")).isEmpty())
     }
 
     private fun validate(json: String): List<String> {

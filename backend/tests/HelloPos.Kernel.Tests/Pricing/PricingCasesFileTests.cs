@@ -9,7 +9,7 @@ namespace HelloPos.Kernel.Tests.Pricing;
 /// </summary>
 public sealed class PricingCasesFileTests
 {
-    private static readonly string ContractsDir = Path.Combine(FindRepositoryRoot(), "contracts");
+    internal static readonly string ContractsDir = Path.Combine(FindRepositoryRoot(), "contracts");
     private static readonly string CasesPath = Path.Combine(ContractsDir, "pricing-cases.json");
     private static readonly string SchemaPath = Path.Combine(ContractsDir, "pricing-cases.schema.json");
 
@@ -30,9 +30,18 @@ public sealed class PricingCasesFileTests
     [Fact]
     public void MalformedCase_IsRejected()
     {
-        const string malformed = """{ "version": 1, "cases": [ { "id": "Bad Id" } ] }""";
+        const string malformed = """{ "version": 2, "cases": [ { "id": "Bad Id" } ] }""";
 
         Assert.NotEmpty(Validate(malformed));
+    }
+
+    [Fact]
+    public void CaseWithBothExpectedAndExpectedError_IsRejected()
+    {
+        const string both = """{ "version": 2, "cases": [ { "id": "both", "description": "d", "input": { "currency": "CAD", "pricing": "taxExclusive", "lines": [] }, "expected": { "lines": [], "taxes": [], "baseByKind": { "taxable": 0, "zeroRated": 0, "exempt": 0 }, "subtotal": 0, "taxTotal": 0, "tip": 0, "total": 0, "payments": [], "cashRounding": 0, "change": 0, "remaining": 0 }, "expectedError": { "code": "emptySale" } } ] }""";
+
+        Assert.NotEmpty(Validate(both));
+        Assert.Empty(Validate(both.Replace(", \"expectedError\": { \"code\": \"emptySale\" }", "", StringComparison.Ordinal)));
     }
 
     private static List<string> Validate(string json)

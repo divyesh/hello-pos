@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). #7 login and sessions (owners and managers register POS devices on the web; staff sign in on Android with username and PIN, also offline; idle lock; own PIN change).
+> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). #7 login and sessions (owners and managers register POS devices on the web; staff sign in on Android with username and PIN, also offline; idle lock; own PIN change). Phase 2 (#8 billing) is specified and parked; Phase 3 started: #10 pricing engine.
 
 ## Applications
 
@@ -123,7 +123,7 @@ scripts/dotnet.ps1 test --solution backend/HelloPos.slnx
 scripts/dotnet.ps1 build web/HelloPos.Web.slnx
 scripts/dotnet.ps1 test --solution web/HelloPos.Web.slnx
 cd android
-./gradlew assembleDebug testDebugUnitTest      # gradlew.bat on Windows
+./gradlew assembleDebug testDebugUnitTest lintDebug   # gradlew.bat on Windows
 ```
 
 Tests use Microsoft.Testing.Platform, so `dotnet test` takes `--solution` or `--project`.
@@ -219,6 +219,18 @@ instead of `up --api`, send its logs to the environment's Seq with
 `test`), so tests can start their own throwaway PostgreSQL with Testcontainers. Override the socket
 path with `HELLOPOS_ENGINE_SOCKET` if your engine keeps it elsewhere.
 
+### Changing how sales are priced
+
+Pricing lives in exactly one module per side: `backend/src/HelloPos.Kernel/Pricing/` (used by the API
+and the web app) and `android/.../domain/pricing/`. Both run every case in
+`contracts/pricing-cases.json`, whose expected amounts are worked out by hand, never copied from
+either engine. To change a rule:
+
+1. Add cases to `contracts/pricing-cases.json` (extend `pricing-cases.schema.json` if needed) and see
+   both suites fail.
+2. Update [pricing rules](specs/pricing-rules.md).
+3. Change both engines until both suites pass.
+
 ### After changing the API contract
 
 Edit `contracts/openapi.yaml` first (it is the source of truth), then regenerate the web client:
@@ -241,7 +253,7 @@ secrets (safe for pull requests from forks), and every action is pinned to a com
 |-------|--------|-------------------|
 | `backend` | Backend builds; all tests pass, including real-PostgreSQL tests | `scripts/dotnet.ps1 test --solution backend/HelloPos.slnx` |
 | `web` | Web back office builds; all tests pass | `scripts/dotnet.ps1 test --solution web/HelloPos.Web.slnx` |
-| `android` | Android app builds; all unit tests pass | `cd android; ./gradlew assembleDebug testDebugUnitTest` |
+| `android` | Android app builds; all unit tests pass; lint finds no errors (for example an API newer than minSdk) | `cd android; ./gradlew assembleDebug testDebugUnitTest lintDebug` |
 | `contract` | The contract is valid and the committed web client matches it | `npx @redocly/cli@2.62.1 lint contracts/openapi.yaml`, then the regeneration commands above and `git status` |
 | `image` | The API container image builds | `podman build -f backend/src/HelloPos.Api/Dockerfile .` |
 | `environment` | `compose.yaml` is valid for every profile | `podman compose --env-file .env.example --profile api --profile tools config --quiet` |
