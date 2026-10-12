@@ -1,0 +1,59 @@
+{
+  "description": "PINs and their ASP.NET Core Identity v3 hashes (PBKDF2, header-declared PRF and iterations). Both the API (.NET) and the Android app (Kotlin) must verify every pin and reject every wrongPins entry. Test data only: these PINs are not used anywhere.",
+  "cases": [
+    {
+      "pin": "4826",
+      "hash": "AQAAAAIAAYagAAAAEAkqyLRQGlIZmn3ONr+RYX6jfl8I+WeJwzjXGoCA7wOxsoPAEpJVilMO+YKSSjL3Hg==",
+      "wrongPins": [
+        "4827",
+        "6284",
+        "48260"
+      ]
+    },
+    {
+      "pin": "1357",
+      "hash": "AQAAAAIAAYagAAAAEO+ZS3gEbnP3JowCKGO5ChjmiwtQWfRUqQphaomBOpJuulAZa1GXW+ZpdjtNpW0AFQ==",
+      "wrongPins": [
+        "7531",
+        "1358",
+        "135"
+      ]
+    },
+    {
+      "pin": "90715",
+      "hash": "AQAAAAIAAYagAAAAEBIpDCauW4Kz+eQ4HIV9iRi0yJbkI2Ers9eaBwsaXyDRa4GX2XPOnuqAXc/YyiGnBw==",
+      "wrongPins": [
+        "90716",
+        "9071",
+        "907150"
+      ]
+    },
+    {
+      "pin": "593718",
+      "hash": "AQAAAAIAAYagAAAAEDtZcqnfxiqQDOYLx5/YosUesPNXKwX/+bJpmIYhn+POVwRaLhaAw8V94seJ6Uio2w==",
+      "wrongPins": [
+        "593719",
+        "59371",
+        "000000"
+      ]
+    },
+    {
+      "pin": "0429",
+      "hash": "AQAAAAIAAYagAAAAECmzB0NkGD2KS5hckedE4LmW5HIHiCaGJMBk+BJX7vEF8AZ2nF/mSIvH35gku8EXaA==",
+      "wrongPins": [
+        "429",
+        "04290",
+        "4029"
+      ]
+    },
+    {
+      "pin": "700001",
+      "hash": "AQAAAAIAAYagAAAAEDGbtJh3bBo4ofgoZbW8tFCZY2AHqY9rMSEYTdvqMKf33v4XXfCeXWn1djvHJ5ktlw==",
+      "wrongPins": [
+        "700000",
+        "70001",
+        "100007"
+      ]
+    }
+  ]
+}

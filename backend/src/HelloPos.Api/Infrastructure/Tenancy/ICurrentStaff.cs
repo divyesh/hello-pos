@@ -16,7 +16,12 @@ public interface ICurrentStaff
     Task<StaffMember?> GetAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed class CurrentStaff(ICurrentBusiness business, ICurrentOwner owner, HelloPosDbContext db) : ICurrentStaff
+/// <remarks>
+/// Two kinds of callers: a back-office account (005/006: the account's active staff row) and a POS staff
+/// session (007: claim <c>staff_id</c>, set only by the <c>PosSession</c> scheme after checking the token).
+/// </remarks>
+public sealed class CurrentStaff(
+    ICurrentBusiness business, ICurrentOwner owner, IHttpContextAccessor httpContextAccessor, HelloPosDbContext db) : ICurrentStaff
 {
     private Task<StaffMember?>? loaded;
 
@@ -25,7 +30,21 @@ public sealed class CurrentStaff(ICurrentBusiness business, ICurrentOwner owner,
 
     private async Task<StaffMember?> LoadAsync(CancellationToken cancellationToken)
     {
-        if (business.BusinessId is null || owner.OwnerId is not { } account)
+        if (business.BusinessId is null)
+        {
+            return null;
+        }
+
+        var user = httpContextAccessor.HttpContext?.User;
+        if (user?.Identity?.IsAuthenticated == true
+            && Guid.TryParse(user.FindFirst(Pos.PosAuthentication.StaffIdClaim)?.Value, out var staffId))
+        {
+            return await db.StaffMembers.AsNoTracking()
+                .SingleOrDefaultAsync(s => s.Id == staffId && s.Active, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (owner.OwnerId is not { } account)
         {
             return null;
         }

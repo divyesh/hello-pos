@@ -13,7 +13,8 @@ single mistake cannot leak data (Constitution, Principle III):
 
 Owners (feature 005) sign in to the web back office and open one of their businesses: the API checks
 ownership, then puts `business_id` in the session cookie, so every layer above works unchanged.
-Staff and device logins arrive with roadmap #7.
+POS devices and the people signing in on them (feature 007) carry their business inside their own
+secret instead; see "POS devices and sessions" below.
 
 ## The account dimension: staff and roles
 
@@ -63,6 +64,39 @@ PIN or token.
 **Stale tabs**: business pages send `X-HelloPos-Business` with the business they were opened for.
 `RequireSameBusiness()` answers `409 business-changed` when the session has since opened another
 business. The header can only refuse a request; the business still comes from the session.
+
+## POS devices and sessions
+
+The Android POS has no cookie session. It authenticates with opaque secrets of the form
+`dev_|pat_|prt_<business id>.<record id>.<random>`, stored only as SHA-256 hashes:
+
+| Secret | Header | Lives |
+|--------|--------|-------|
+| Device credential (`dev_`) | `Authorization: Device …` | until the device is revoked |
+| Access token (`pat_`) | `Authorization: Bearer …` | 15 minutes |
+| Refresh token (`prt_`) | body of `POST /pos/refresh` | rotated on every use; a reused one ends the session |
+
+The handlers (`DeviceCredentialHandler`, `PosSessionHandler`) read the business id from the secret,
+open a context acting as that business (`PosAuthentication.ActingAs`), and accept only if the record
+exists **in that business** and the hash matches, so a secret edited to name another business finds no
+row under row-level security and gets `401`. Only then is `business_id` put in the claims, and every
+layer above works unchanged. A session is also checked on each request against the events that end it
+(device revoked, person deactivated, PIN changed after the session started, 12 hours) in
+`SessionChecks`.
+
+**Pairing** (`POST /pos/pair`, anonymous): like invitations, the business must not come from the
+request. The code's SHA-256 is looked up by `pos.pairing_business()`, a `SECURITY DEFINER` function that
+returns only the business id of an unused, unexpired code; the API then acts as that business and claims
+the code with a conditional update so it works once.
+
+**Offline access** (`GET /pos/offline-access`): the active staff of the business with their PIN hashes,
+encrypted to the device's RSA public key (stored at pairing). It never holds a plain PIN, and only that
+device's Keystore key can open it. The accepted residual risk (a rooted, stolen device can attack the
+hashes offline) is in `specs/007-login-sessions/research.md` R4; revoking the device is the remedy.
+
+**Audit**: device registration, renames and revocations, sign-ins (online and offline), failures,
+lockouts, sign-outs and own PIN changes go to `pos.staff_changes` with the device id. Never a PIN,
+code, credential or token (`PosSecretsNeverLeakTests`).
 
 ## Add a business-owned table
 

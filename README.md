@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). Next: #7 login and sessions (POS sign-in on Android).
+> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). #7 login and sessions (owners and managers register POS devices on the web; staff sign in on Android with username and PIN, also offline; idle lock; own PIN change).
 
 ## Applications
 
@@ -51,11 +51,14 @@ Single `app` module with strict package boundaries:
 app/src/main/java/<package>/
 ├── core/
 │   ├── money/        Money type, formatting
-│   ├── network/      Retrofit setup, auth interceptor, token refresh, error mapping
+│   ├── network/      Retrofit setup, error mapping (ApiResult)
+│   ├── security/     Keystore keys, encrypted files, PIN-hash check (offline sign-in)
+│   ├── session/      device registration, session tokens, auth interceptor, token refresh, idle lock
 │   ├── printing/     PrinterService, ESC/POS implementation, receipt layout
 │   ├── designsystem/ theme, shared Compose components
 │   └── util/
 ├── data/
+│   ├── auth/         device pairing, sign-in/out, offline access bundle, pending attempt reports
 │   ├── remote/       API interfaces and DTOs
 │   ├── local/        Room database, DAOs, entities
 │   └── repository/   repositories that combine remote and local
@@ -64,7 +67,11 @@ app/src/main/java/<package>/
 │   ├── pricing/      pricing rules, tested against contracts/pricing-cases.json
 │   └── usecase/
 └── feature/
-    ├── auth/
+    ├── pairing/      register this device with a code from the back office
+    ├── signin/       username + PIN pad
+    ├── lock/         idle lock (same person's PIN, or "Not you?")
+    ├── changepin/
+    ├── home/         placeholder until selling (#14)
     ├── pos/          catalog + bill
     ├── checkout/
     ├── pending/
@@ -77,6 +84,10 @@ app/src/main/java/<package>/
 Each feature has a `Screen` (Compose), a `ViewModel` and a `UiState`. ViewModels call
 repositories and use cases, never Retrofit or Room directly. `BLUETOOTH_CONNECT` and
 `BLUETOOTH_SCAN` are requested on Android 12+ before printing.
+
+Secrets (device credential, tokens, offline bundle, sign-in memory) are kept only in AES-GCM files
+under a non-exportable Android Keystore key, never in plain preferences or logs; screens set
+`FLAG_SECURE`.
 
 ## Open decisions
 
@@ -140,6 +151,14 @@ hellopos.apiBaseUrl=http://192.168.1.20:5080/
 ```
 
 Debug builds allow plain HTTP for this; release builds do not.
+
+**Registering a device and signing in**: in the web back office (owner or manager), open
+**Devices** → **Register a device**. A code like `K7QD-M3XP` is shown with a 5-minute countdown. In the
+app, type the code and a name for the device; it then shows the sign-in screen. Staff sign in with the
+POS username and PIN set under **Staff**. Five wrong PINs lock that person for 15 minutes; after 5
+idle minutes the app locks until the same person enters their PIN. Without a connection, staff can
+still sign in (their PIN is checked on the device); the session is confirmed with the API when the
+connection returns. Revoking a device on the web signs everyone on it out at once.
 
 ### Local environment
 

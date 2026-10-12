@@ -1,6 +1,8 @@
 using HelloPos.Api.Features.Businesses;
+using HelloPos.Api.Features.Devices;
 using HelloPos.Api.Features.Invitations;
 using HelloPos.Api.Features.Staff;
+using HelloPos.Api.Infrastructure.Pos;
 using HelloPos.Api.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
@@ -60,6 +62,12 @@ public class HelloPosDbContext : DbContext
     public DbSet<StaffInvitation> StaffInvitations => Set<StaffInvitation>();
 
     public DbSet<StaffChange> StaffChanges => Set<StaffChange>();
+
+    public DbSet<Device> Devices => Set<Device>();
+
+    public DbSet<DevicePairing> DevicePairings => Set<DevicePairing>();
+
+    public DbSet<StaffSession> StaffSessions => Set<StaffSession>();
 
     protected sealed override void OnModelCreating(ModelBuilder modelBuilder)
     {

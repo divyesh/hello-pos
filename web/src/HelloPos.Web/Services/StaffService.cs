@@ -164,8 +164,13 @@ public sealed partial class StaffService(HttpClient http, ILogger<StaffService> 
     private static StaffRole ParseRole(string? role) =>
         Enum.TryParse<StaffRole>(role, ignoreCase: true, out var parsed) ? parsed : StaffRole.Cashier;
 
-    private async Task<LoadResult<T>> LoadAsync<T>(string operation, Func<Task<T>> load)
+    private Task<LoadResult<T>> LoadAsync<T>(string operation, Func<Task<T>> load) => LoadAsync(http, logger, operation, load);
+
+    /// <summary>Runs a load call and turns its outcome into a <see cref="LoadResult{T}"/> (shared by the web services).</summary>
+    internal static async Task<LoadResult<T>> LoadAsync<T>(HttpClient http, ILogger logger, string operation, Func<Task<T>> load)
     {
+        ArgumentNullException.ThrowIfNull(http);
+        ArgumentNullException.ThrowIfNull(load);
         if (http.BaseAddress is null)
         {
             return new LoadResult<T>.Failed(OwnerAccountService.Unreachable);
@@ -195,6 +200,6 @@ public sealed partial class StaffService(HttpClient http, ILogger<StaffService> 
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Staff {Operation} request failed")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "API {Operation} request failed")]
     private static partial void LogFailed(ILogger logger, string operation, Exception exception);
 }

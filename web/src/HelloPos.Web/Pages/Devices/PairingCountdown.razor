@@ -1,0 +1,51 @@
+@implements IDisposable
+@using System.Globalization
+@inject TimeProvider Clock
+
+@* The one-time device code with a live countdown (feature 007, FR-002, clarification Q2): 5 minutes,
+   then "expired" and a button for a new code. *@
+
+<MudPaper Outlined="true" Class="pa-6" Style="max-width: 32rem;" data-testid="pairing">
+    @if (Remaining > TimeSpan.Zero)
+    {
+        <MudText Typo="Typo.body1">On the till, open Hello POS and type this code:</MudText>
+        <MudText Typo="Typo.h3" Class="my-4" Style="letter-spacing: 0.15em; font-family: monospace;" data-testid="pairing-code">@Code</MudText>
+        <MudText Typo="Typo.body2">Expires in <b data-testid="countdown">@Format(Remaining)</b>. It works once.</MudText>
+    }
+    else
+    {
+        <MudAlert data-testid="pairing-expired" Severity="Severity.Warning">This code has expired.</MudAlert>
+        <MudButton data-testid="new-code" Class="mt-3" Variant="Variant.Filled" Color="Color.Primary" OnClick="OnRenew">New code</MudButton>
+    }
+    <MudButton data-testid="pairing-done" Class="mt-3 ml-2" Variant="Variant.Text" OnClick="OnDone">Done</MudButton>
+</MudPaper>
+
+@code {
+    private ITimer? timer;
+
+    [Parameter, EditorRequired]
+    public string Code { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public DateTimeOffset ExpiresAt { get; set; }
+
+    [Parameter]
+    public EventCallback OnRenew { get; set; }
+
+    [Parameter]
+    public EventCallback OnDone { get; set; }
+
+    private TimeSpan Remaining => ExpiresAt - Clock.GetUtcNow();
+
+    protected override void OnInitialized() =>
+        timer = Clock.CreateTimer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+
+    public void Dispose() => timer?.Dispose();
+
+    /// <summary>m:ss, rounded up so the last second shows 0:01, never 0:00 while still valid.</summary>
+    public static string Format(TimeSpan remaining)
+    {
+        var seconds = (int)Math.Ceiling(Math.Max(0, remaining.TotalSeconds));
+        return string.Create(CultureInfo.InvariantCulture, $"{seconds / 60}:{seconds % 60:00}");
+    }
+}

@@ -100,6 +100,141 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HelloPos.Api.Features.Devices.Device", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("CredentialHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("credential_hash");
+
+                    b.Property<int>("FailedSignins")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_signins");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<byte[]>("PublicKey")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("public_key");
+
+                    b.Property<DateTimeOffset>("RegisteredAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("registered_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("RegisteredByStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("registered_by_staff_id");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid?>("RevokedByStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("revoked_by_staff_id");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("version");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_devices");
+
+                    b.HasIndex("CredentialHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_devices_credential_hash");
+
+                    b.HasIndex("BusinessId", "RegisteredByStaffId")
+                        .HasDatabaseName("ix_devices_business_id_registered_by_staff_id");
+
+                    b.HasIndex("BusinessId", "RevokedByStaffId")
+                        .HasDatabaseName("ix_devices_business_id_revoked_by_staff_id");
+
+                    b.ToTable("devices", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_devices_name", "char_length(name) BETWEEN 1 AND 60");
+                        });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Devices.DevicePairing", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("CodeHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("code_hash");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("CreatedByStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_staff_id");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_device_pairings");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_pairings_code_hash");
+
+                    b.HasIndex("BusinessId", "CreatedByStaffId")
+                        .HasDatabaseName("ix_device_pairings_business_id_created_by_staff_id");
+
+                    b.HasIndex("BusinessId", "DeviceId")
+                        .HasDatabaseName("ix_device_pairings_business_id_device_id");
+
+                    b.ToTable("device_pairings", "pos");
+                });
+
             modelBuilder.Entity("HelloPos.Api.Features.Invitations.StaffInvitation", b =>
                 {
                     b.Property<Guid>("BusinessId")
@@ -223,6 +358,10 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .HasColumnName("at")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
                     b.Property<Guid?>("InvitationId")
                         .HasColumnType("uuid")
                         .HasColumnName("invitation_id");
@@ -246,6 +385,9 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("BusinessId", "ActorStaffId")
                         .HasDatabaseName("ix_staff_changes_business_id_actor_staff_id");
+
+                    b.HasIndex("BusinessId", "DeviceId")
+                        .HasDatabaseName("ix_staff_changes_business_id_device_id");
 
                     b.HasIndex("BusinessId", "InvitationId")
                         .HasDatabaseName("ix_staff_changes_business_id_invitation_id");
@@ -290,9 +432,17 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("pin_changed_at");
 
+                    b.Property<int>("PinFailedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("pin_failed_count");
+
                     b.Property<string>("PinHash")
                         .HasColumnType("text")
                         .HasColumnName("pin_hash");
+
+                    b.Property<DateTimeOffset?>("PinLockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("pin_locked_until");
 
                     b.Property<string>("PosUsername")
                         .HasMaxLength(32)
@@ -350,6 +500,136 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HelloPos.Api.Infrastructure.Pos.StaffSession", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AccessExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("access_expires_at");
+
+                    b.Property<byte[]>("AccessTokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("access_token_hash");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("EndReason")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("end_reason");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTimeOffset>("LastActiveAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_active_at");
+
+                    b.Property<DateTimeOffset?>("OfflineSignedInAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("offline_signed_in_at");
+
+                    b.Property<byte[]>("PreviousRefreshTokenHash")
+                        .HasColumnType("bytea")
+                        .HasColumnName("previous_refresh_token_hash");
+
+                    b.Property<byte[]>("RefreshTokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("refresh_token_hash");
+
+                    b.Property<Guid>("StaffMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("staff_member_id");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_staff_sessions");
+
+                    b.HasIndex("AccessTokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_sessions_access_token_hash");
+
+                    b.HasIndex("RefreshTokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staff_sessions_refresh_token_hash");
+
+                    b.HasIndex("BusinessId", "DeviceId")
+                        .HasDatabaseName("ix_staff_sessions_business_id_device_id");
+
+                    b.HasIndex("BusinessId", "StaffMemberId")
+                        .HasDatabaseName("ix_staff_sessions_business_id_staff_member_id");
+
+                    b.ToTable("staff_sessions", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_staff_sessions_end_reason", "end_reason IS NULL OR end_reason IN ('sign_out', 'refresh_reuse', 'pin_changed', 'deactivated', 'device_revoked', 'expired')");
+                        });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Devices.Device", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_devices_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "RegisteredByStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_devices_staff_members_business_id_registered_by_staff_id");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "RevokedByStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_devices_staff_members_business_id_revoked_by_staff_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Devices.DevicePairing", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_pairings_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "CreatedByStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_pairings_staff_members_business_id_created_by_staff_");
+
+                    b.HasOne("HelloPos.Api.Features.Devices.Device", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "DeviceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_device_pairings_devices_business_id_device_id");
+                });
+
             modelBuilder.Entity("HelloPos.Api.Features.Invitations.StaffInvitation", b =>
                 {
                     b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
@@ -389,6 +669,12 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_staff_changes_staff_members_business_id_actor_staff_id");
 
+                    b.HasOne("HelloPos.Api.Features.Devices.Device", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "DeviceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_staff_changes_devices_business_id_device_id");
+
                     b.HasOne("HelloPos.Api.Features.Invitations.StaffInvitation", null)
                         .WithMany()
                         .HasForeignKey("BusinessId", "InvitationId")
@@ -410,6 +696,30 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_staff_members_businesses_business_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Infrastructure.Pos.StaffSession", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_staff_sessions_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Devices.Device", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "DeviceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_staff_sessions_devices_business_id_device_id");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "StaffMemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_staff_sessions_staff_members_business_id_staff_member_id");
                 });
 #pragma warning restore 612, 618
         }

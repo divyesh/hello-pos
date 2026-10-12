@@ -1,0 +1,41 @@
+# Design draft of the operations this feature adds to contracts/openapi.yaml (merged there by the
+# implementation, which stays the single source of truth). Errors are RFC 7807 problem details.
+# Back-office operations act on the business open in the web session (owner or manager) with the
+# client and stale-tab headers. /pos operations are called by the Android app:
+#   deviceCredential: "Authorization: Device dev_<businessId>.<deviceId>.<secret>"
+#   staffSession:     "Authorization: Bearer pat_<businessId>.<sessionId>.<secret>"
+paths:
+  /devices:
+    get: { operationId: listDevices }                        # Device[]: id, name, registeredBy, registeredAt, lastUsedAt, revokedAt, version
+  /devices/pairings:
+    post: { operationId: createDevicePairing }               # -> 201 { code: "ABCD-EFGH", expiresAt }
+  /devices/{deviceId}:
+    put: { operationId: renameDevice }                       # { name, version } -> Device
+  /devices/{deviceId}/revoke:
+    post: { operationId: revokeDevice }                      # { version } -> Device; ends its sessions
+  /pos/pair:
+    post: { operationId: posPair }                           # anonymous, rate-limited: { code, deviceName, publicKey } -> { deviceId, deviceCredential, businessName }
+  /pos/sign-in:
+    post: { operationId: posSignIn }                         # deviceCredential: { username, pin } -> PosTokens + PosStaff; 401 generic
+  /pos/refresh:
+    post: { operationId: posRefresh }                        # deviceCredential: { refreshToken } -> PosTokens; reuse ends the session
+  /pos/sign-out:
+    post: { operationId: posSignOut }                        # staffSession -> 204
+  /pos/me:
+    get: { operationId: posMe }                              # staffSession -> PosStaff (+ business name)
+  /pos/me/pin:
+    put: { operationId: posChangeOwnPin }                    # staffSession: { currentPin, newPin } -> PosTokens (other sessions end)
+  /pos/offline-access:
+    get: { operationId: posOfflineAccess }                   # deviceCredential -> { version, bundle (base64, RSA-OAEP + AES-GCM to the device key) }
+  /pos/sessions/offline:
+    post: { operationId: posSessionFromOffline }             # deviceCredential: { staffId, signedInAt, pinChangedAt } -> PosTokens | 401
+  /pos/attempts:
+    post: { operationId: posReportAttempts }                 # deviceCredential: { attempts: [{ username, success, at }] } -> 204
+components:
+  schemas:
+    PosTokens:   # accessToken, accessExpiresAt, refreshToken, sessionExpiresAt
+      type: object
+    PosStaff:    # staffId, displayName, role, businessId, businessName
+      type: object
+    Device:
+      type: object
