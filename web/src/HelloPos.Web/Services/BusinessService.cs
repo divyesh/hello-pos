@@ -29,7 +29,7 @@ public abstract record CurrentBusinessResult
     {
     }
 
-    public sealed record Loaded(Guid Id, BusinessSettings Settings) : CurrentBusinessResult;
+    public sealed record Loaded(Guid Id, BusinessSettings Settings, bool DepositsTaxable = false) : CurrentBusinessResult;
 
     public sealed record BusinessChanged : CurrentBusinessResult;
 
@@ -49,7 +49,8 @@ public interface IBusinessService
     /// <summary>The open business; <paramref name="pageBusiness"/> is the business this page was opened for.</summary>
     Task<CurrentBusinessResult> GetCurrentAsync(Guid pageBusiness, CancellationToken cancellationToken = default);
 
-    Task<OwnerActionResult> UpdateCurrentAsync(Guid pageBusiness, BusinessSettings settings, CancellationToken cancellationToken = default);
+    /// <summary>Saves the settings; <paramref name="depositsTaxable"/> null keeps the current value (feature #11).</summary>
+    Task<OwnerActionResult> UpdateCurrentAsync(Guid pageBusiness, BusinessSettings settings, bool? depositsTaxable = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Owner business calls (feature 005, US2) through the client generated from the contract.</summary>
@@ -115,7 +116,7 @@ public sealed partial class BusinessService(HttpClient http, ILogger<BusinessSer
                 .GetAsync(c => c.Headers.Add(BusinessHeader, pageBusiness.ToString()), cancellationToken)
                 .ConfigureAwait(false);
             return business is { Id: { } id }
-                ? new CurrentBusinessResult.Loaded(id, FromApi(business))
+                ? new CurrentBusinessResult.Loaded(id, FromApi(business), business.DepositsTaxable ?? false)
                 : new CurrentBusinessResult.Failed("The business could not be loaded.");
         }
         catch (ProblemDetails problem) when (problem.Type == OwnerAccountService.BusinessChangedType)
@@ -135,9 +136,10 @@ public sealed partial class BusinessService(HttpClient http, ILogger<BusinessSer
         }
     }
 
-    public async Task<OwnerActionResult> UpdateCurrentAsync(Guid pageBusiness, BusinessSettings settings, CancellationToken cancellationToken = default)
+    public async Task<OwnerActionResult> UpdateCurrentAsync(Guid pageBusiness, BusinessSettings settings, bool? depositsTaxable = null, CancellationToken cancellationToken = default)
     {
         var body = ToApi(settings);
+        body.DepositsTaxable = depositsTaxable;
         var result = await OwnerAccountService.RunAsync(http, logger, "update-business",
             () => ApiClients.Create(http).Business.PutAsync(body, c => c.Headers.Add(BusinessHeader, pageBusiness.ToString()), cancellationToken))
             .ConfigureAwait(false);

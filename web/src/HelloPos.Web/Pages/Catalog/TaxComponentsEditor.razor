@@ -1,0 +1,75 @@
+@using HelloPos.Kernel.Catalog
+
+@* Rows of tax components (label and rate) for a taxable profile, checked with the kernel's rules as typed. *@
+
+@for (var i = 0; i < Rows.Count; i++)
+{
+    var index = i;
+    var row = Rows[index];
+    <div class="d-flex align-center" style="gap: 8px;" data-testid="component-row">
+        <MudTextField T="string" data-testid="component-label" Label="Label" Value="row.Label" MaxLength="CatalogRules.ComponentLabelMaxLength"
+                      ValueChanged="v => SetAsync(index, row with { Label = v ?? string.Empty })" Style="max-width: 10rem;"
+                      Error="@(LabelError(row) is not null)" ErrorText="@LabelError(row)" />
+        <MudTextField T="string" data-testid="component-rate" Label="Rate %" Value="row.RatePercent"
+                      ValueChanged="v => SetAsync(index, row with { RatePercent = v ?? string.Empty })" Style="max-width: 8rem;"
+                      Error="@(RateError(row) is not null)" ErrorText="@RateError(row)" />
+        @if (Rows.Count > 1)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Remove component" OnClick="() => RemoveAsync(index)" />
+        }
+    </div>
+}
+@if (Rows.Count < CatalogRules.MaxComponents)
+{
+    <MudButton data-testid="add-component" Size="Size.Small" Variant="Variant.Text" OnClick="AddAsync">
+        Add component
+    </MudButton>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public List<TaxComponentItem> Rows { get; set; } = [];
+
+    /// <summary>Raised after any change, so the page re-checks its Save button.</summary>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    /// <summary>True when every row is filled in and passes the kernel's rules (and there is at least one).</summary>
+    public static bool IsValid(IReadOnlyList<TaxComponentItem> rows) =>
+        rows.Count > 0
+        && rows.All(r => r.Label.Trim().Length > 0 && r.RatePercent.Trim().Length > 0 && LabelError(r) is null && RateError(r) is null)
+        && rows.Select(r => r.Label.Trim().ToLowerInvariant()).Distinct().Count() == rows.Count;
+
+    private Task SetAsync(int index, TaxComponentItem row)
+    {
+        Rows[index] = row;
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task RemoveAsync(int index)
+    {
+        Rows.RemoveAt(index);
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task AddAsync()
+    {
+        Rows.Add(new TaxComponentItem(string.Empty, string.Empty));
+        return OnChanged.InvokeAsync();
+    }
+
+    private static string? LabelError(TaxComponentItem row) =>
+        row.Label.Length == 0 ? null : CatalogRules.ValidateComponentLabel(row.Label);
+
+    private static string? RateError(TaxComponentItem row)
+    {
+        if (row.RatePercent.Length == 0)
+        {
+            return null;
+        }
+
+        return decimal.TryParse(row.RatePercent, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var rate)
+            ? CatalogRules.ValidateRate(rate)
+            : "Use a number such as 2.5";
+    }
+}

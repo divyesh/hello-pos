@@ -24,6 +24,8 @@ namespace HelloPos.Web.ApiClient.Models
 #else
         public string CurrencyCode { get; set; }
 #endif
+        /// <summary>Container deposits are taxed with the product (owners); default false.</summary>
+        public bool? DepositsTaxable { get; set; }
         /// <summary>The financialYearStartMonth property</summary>
         public int? FinancialYearStartMonth { get; set; }
         /// <summary>1 to 200 characters.</summary>
@@ -65,6 +67,7 @@ namespace HelloPos.Web.ApiClient.Models
                 { "cashRoundingStepMinor", n => { CashRoundingStepMinor = n.GetLongValue(); } },
                 { "countryCode", n => { CountryCode = n.GetEnumValue<global::HelloPos.Web.ApiClient.Models.BusinessSettings_countryCode>(); } },
                 { "currencyCode", n => { CurrencyCode = n.GetStringValue(); } },
+                { "depositsTaxable", n => { DepositsTaxable = n.GetBoolValue(); } },
                 { "financialYearStartMonth", n => { FinancialYearStartMonth = n.GetIntValue(); } },
                 { "name", n => { Name = n.GetStringValue(); } },
                 { "pricingMode", n => { PricingMode = n.GetEnumValue<global::HelloPos.Web.ApiClient.Models.BusinessSettings_pricingMode>(); } },
@@ -81,6 +84,7 @@ namespace HelloPos.Web.ApiClient.Models
             writer.WriteLongValue("cashRoundingStepMinor", CashRoundingStepMinor);
             writer.WriteEnumValue<global::HelloPos.Web.ApiClient.Models.BusinessSettings_countryCode>("countryCode", CountryCode);
             writer.WriteStringValue("currencyCode", CurrencyCode);
+            writer.WriteBoolValue("depositsTaxable", DepositsTaxable);
             writer.WriteIntValue("financialYearStartMonth", FinancialYearStartMonth);
             writer.WriteStringValue("name", Name);
             writer.WriteEnumValue<global::HelloPos.Web.ApiClient.Models.BusinessSettings_pricingMode>("pricingMode", PricingMode);

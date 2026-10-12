@@ -1,0 +1,296 @@
+@page "/catalog/products/new"
+@page "/catalog/products/{ProductId:guid}"
+@using HelloPos.Kernel.Catalog
+@using HelloPos.Kernel.Staff
+@inject ICatalogService CatalogApi
+@inject IBusinessService BusinessApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>@(ProductId is null ? "Add product" : "Edit product") · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">@(ProductId is null ? "Add product" : product?.Name ?? "Product")</MudText>
+<MudLink Href="catalog/products" Class="mb-3 d-block">Back to products</MudLink>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session. Nothing was saved.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers use the catalog.</MudAlert>
+}
+else if (loadError is not null)
+{
+    <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+}
+else if (ready)
+{
+    @if (message is not null)
+    {
+        <MudAlert data-testid="message" Severity="@(failed ? Severity.Error : Severity.Success)" Dense="true" Class="mb-3">@message</MudAlert>
+    }
+
+    <MudPaper Outlined="true" Class="pa-4" Style="max-width: 44rem;">
+        <MudTextField T="string" data-testid="name" Label="Name" @bind-Value="name" MaxLength="CatalogRules.ProductNameMaxLength"
+                      Error="@HasError("name")" ErrorText="@ErrorOf("name")" />
+        <MudTextField T="string" data-testid="sku" Label="SKU (optional)" @bind-Value="sku" MaxLength="CatalogRules.SkuMaxLength"
+                      Error="@HasError("sku")" ErrorText="@ErrorOf("sku")" />
+        <MudSelect T="Guid" data-testid="category" Label="Category" @bind-Value="categoryId"
+                   Error="@HasError("categoryId")" ErrorText="@ErrorOf("categoryId")">
+            @foreach (var category in categories.Where(c => c.Active || c.Id == product?.CategoryId))
+            {
+                <MudSelectItem T="Guid" Value="category.Id">@category.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="Guid" data-testid="tax-profile" Label="Tax" @bind-Value="taxChoice" Error="@HasError("taxProfileId")" ErrorText="@ErrorOf("taxProfileId")">
+            <MudSelectItem T="Guid" Value="Guid.Empty">Follow the category (@CategoryTaxName)</MudSelectItem>
+            @foreach (var profile in profiles.Where(p => p.Active || p.Id == product?.TaxProfileId))
+            {
+                <MudSelectItem T="Guid" Value="profile.Id">@profile.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <div class="d-flex align-center flex-wrap mt-2" style="gap: 12px;">
+            <MudSelect T="string" data-testid="unit" Label="Unit" @bind-Value="unit" Style="max-width: 8rem;">
+                @foreach (var option in CatalogRules.Units)
+                {
+                    <MudSelectItem T="string" Value="option">@option</MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField T="string" data-testid="min-quantity" Label="Minimum quantity" @bind-Value="minQuantity" Style="max-width: 10rem;"
+                          Error="@HasError("minQuantity")" ErrorText="@ErrorOf("minQuantity")" />
+            <MudTextField T="string" data-testid="step" Label="Step" @bind-Value="step" Style="max-width: 10rem;"
+                          Error="@HasError("step")" ErrorText="@ErrorOf("step")" />
+        </div>
+
+        <MudSwitch T="bool" data-testid="open-price" @bind-Value="openPrice" Color="Color.Primary" Label="Open price (the cashier enters it)" Class="mt-2" />
+        @if (!openPrice)
+        {
+            <MudTextField T="string" data-testid="price" Label="@($"Price ({currency}{(unit == "piece" ? "" : $" per {unit}")})")" @bind-Value="price"
+                          Error="@HasError("unitPrice")" ErrorText="@ErrorOf("unitPrice")" Style="max-width: 14rem;" />
+        }
+        <MudTextField T="string" data-testid="deposit" Label="@($"Container deposit per unit ({currency})")" @bind-Value="deposit"
+                      Error="@HasError("depositPerUnit")" ErrorText="@ErrorOf("depositPerUnit")" Style="max-width: 14rem;" />
+        <div class="d-flex align-center" style="gap: 12px;">
+            <MudSwitch T="bool" data-testid="age-restricted" @bind-Value="ageRestricted" Color="Color.Primary" Label="Age-restricted" />
+            @if (ageRestricted)
+            {
+                <MudNumericField T="int" data-testid="min-age" Label="Minimum age" @bind-Value="minAge" Min="1" Max="99" Style="max-width: 8rem;"
+                                 Error="@HasError("minAge")" ErrorText="@ErrorOf("minAge")" />
+            }
+        </div>
+        <MudTextField T="string" data-testid="barcodes" Label="Barcodes (one per line)" @bind-Value="barcodes" Lines="3" Immediate="true" Class="mt-2" />
+        @foreach (var problem in BarcodeProblems.Concat(ErrorsOf("barcodes")))
+        {
+            <MudText data-testid="barcode-error" Color="Color.Error" Typo="Typo.body2">@problem</MudText>
+        }
+
+        <div class="d-flex mt-4" style="gap: 8px;">
+            <MudButton data-testid="save" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(busy || BarcodeProblems.Any())" OnClick="SaveAsync">Save</MudButton>
+            @if (product is not null)
+            {
+                <MudButton data-testid="toggle-active" Variant="Variant.Outlined" Disabled="busy" OnClick="ToggleActiveAsync">
+                    @(product.Active ? "Deactivate" : "Reactivate")
+                </MudButton>
+            }
+        </div>
+    </MudPaper>
+
+    @if (product is not null)
+    {
+        <ProductDiscounts PageBusiness="pageBusiness" ProductId="product.Id" Currency="@currency" />
+        <ProductHistory PageBusiness="pageBusiness" ProductId="product.Id" @key="product.Version" />
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid? ProductId { get; set; }
+
+    private Guid pageBusiness;
+    private bool noBusiness;
+    private bool stale;
+    private bool ready;
+    private bool busy;
+    private string? loadError;
+    private string? message;
+    private bool failed;
+    private Dictionary<string, string> fieldErrors = new(StringComparer.Ordinal);
+    private ProductItem? product;
+    private IReadOnlyList<CategoryItem> categories = [];
+    private IReadOnlyList<TaxProfileItem> profiles = [];
+    private string currency = string.Empty;
+    private string name = string.Empty;
+    private string sku = string.Empty;
+    private Guid categoryId;
+    private Guid taxChoice;
+    private string unit = "piece";
+    private string minQuantity = "1";
+    private string step = "1";
+    private bool openPrice;
+    private string price = string.Empty;
+    private string deposit = "0";
+    private bool ageRestricted;
+    private int minAge = 18;
+    private string barcodes = string.Empty;
+
+    private string CategoryTaxName =>
+        profiles.FirstOrDefault(p => p.Id == categories.FirstOrDefault(c => c.Id == categoryId)?.DefaultTaxProfileId)?.Name ?? "choose a category";
+
+    private IEnumerable<string> BarcodeLines => barcodes.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>Checked as typed with the same rules the API applies.</summary>
+    private IEnumerable<string> BarcodeProblems => BarcodeLines
+        .Select(line => (line, problem: BarcodeRules.Parse(line).Problem))
+        .Where(x => x.problem is not null)
+        .Select(x => $"{x.line}: {BarcodeRules.Message(x.problem!.Value)}");
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        pageBusiness = id;
+        if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+        {
+            return;
+        }
+
+        if (await BusinessApi.GetCurrentAsync(pageBusiness) is CurrentBusinessResult.Loaded business)
+        {
+            currency = business.Settings.CurrencyCode;
+        }
+
+        categories = await CatalogApi.ListCategoriesAsync(pageBusiness) is LoadResult<IReadOnlyList<CategoryItem>>.Loaded c ? c.Value : [];
+        profiles = await CatalogApi.ListTaxProfilesAsync(pageBusiness) is LoadResult<IReadOnlyList<TaxProfileItem>>.Loaded p ? p.Value : [];
+        if (ProductId is { } productId)
+        {
+            switch (await CatalogApi.GetProductAsync(pageBusiness, productId))
+            {
+                case LoadResult<ProductItem>.Loaded loaded:
+                    Fill(loaded.Value);
+                    break;
+                case LoadResult<ProductItem>.BusinessChanged:
+                    stale = true;
+                    return;
+                case LoadResult<ProductItem>.Failed loadFailed:
+                    loadError = loadFailed.Message;
+                    return;
+            }
+        }
+        else
+        {
+            categoryId = categories.FirstOrDefault(c => c.Active)?.Id ?? Guid.Empty;
+        }
+
+        ready = true;
+    }
+
+    private void Fill(ProductItem item)
+    {
+        product = item;
+        currency = item.Currency;
+        (name, sku, categoryId, taxChoice, unit) = (item.Name, item.Sku ?? string.Empty, item.CategoryId, item.TaxProfileId ?? Guid.Empty, item.Unit);
+        (minQuantity, step, openPrice) = (item.MinQuantity, item.Step, item.OpenPrice);
+        price = item.UnitPrice is { } p ? MoneyText.Format(p, currency) : string.Empty;
+        deposit = MoneyText.Format(item.DepositPerUnit, currency);
+        (ageRestricted, minAge) = (item.MinAge is not null, item.MinAge ?? 18);
+        barcodes = string.Join('\n', item.Barcodes);
+    }
+
+    private async Task SaveAsync()
+    {
+        message = null;
+        fieldErrors = new(StringComparer.Ordinal);
+        var (priceMinor, priceError) = openPrice ? (null, null) : MoneyText.Parse(price, currency);
+        var (depositMinor, depositError) = MoneyText.Parse(string.IsNullOrWhiteSpace(deposit) ? "0" : deposit, currency);
+        if (priceError is not null || depositError is not null)
+        {
+            if (priceError is not null) { fieldErrors["unitPrice"] = priceError; }
+            if (depositError is not null) { fieldErrors["depositPerUnit"] = depositError; }
+            return;
+        }
+
+        var form = new ProductForm(
+            name.Trim(), string.IsNullOrWhiteSpace(sku) ? null : sku.Trim(), categoryId, taxChoice == Guid.Empty ? null : taxChoice, unit,
+            priceMinor, openPrice, minQuantity.Trim(), step.Trim(), ageRestricted ? minAge : null, depositMinor ?? 0, BarcodeLines.ToList());
+        busy = true;
+        var result = product is null
+            ? await CatalogApi.CreateProductAsync(pageBusiness, form)
+            : await CatalogApi.UpdateProductAsync(pageBusiness, product, form);
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded when product is null:
+                Navigation.NavigateTo("catalog/products");
+                break;
+            case OwnerActionResult.Succeeded:
+                (message, failed) = ("Saved.", false);
+                await ReloadProductAsync();
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                fieldErrors = new(fields.Errors, StringComparer.Ordinal);
+                (message, failed) = ("Please correct the marked fields.", true);
+                break;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                break;
+            case OwnerActionResult.Failed saveFailed:
+                (message, failed) = (saveFailed.Message, true);
+                break;
+        }
+    }
+
+    private async Task ToggleActiveAsync()
+    {
+        busy = true;
+        var result = await CatalogApi.SetProductActiveAsync(pageBusiness, product!, !product!.Active);
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                (message, failed) = (product.Active ? "Deactivated: it is no longer sold." : "Reactivated.", false);
+                await ReloadProductAsync();
+                break;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                break;
+            case OwnerActionResult.Failed changeFailed:
+                (message, failed) = (changeFailed.Message, true);
+                break;
+        }
+    }
+
+    private async Task ReloadProductAsync()
+    {
+        if (await CatalogApi.GetProductAsync(pageBusiness, product!.Id) is LoadResult<ProductItem>.Loaded loaded)
+        {
+            Fill(loaded.Value);
+        }
+    }
+
+    private bool HasError(string field) => fieldErrors.ContainsKey(field);
+
+    private string? ErrorOf(string field) => fieldErrors.GetValueOrDefault(field);
+
+    private IEnumerable<string> ErrorsOf(string field) => fieldErrors.TryGetValue(field, out var e) ? [e] : [];
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

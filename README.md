@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). #7 login and sessions (owners and managers register POS devices on the web; staff sign in on Android with username and PIN, also offline; idle lock; own PIN change). Phase 2 (#8 billing) is specified and parked; Phase 3 started: #10 pricing engine.
+> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). #7 login and sessions (owners and managers register POS devices on the web; staff sign in on Android with username and PIN, also offline; idle lock; own PIN change). Phase 2 (#8 billing) is specified and parked; Phase 3 in progress: #10 pricing engine, #11 catalog setup (tax profiles with dated rates, categories, products with barcodes, scheduled discounts, CSV import and price-list export).
 
 ## Applications
 
@@ -218,6 +218,22 @@ instead of `up --api`, send its logs to the environment's Seq with
 **Database tests**: `scripts/dotnet.ps1 test ...` mounts the container engine's socket (only for
 `test`), so tests can start their own throwaway PostgreSQL with Testcontainers. Override the socket
 path with `HELLOPOS_ENGINE_SOCKET` if your engine keeps it elsewhere.
+
+### Setting up the catalog
+
+In the web back office (owners and managers), open **Catalog**:
+
+1. **Tax profiles** (owners): for example "HST 13%", or "GST 5%" with CGST 2.5% + SGST 2.5%; zero-rated and
+   exempt profiles have no rates. A rate change is entered ahead of time with "Change rates from a date";
+   rates already in force never change. The switch at the bottom decides whether container deposits are
+   taxed.
+2. **Categories**: each has a default tax profile.
+3. **Products**: price (or open price), unit and quantity steps for weighed goods, barcodes (UPC-A, EAN-13,
+   EAN-8 with check digits, PLU codes), age restriction, container deposit, and scheduled discounts.
+4. **Import**: upload a CSV (template on the page). The preview lists every row as new, changed,
+   unchanged or with errors; nothing is saved until a file without errors is imported, all at once.
+   Rows match existing products by SKU, then barcode. **Export price list** on the products page writes the
+   same format, so an export imports back with no changes.
 
 ### Changing how sales are priced
 

@@ -67,6 +67,7 @@ public sealed class CreateBusiness : IEndpointMapper
             UpdatedAt = now,
         };
         BusinessContracts.Apply(settings, business);
+        business.DepositsTaxable = request.DepositsTaxable ?? false;
 
         await using var asNewBusiness = new HelloPosDbContext(databaseOptions, new FixedCurrentBusiness(business.Id));
         asNewBusiness.Businesses.Add(business);

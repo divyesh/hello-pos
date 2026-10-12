@@ -1,0 +1,193 @@
+{
+  "$schema": "./barcode-cases.schema.json",
+  "version": 1,
+  "description": "Barcode normalization and validation cases (feature #11, research R4). The .NET kernel runs them now; the Kotlin scanner (#13/#14) must run them too.",
+  "cases": [
+    {
+      "input": "5901234123457",
+      "valid": true,
+      "code": "5901234123457",
+      "kind": "ean13",
+      "description": "GS1 EAN-13 example"
+    },
+    {
+      "input": "9780306406157",
+      "valid": true,
+      "code": "9780306406157",
+      "kind": "ean13",
+      "description": "ISBN as EAN-13"
+    },
+    {
+      "input": "067000004568",
+      "valid": true,
+      "code": "0067000004568",
+      "kind": "ean13",
+      "description": "UPC-A, stored in its 13-digit form"
+    },
+    {
+      "input": "0067000004568",
+      "valid": true,
+      "code": "0067000004568",
+      "kind": "ean13",
+      "description": "the same code typed as EAN-13 normalizes identically"
+    },
+    {
+      "input": "0 67000 00456 8",
+      "valid": true,
+      "code": "0067000004568",
+      "kind": "ean13",
+      "description": "spaces removed"
+    },
+    {
+      "input": "0-67000-00456-8",
+      "valid": true,
+      "code": "0067000004568",
+      "kind": "ean13",
+      "description": "dashes removed"
+    },
+    {
+      "input": " 5901234123457 ",
+      "valid": true,
+      "code": "5901234123457",
+      "kind": "ean13",
+      "description": "surrounding spaces removed"
+    },
+    {
+      "input": "96385074",
+      "valid": true,
+      "code": "96385074",
+      "kind": "ean8",
+      "description": "GS1 EAN-8 example"
+    },
+    {
+      "input": "4011",
+      "valid": true,
+      "code": "4011",
+      "kind": "plu",
+      "description": "PLU: bananas"
+    },
+    {
+      "input": "3000",
+      "valid": true,
+      "code": "3000",
+      "kind": "plu",
+      "description": "lowest PLU"
+    },
+    {
+      "input": "4999",
+      "valid": true,
+      "code": "4999",
+      "kind": "plu",
+      "description": "highest PLU"
+    },
+    {
+      "input": "94011",
+      "valid": true,
+      "code": "94011",
+      "kind": "plu",
+      "description": "organic PLU: 9 + PLU"
+    },
+    {
+      "input": "5901234123458",
+      "valid": false,
+      "reason": "checkDigit",
+      "description": "EAN-13 with a wrong check digit"
+    },
+    {
+      "input": "067000004567",
+      "valid": false,
+      "reason": "checkDigit",
+      "description": "UPC-A with a wrong check digit"
+    },
+    {
+      "input": "96385075",
+      "valid": false,
+      "reason": "checkDigit",
+      "description": "EAN-8 with a wrong check digit"
+    },
+    {
+      "input": "59012341234A7",
+      "valid": false,
+      "reason": "notDigits",
+      "description": "letters are not allowed"
+    },
+    {
+      "input": "",
+      "valid": false,
+      "reason": "notDigits",
+      "description": "empty"
+    },
+    {
+      "input": "123",
+      "valid": false,
+      "reason": "length",
+      "description": "too short"
+    },
+    {
+      "input": "123456",
+      "valid": false,
+      "reason": "length",
+      "description": "6 digits (UPC-E is not supported)"
+    },
+    {
+      "input": "59012341234570",
+      "valid": false,
+      "reason": "length",
+      "description": "14 digits (GTIN-14 cases are not sold)"
+    },
+    {
+      "input": "2999",
+      "valid": false,
+      "reason": "pluRange",
+      "description": "4 digits below the PLU range"
+    },
+    {
+      "input": "5000",
+      "valid": false,
+      "reason": "pluRange",
+      "description": "4 digits above the PLU range"
+    },
+    {
+      "input": "95000",
+      "valid": false,
+      "reason": "pluRange",
+      "description": "5-digit code that is not 9 + a PLU"
+    },
+    {
+      "input": "84011",
+      "valid": false,
+      "reason": "pluRange",
+      "description": "5-digit code not starting with 9"
+    },
+    {
+      "input": "2012345678903",
+      "valid": false,
+      "reason": "inStore",
+      "description": "EAN-13 in the in-store range 20-29 (scale labels; later feature)"
+    },
+    {
+      "input": "2900000000018",
+      "valid": false,
+      "reason": "inStore",
+      "description": "EAN-13 prefix 29"
+    },
+    {
+      "input": "212345678909",
+      "valid": false,
+      "reason": "inStore",
+      "description": "UPC-A number system 2 (random weight)"
+    },
+    {
+      "input": "0212345678909",
+      "valid": false,
+      "reason": "inStore",
+      "description": "the same UPC-A typed as EAN-13 (prefix 02)"
+    },
+    {
+      "input": "20123451",
+      "valid": false,
+      "reason": "inStore",
+      "description": "EAN-8 with prefix 2 (restricted distribution)"
+    }
+  ]
+}

@@ -1,0 +1,284 @@
+@page "/catalog/tax-profiles"
+@using HelloPos.Kernel.Catalog
+@using HelloPos.Kernel.Staff
+@inject ICatalogService CatalogApi
+@inject IBusinessService BusinessApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+@inject TimeProvider Clock
+
+<PageTitle>Tax profiles · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Tax profiles</MudText>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session. Nothing was saved.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers use the catalog.</MudAlert>
+}
+else
+{
+    @if (!IsOwner)
+    {
+        <MudAlert data-testid="owners-only" Severity="Severity.Info" Dense="true" Class="mb-3">Only owners change tax profiles; you can see them.</MudAlert>
+    }
+
+    @if (message is not null)
+    {
+        <MudAlert data-testid="message" Severity="@(failed ? Severity.Error : Severity.Success)" Dense="true" Class="mb-3">@message</MudAlert>
+    }
+
+    @if (loadError is not null)
+    {
+        <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else if (profiles is not null)
+    {
+        @if (profiles.Count == 0)
+        {
+            <MudText data-testid="no-profiles" Class="mb-3">No tax profiles yet. Add how your goods are taxed, for example "HST 13%" or "GST 5%".</MudText>
+        }
+
+        @foreach (var profile in profiles)
+        {
+            <MudPaper Outlined="true" Class="pa-4 mb-3" Style="max-width: 48rem;" data-testid="tax-profile">
+                <div class="d-flex align-center" style="gap: 8px;">
+                    <MudText Typo="Typo.h6" Class="flex-grow-1"><span data-testid="profile-name">@profile.Name</span>
+                        @if (!profile.Active) { <MudChip T="string" Size="Size.Small">Inactive</MudChip> }
+                    </MudText>
+                    @if (IsOwner)
+                    {
+                        @if (profile.Kind == "taxable" && profile.Active)
+                        {
+                            <MudButton data-testid="change-rates" Size="Size.Small" Variant="Variant.Text" OnClick="() => StartVersion(profile)">Change rates from a date</MudButton>
+                        }
+                        <MudButton data-testid="toggle-active" Size="Size.Small" Variant="Variant.Text" Disabled="busy"
+                                   OnClick="() => SetActiveAsync(profile, !profile.Active)">@(profile.Active ? "Deactivate" : "Reactivate")</MudButton>
+                    }
+                </div>
+                <MudText data-testid="rates">@profile.RatesText</MudText>
+                @foreach (var future in profile.Versions.Where(v => v.Editable))
+                {
+                    <div class="d-flex align-center mt-1" style="gap: 8px;" data-testid="future-version">
+                        <MudText Typo="Typo.body2">From @future.EffectiveFrom.ToString("d MMM yyyy", System.Globalization.CultureInfo.CurrentCulture):
+                            @string.Join(" + ", future.Components.Select(c => $"{c.Label} {c.RatePercent}%"))</MudText>
+                        @if (IsOwner)
+                        {
+                            <MudButton data-testid="remove-version" Size="Size.Small" Variant="Variant.Text" Color="Color.Error" Disabled="busy"
+                                       OnClick="() => RemoveVersionAsync(profile, future.Id)">Remove</MudButton>
+                        }
+                    </div>
+                }
+
+                @if (versionFor == profile.Id)
+                {
+                    <div class="mt-3" data-testid="version-form">
+                        <MudDatePicker data-testid="version-date" Label="First day of the new rates" Date="versionDate"
+                                       DateChanged="d => versionDate = d" MinDate="TodayDateTime" />
+                        <TaxComponentsEditor Rows="versionRows" OnChanged="StateHasChanged" />
+                        <MudButton data-testid="save-version" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2" Disabled="@(busy || !TaxComponentsEditor.IsValid(versionRows) || versionDate is null)"
+                                   OnClick="() => AddVersionAsync(profile)">Save new rates</MudButton>
+                        <MudButton Variant="Variant.Text" Class="mt-2" OnClick="() => versionFor = null">Cancel</MudButton>
+                    </div>
+                }
+            </MudPaper>
+        }
+
+        @if (IsOwner)
+        {
+            <MudPaper Outlined="true" Class="pa-4 mt-4" Style="max-width: 48rem;" data-testid="new-profile">
+                <MudText Typo="Typo.h6">Add a tax profile</MudText>
+                <MudTextField T="string" data-testid="new-name" Label="Name" @bind-Value="newName" MaxLength="CatalogRules.TaxProfileNameMaxLength"
+                              Error="@(fieldErrors.ContainsKey("name"))" ErrorText="@fieldErrors.GetValueOrDefault("name")" />
+                <MudSelect T="string" data-testid="new-kind" Label="Kind" @bind-Value="newKind">
+                    <MudSelectItem T="string" Value="@("taxable")">Taxable</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("zeroRated")">Zero-rated</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("exempt")">Exempt</MudSelectItem>
+                </MudSelect>
+                @if (newKind == "taxable")
+                {
+                    <TaxComponentsEditor Rows="newRows" OnChanged="StateHasChanged" />
+                }
+                @if (fieldErrors.TryGetValue("components", out var componentsError))
+                {
+                    <MudText Color="Color.Error" Typo="Typo.body2">@componentsError</MudText>
+                }
+                <MudButton data-testid="create-profile" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2" Disabled="@(busy || !CanCreate)" OnClick="CreateAsync">Add</MudButton>
+            </MudPaper>
+
+            <MudPaper Outlined="true" Class="pa-4 mt-4" Style="max-width: 48rem;" data-testid="deposits">
+                <MudSwitch T="bool" data-testid="deposits-taxable" Value="depositsTaxable" ValueChanged="SetDepositsTaxableAsync" Color="Color.Primary" Disabled="busy"
+                           Label="Container deposits are taxed with the product" />
+            </MudPaper>
+        }
+    }
+}
+
+@code {
+    private Guid pageBusiness;
+    private bool noBusiness;
+    private bool stale;
+    private bool busy;
+    private IReadOnlyList<TaxProfileItem>? profiles;
+    private string? loadError;
+    private string? message;
+    private bool failed;
+    private Dictionary<string, string> fieldErrors = new(StringComparer.Ordinal);
+    private string newName = string.Empty;
+    private string newKind = "taxable";
+    private List<TaxComponentItem> newRows = [new(string.Empty, string.Empty)];
+    private Guid? versionFor;
+    private DateTime? versionDate;
+    private List<TaxComponentItem> versionRows = [];
+    private bool depositsTaxable;
+    private HelloPos.Kernel.Businesses.BusinessSettings? settings;
+
+    private bool IsOwner => OpenBusiness.Role == StaffRole.Owner;
+
+    private DateTime TodayDateTime => Clock.GetLocalNow().Date;
+
+    private bool CanCreate =>
+        CatalogRules.ValidateName(newName, CatalogRules.TaxProfileNameMaxLength) is null
+        && (newKind != "taxable" || TaxComponentsEditor.IsValid(newRows));
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        pageBusiness = id;
+        if (OpenBusiness.Role is StaffRole.Owner or StaffRole.Manager)
+        {
+            await LoadAsync();
+        }
+
+        if (IsOwner && await BusinessApi.GetCurrentAsync(pageBusiness) is CurrentBusinessResult.Loaded loaded)
+        {
+            settings = loaded.Settings;
+            depositsTaxable = loaded.DepositsTaxable;
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        switch (await CatalogApi.ListTaxProfilesAsync(pageBusiness))
+        {
+            case LoadResult<IReadOnlyList<TaxProfileItem>>.Loaded loaded:
+                profiles = loaded.Value;
+                loadError = null;
+                break;
+            case LoadResult<IReadOnlyList<TaxProfileItem>>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<IReadOnlyList<TaxProfileItem>>.Failed loadFailed:
+                loadError = loadFailed.Message;
+                break;
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        var rows = newKind == "taxable" ? newRows.Select(Trimmed).ToList() : [];
+        if (await ApplyAsync(CatalogApi.CreateTaxProfileAsync(pageBusiness, newName.Trim(), newKind, rows), $"{newName.Trim()} was added."))
+        {
+            (newName, newKind, newRows) = (string.Empty, "taxable", [new(string.Empty, string.Empty)]);
+        }
+    }
+
+    private void StartVersion(TaxProfileItem profile)
+    {
+        versionFor = profile.Id;
+        versionDate = null;
+        versionRows = (profile.CurrentVersion?.Components ?? []).ToList();
+        if (versionRows.Count == 0)
+        {
+            versionRows.Add(new(string.Empty, string.Empty));
+        }
+    }
+
+    private async Task AddVersionAsync(TaxProfileItem profile)
+    {
+        var from = DateOnly.FromDateTime(versionDate!.Value);
+        if (await ApplyAsync(CatalogApi.AddTaxVersionAsync(pageBusiness, profile, from, versionRows.Select(Trimmed).ToList()),
+                $"New rates for {profile.Name} apply from {from.ToString("d MMM yyyy", System.Globalization.CultureInfo.CurrentCulture)}."))
+        {
+            versionFor = null;
+        }
+    }
+
+    private Task RemoveVersionAsync(TaxProfileItem profile, Guid versionId) =>
+        ApplyAsync(CatalogApi.DeleteTaxVersionAsync(pageBusiness, profile, versionId), "The future rates were removed.");
+
+    private Task SetActiveAsync(TaxProfileItem profile, bool active) =>
+        ApplyAsync(CatalogApi.SetTaxProfileActiveAsync(pageBusiness, profile, active), $"{profile.Name} is now {(active ? "active" : "inactive")}.");
+
+    private async Task SetDepositsTaxableAsync(bool value)
+    {
+        if (settings is null)
+        {
+            return;
+        }
+
+        if (await ApplyAsync(BusinessApi.UpdateCurrentAsync(pageBusiness, settings, value),
+                value ? "Deposits are now taxed with the product." : "Deposits are now untaxed.", reload: false))
+        {
+            depositsTaxable = value;
+        }
+    }
+
+    private async Task<bool> ApplyAsync(Task<OwnerActionResult> call, string success, bool reload = true)
+    {
+        busy = true;
+        message = null;
+        fieldErrors = new(StringComparer.Ordinal);
+        var result = await call;
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                (message, failed) = (success, false);
+                if (reload)
+                {
+                    await LoadAsync();
+                }
+
+                return true;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                return false;
+            case OwnerActionResult.FieldErrors fields:
+                fieldErrors = new(fields.Errors, StringComparer.Ordinal);
+                (message, failed) = (string.Join(" ", fields.Errors.Values), true);
+                return false;
+            case OwnerActionResult.Failed changeFailed:
+                (message, failed) = (changeFailed.Message, true);
+                await LoadAsync();
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    private static TaxComponentItem Trimmed(TaxComponentItem row) => new(row.Label.Trim(), row.RatePercent.Trim());
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}
