@@ -53,6 +53,10 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("char(3)")
                         .HasColumnName("currency_code");
 
+                    b.Property<bool>("DepositsTaxable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("deposits_taxable");
+
                     b.Property<short>("FinancialYearStartMonth")
                         .HasColumnType("smallint")
                         .HasColumnName("financial_year_start_month");
@@ -98,6 +102,544 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_businesses_pricing_mode", "pricing_mode IN ('tax_inclusive', 'tax_exclusive')");
                         });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.CatalogChange", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid>("ActorStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_staff_id");
+
+                    b.Property<DateTimeOffset>("At")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Changes")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("changes");
+
+                    b.Property<string>("Entity")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("entity");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entity_id");
+
+                    b.Property<Guid?>("ImportId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("import_id");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_catalog_changes");
+
+                    b.HasIndex("BusinessId", "ActorStaffId")
+                        .HasDatabaseName("ix_catalog_changes_business_id_actor_staff_id");
+
+                    b.HasIndex("BusinessId", "ImportId")
+                        .HasDatabaseName("ix_catalog_changes_business_id_import_id");
+
+                    b.HasIndex("BusinessId", "EntityId", "At")
+                        .HasDatabaseName("ix_catalog_changes_business_id_entity_id_at");
+
+                    b.ToTable("catalog_changes", "pos");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.CatalogImport", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ActorStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_staff_id");
+
+                    b.Property<DateTimeOffset>("At")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int>("Created")
+                        .HasColumnType("integer")
+                        .HasColumnName("created");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("file_name");
+
+                    b.Property<int>("Rows")
+                        .HasColumnType("integer")
+                        .HasColumnName("rows");
+
+                    b.Property<int>("Unchanged")
+                        .HasColumnType("integer")
+                        .HasColumnName("unchanged");
+
+                    b.Property<int>("Updated")
+                        .HasColumnType("integer")
+                        .HasColumnName("updated");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("ak_catalog_imports_business_id_id");
+
+                    b.HasIndex("BusinessId", "ActorStaffId")
+                        .HasDatabaseName("ix_catalog_imports_business_id_actor_staff_id");
+
+                    b.ToTable("catalog_imports", "pos");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.Category", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("DefaultTaxProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_tax_profile_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("normalized_name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("version");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_categories");
+
+                    b.HasIndex("BusinessId", "DefaultTaxProfileId")
+                        .HasDatabaseName("ix_categories_business_id_default_tax_profile_id");
+
+                    b.HasIndex("BusinessId", "NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_categories_business_id_normalized_name");
+
+                    b.ToTable("categories", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_categories_name", "char_length(name) BETWEEN 1 AND 60");
+                        });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.ItemDiscount", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateOnly>("FromDate")
+                        .HasColumnType("date")
+                        .HasColumnName("from_date");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<DateOnly?>("ToDate")
+                        .HasColumnType("date")
+                        .HasColumnName("to_date");
+
+                    b.Property<decimal>("Value")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("value");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_item_discounts");
+
+                    b.HasIndex("BusinessId", "ProductId")
+                        .HasDatabaseName("ix_item_discounts_business_id_product_id");
+
+                    b.ToTable("item_discounts", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_item_discounts_kind", "kind IN ('percent', 'fixed')");
+
+                            t.HasCheckConstraint("ck_item_discounts_period", "to_date IS NULL OR to_date >= from_date");
+
+                            t.HasCheckConstraint("ck_item_discounts_value", "value >= 0 AND (kind <> 'percent' OR value <= 100)");
+                        });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.Product", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<decimal>("DepositPerUnit")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("deposit_per_unit");
+
+                    b.Property<short?>("MinAge")
+                        .HasColumnType("smallint")
+                        .HasColumnName("min_age");
+
+                    b.Property<decimal>("MinQuantity")
+                        .HasPrecision(9, 3)
+                        .HasColumnType("numeric(9,3)")
+                        .HasColumnName("min_quantity");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedSku")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("normalized_sku");
+
+                    b.Property<bool>("OpenPrice")
+                        .HasColumnType("boolean")
+                        .HasColumnName("open_price");
+
+                    b.Property<string>("Sku")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("sku");
+
+                    b.Property<decimal>("Step")
+                        .HasPrecision(9, 3)
+                        .HasColumnType("numeric(9,3)")
+                        .HasColumnName("step");
+
+                    b.Property<Guid?>("TaxProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tax_profile_id");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("unit");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("unit_price");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("version");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("ak_products_business_id_id");
+
+                    b.HasIndex("BusinessId", "CategoryId")
+                        .HasDatabaseName("ix_products_business_id_category_id");
+
+                    b.HasIndex("BusinessId", "NormalizedSku")
+                        .IsUnique()
+                        .HasDatabaseName("ix_products_business_id_normalized_sku")
+                        .HasFilter("normalized_sku IS NOT NULL");
+
+                    b.HasIndex("BusinessId", "TaxProfileId")
+                        .HasDatabaseName("ix_products_business_id_tax_profile_id");
+
+                    b.ToTable("products", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_products_deposit", "deposit_per_unit >= 0");
+
+                            t.HasCheckConstraint("ck_products_min_age", "min_age IS NULL OR min_age BETWEEN 1 AND 99");
+
+                            t.HasCheckConstraint("ck_products_name", "char_length(name) BETWEEN 1 AND 120");
+
+                            t.HasCheckConstraint("ck_products_price", "(open_price AND unit_price IS NULL) OR (NOT open_price AND unit_price >= 0)");
+
+                            t.HasCheckConstraint("ck_products_quantities", "min_quantity > 0 AND step > 0 AND mod(min_quantity, step) = 0");
+
+                            t.HasCheckConstraint("ck_products_unit", "unit IN ('piece', 'g', 'kg', 'ml', 'l')");
+                        });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.ProductBarcode", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_product_barcodes");
+
+                    b.HasIndex("BusinessId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_product_barcodes_business_id_code");
+
+                    b.HasIndex("BusinessId", "ProductId")
+                        .HasDatabaseName("ix_product_barcodes_business_id_product_id");
+
+                    b.ToTable("product_barcodes", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_product_barcodes_code", "code ~ '^[0-9]{4,13}$'");
+
+                            t.HasCheckConstraint("ck_product_barcodes_kind", "kind IN ('ean13', 'ean8', 'plu')");
+                        });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.TaxComponent", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("label");
+
+                    b.Property<short>("Position")
+                        .HasColumnType("smallint")
+                        .HasColumnName("position");
+
+                    b.Property<decimal>("RatePercent")
+                        .HasPrecision(6, 3)
+                        .HasColumnType("numeric(6,3)")
+                        .HasColumnName("rate_percent");
+
+                    b.Property<Guid>("TaxProfileVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tax_profile_version_id");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("pk_tax_components");
+
+                    b.HasIndex("BusinessId", "TaxProfileVersionId", "Label")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tax_components_business_id_tax_profile_version_id_label");
+
+                    b.ToTable("tax_components", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_tax_components_label", "char_length(label) BETWEEN 1 AND 20");
+
+                            t.HasCheckConstraint("ck_tax_components_rate", "rate_percent >= 0 AND rate_percent <= 100");
+                        });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.TaxProfile", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("normalized_name");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("version");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("ak_tax_profiles_business_id_id");
+
+                    b.HasIndex("BusinessId", "NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tax_profiles_business_id_normalized_name");
+
+                    b.ToTable("tax_profiles", "pos", t =>
+                        {
+                            t.HasCheckConstraint("ck_tax_profiles_kind", "kind IN ('taxable', 'zero_rated', 'exempt')");
+
+                            t.HasCheckConstraint("ck_tax_profiles_name", "char_length(name) BETWEEN 1 AND 60");
+                        });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.TaxProfileVersion", b =>
+                {
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<Guid>("TaxProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tax_profile_id");
+
+                    b.HasKey("BusinessId", "Id")
+                        .HasName("ak_tax_profile_versions_business_id_id");
+
+                    b.HasIndex("BusinessId", "TaxProfileId", "EffectiveFrom")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tax_profile_versions_business_id_tax_profile_id_effective_f");
+
+                    b.ToTable("tax_profile_versions", "pos");
                 });
 
             modelBuilder.Entity("HelloPos.Api.Features.Devices.Device", b =>
@@ -582,6 +1124,164 @@ namespace HelloPos.Api.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_staff_sessions_end_reason", "end_reason IS NULL OR end_reason IN ('sign_out', 'refresh_reuse', 'pin_changed', 'deactivated', 'device_revoked', 'expired')");
                         });
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.CatalogChange", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_catalog_changes_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "ActorStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_catalog_changes_staff_members_business_id_actor_staff_id");
+
+                    b.HasOne("HelloPos.Api.Features.Catalog.CatalogImport", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "ImportId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_catalog_changes_catalog_imports_business_id_import_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.CatalogImport", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_catalog_imports_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Staff.StaffMember", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "ActorStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_catalog_imports_staff_members_business_id_actor_staff_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.Category", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_categories_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Catalog.TaxProfile", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "DefaultTaxProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_categories_tax_profiles_business_id_default_tax_profile_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.ItemDiscount", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_item_discounts_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_item_discounts_products_business_id_product_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.Product", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_products_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Catalog.Category", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_products_categories_business_id_category_id");
+
+                    b.HasOne("HelloPos.Api.Features.Catalog.TaxProfile", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "TaxProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_products_tax_profiles_business_id_tax_profile_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.ProductBarcode", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_barcodes_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_barcodes_products_business_id_product_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.TaxComponent", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tax_components_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Catalog.TaxProfileVersion", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "TaxProfileVersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tax_components_tax_profile_versions_business_id_tax_profile");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.TaxProfile", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tax_profiles_businesses_business_id");
+                });
+
+            modelBuilder.Entity("HelloPos.Api.Features.Catalog.TaxProfileVersion", b =>
+                {
+                    b.HasOne("HelloPos.Api.Features.Businesses.Business", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tax_profile_versions_businesses_business_id");
+
+                    b.HasOne("HelloPos.Api.Features.Catalog.TaxProfile", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId", "TaxProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tax_profile_versions_tax_profiles_business_id_tax_profile_id");
                 });
 
             modelBuilder.Entity("HelloPos.Api.Features.Devices.Device", b =>

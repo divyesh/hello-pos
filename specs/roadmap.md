@@ -68,7 +68,7 @@ Goal: a business can set up everything it sells.
 
 10. **Pricing engine** (done, `specs/009-pricing-engine/`): the shared pricing module in C# (used by the API and the web app) and
    Kotlin, driven by `contracts/pricing-cases.json`, implementing `specs/pricing-rules.md`.
-11. **Catalog setup** (web): categories, products, units, open-price items, tax profiles,
+11. **Catalog setup** (done, `specs/010-catalog-setup/`) (web): categories, products, units, open-price items, tax profiles,
    scheduled item discounts, CSV import; per product: one or more barcodes (UPC/EAN, PLU),
    an age-restriction flag with minimum age, and a container deposit amount.
 28. **Promotions** (web, pricing engine): multi-buy ("2 for $5", "3 for the price of 2"),

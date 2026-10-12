@@ -98,6 +98,27 @@ hashes offline) is in `specs/007-login-sessions/research.md` R4; revoking the de
 lockouts, sign-outs and own PIN changes go to `pos.staff_changes` with the device id. Never a PIN,
 code, credential or token (`PosSecretsNeverLeakTests`).
 
+## Catalog (feature #11)
+
+The catalog is the first large set of business-owned tables, and a good example of the rules above:
+
+- Every link carries the business id (`products (business_id, category_id) -> categories (business_id, id)`,
+  tax profile versions, components, barcodes, discounts), so a product cannot point at another
+  business's category even if a check were forgotten. Slices still check every referenced id against
+  the open business and answer "unknown" for other businesses' ids (row-level security hides them).
+- Uniqueness is per business: names and SKUs through a normalized lower-case column, barcodes on
+  `(business_id, code)`. The same barcode may exist in two businesses.
+- **Overlap rules belong in the database too.** Two scheduled discounts of one product may never cover
+  the same day: the slice checks under a row lock on the product, and an exclusion constraint
+  (`EXCLUDE USING gist (business_id WITH =, product_id WITH =, daterange(from_date, to_date, '[]') WITH &&)`,
+  extension `btree_gist`) guarantees it when two saves race.
+- **Imports never name a business.** A CSV row's category, tax profile, SKU and barcodes are looked up
+  in the open business only; a name from another business is simply unknown.
+- **Selecting the open business row.** On the web an owner can also *read* their other businesses
+  (the owner-read policy), so `Businesses.Single()` is not "the open one": select it by
+  `db.CurrentBusinessId` (`CatalogSupport.BusinessAsync`).
+- `pos.catalog_changes` is append-only for the app login, like `staff_changes`.
+
 ## Add a business-owned table
 
 1. The entity implements `IBusinessOwned` and creates its id with `Guid.CreateVersion7()`:

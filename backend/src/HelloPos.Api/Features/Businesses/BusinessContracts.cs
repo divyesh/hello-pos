@@ -14,7 +14,8 @@ public sealed record BusinessSettingsRequest(
     string? PricingMode,
     int FinancialYearStartMonth,
     string? TimeZone,
-    long CashRoundingStepMinor);
+    long CashRoundingStepMinor,
+    bool? DepositsTaxable = null);
 
 /// <summary>Contract <c>Business</c>.</summary>
 public sealed record BusinessResponse(
@@ -26,6 +27,7 @@ public sealed record BusinessResponse(
     int FinancialYearStartMonth,
     string TimeZone,
     long CashRoundingStepMinor,
+    bool DepositsTaxable,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
@@ -98,6 +100,7 @@ public static class BusinessContracts
             business.FinancialYearStartMonth,
             business.TimeZone,
             (long)(business.CashRoundingStep * MinorPerUnit),
+            business.DepositsTaxable,
             business.CreatedAt,
             business.UpdatedAt);
     }

@@ -26,6 +26,8 @@ namespace HelloPos.Web.ApiClient.Models
 #else
         public string CurrencyCode { get; set; }
 #endif
+        /// <summary>The depositsTaxable property</summary>
+        public bool? DepositsTaxable { get; set; }
         /// <summary>The financialYearStartMonth property</summary>
         public int? FinancialYearStartMonth { get; set; }
         /// <summary>The id property</summary>
@@ -72,6 +74,7 @@ namespace HelloPos.Web.ApiClient.Models
                 { "countryCode", n => { CountryCode = n.GetEnumValue<global::HelloPos.Web.ApiClient.Models.Business_countryCode>(); } },
                 { "createdAt", n => { CreatedAt = n.GetDateTimeOffsetValue(); } },
                 { "currencyCode", n => { CurrencyCode = n.GetStringValue(); } },
+                { "depositsTaxable", n => { DepositsTaxable = n.GetBoolValue(); } },
                 { "financialYearStartMonth", n => { FinancialYearStartMonth = n.GetIntValue(); } },
                 { "id", n => { Id = n.GetGuidValue(); } },
                 { "name", n => { Name = n.GetStringValue(); } },
@@ -91,6 +94,7 @@ namespace HelloPos.Web.ApiClient.Models
             writer.WriteEnumValue<global::HelloPos.Web.ApiClient.Models.Business_countryCode>("countryCode", CountryCode);
             writer.WriteDateTimeOffsetValue("createdAt", CreatedAt);
             writer.WriteStringValue("currencyCode", CurrencyCode);
+            writer.WriteBoolValue("depositsTaxable", DepositsTaxable);
             writer.WriteIntValue("financialYearStartMonth", FinancialYearStartMonth);
             writer.WriteGuidValue("id", Id);
             writer.WriteStringValue("name", Name);

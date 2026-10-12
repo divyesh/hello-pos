@@ -1,0 +1,42 @@
+@using System.Globalization
+@inject ICatalogService CatalogApi
+
+@* Who changed this product and how (feature #11, FR-015), newest first. *@
+
+<MudPaper Outlined="true" Class="pa-4 mt-4" Style="max-width: 44rem;" data-testid="history">
+    <MudText Typo="Typo.h6">History</MudText>
+    @if (changes.Count == 0)
+    {
+        <MudText Typo="Typo.body2">No changes recorded yet.</MudText>
+    }
+    @foreach (var change in changes)
+    {
+        <div class="mt-2" data-testid="change">
+            <MudText Typo="Typo.body2"><b>@change.At.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)</b> · @change.Actor · @change.Action</MudText>
+            @foreach (var field in change.Fields)
+            {
+                <MudText Typo="Typo.caption" Class="d-block" data-testid="change-field">
+                    @field.Field: @(field.Old ?? "–") → @(field.New ?? "–")
+                </MudText>
+            }
+        </div>
+    }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid PageBusiness { get; set; }
+
+    [Parameter, EditorRequired]
+    public Guid ProductId { get; set; }
+
+    private IReadOnlyList<ChangeItem> changes = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (await CatalogApi.ListChangesAsync(PageBusiness, ProductId) is LoadResult<IReadOnlyList<ChangeItem>>.Loaded loaded)
+        {
+            changes = loaded.Value;
+        }
+    }
+}

@@ -1,0 +1,62 @@
+# Additions to contracts/openapi.yaml for feature #11 (summary; the full definitions go into the contract
+# first, then the code). All operations: cookie session + X-HelloPos-Client, business from the session,
+# X-HelloPos-Business stale-tab check, owners and managers unless marked (owner).
+paths:
+  /catalog/tax-profiles:
+    get:  { operationId: listTaxProfiles }        # ?active=; each with its versions (current and future)
+    post: { operationId: createTaxProfile }       # (owner) { name, kind, effectiveFrom?, components[] }
+  /catalog/tax-profiles/{taxProfileId}:
+    get:  { operationId: getTaxProfile }
+    put:  { operationId: renameTaxProfile }       # (owner) { name, version }
+  /catalog/tax-profiles/{taxProfileId}/versions:
+    post: { operationId: addTaxProfileVersion }   # (owner) { effectiveFrom (future or today), components[] }
+  /catalog/tax-profiles/{taxProfileId}/versions/{versionId}:
+    put:    { operationId: updateTaxProfileVersion }  # (owner) future versions only
+    delete: { operationId: deleteTaxProfileVersion }  # (owner) future versions only
+  /catalog/tax-profiles/{taxProfileId}/deactivate: { post: { operationId: deactivateTaxProfile } }  # (owner)
+  /catalog/tax-profiles/{taxProfileId}/reactivate: { post: { operationId: reactivateTaxProfile } }  # (owner)
+  /catalog/categories:
+    get:  { operationId: listCategories }
+    post: { operationId: createCategory }         # { name, sortOrder, defaultTaxProfileId }
+  /catalog/categories/{categoryId}:
+    get: { operationId: getCategory }
+    put: { operationId: updateCategory }          # { name, sortOrder, defaultTaxProfileId, version }
+  /catalog/categories/{categoryId}/deactivate: { post: { operationId: deactivateCategory } }
+  /catalog/categories/{categoryId}/reactivate: { post: { operationId: reactivateCategory } }
+  /catalog/products:
+    get:  { operationId: listProducts }           # ?q= (name part, barcode, SKU) &categoryId= &active= &page= &pageSize=
+    post: { operationId: createProduct }          # ProductInput
+  /catalog/products/export:
+    get: { operationId: exportProducts }          # text/csv in the import format
+  /catalog/products/{productId}:
+    get: { operationId: getProduct }              # with barcodes, effective tax profile, discounts
+    put: { operationId: updateProduct }           # ProductInput + version (barcodes replaced as a set)
+  /catalog/products/{productId}/deactivate: { post: { operationId: deactivateProduct } }
+  /catalog/products/{productId}/reactivate: { post: { operationId: reactivateProduct } }
+  /catalog/products/{productId}/discounts:
+    get:  { operationId: listItemDiscounts }
+    post: { operationId: createItemDiscount }     # { kind, value, fromDate, toDate? }
+  /catalog/products/{productId}/discounts/{discountId}:
+    put:    { operationId: updateItemDiscount }   # future: anything; running: toDate only (end early)
+    delete: { operationId: deleteItemDiscount }   # future only
+  /catalog/imports/preview:
+    post: { operationId: previewCatalogImport }   # multipart file -> rows[{ row, outcome, sku?, name?, errors[{column, message}] }], counts
+  /catalog/imports:
+    get:  { operationId: listCatalogImports }
+    post: { operationId: importCatalog }          # multipart file -> counts, or 400 with the row errors
+  /catalog/changes:
+    get: { operationId: listCatalogChanges }      # ?entity=&entityId= newest first, paged
+  /owner/businesses/{businessId}:
+    put: { operationId: updateBusiness }          # existing; gains depositsTaxable (owner)
+
+components:
+  schemas:
+    TaxComponentInput: { label: string, ratePercent: decimal string }
+    TaxProfile:   { id, name, kind: taxable|zeroRated|exempt, active, version, versions[{ id, effectiveFrom, components[], current: bool, editable: bool }] }
+    Category:     { id, name, sortOrder, defaultTaxProfileId, active, version }
+    ProductInput: { name, sku?, categoryId, taxProfileId?, unit, unitPrice? (minor), openPrice, minQuantity, step, minAge?, depositPerUnit (minor), barcodes[] }
+    Product:      ProductInput + { id, active, version, currency, barcodes[{ code, kind }], effectiveTaxProfileId, discountInForce? }
+    ItemDiscount: { id, kind: percent|fixed, value (percent string or minor), fromDate, toDate?, status: future|running|ended }
+    ImportPreview, ImportResult, CatalogChange
+  responses:
+    CatalogConflict: 409 problem type urn:hellopos:problem:catalog-changed (stale version)

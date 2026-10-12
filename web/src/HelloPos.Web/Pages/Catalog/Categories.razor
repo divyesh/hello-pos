@@ -1,0 +1,233 @@
+@page "/catalog/categories"
+@using HelloPos.Kernel.Catalog
+@using HelloPos.Kernel.Staff
+@inject ICatalogService CatalogApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Categories · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Categories</MudText>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session. Nothing was saved.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers use the catalog.</MudAlert>
+}
+else
+{
+    @if (message is not null)
+    {
+        <MudAlert data-testid="message" Severity="@(failed ? Severity.Error : Severity.Success)" Dense="true" Class="mb-3">@message</MudAlert>
+    }
+
+    @if (loadError is not null)
+    {
+        <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else if (categories is not null && profiles is not null)
+    {
+        @if (profiles.Count(p => p.Active) == 0)
+        {
+            <MudAlert data-testid="needs-profile" Severity="Severity.Info" Class="mb-3">
+                Add a tax profile first: every category has a default tax treatment. <MudLink Href="catalog/tax-profiles">Tax profiles</MudLink>
+            </MudAlert>
+        }
+
+        <MudPaper Outlined="true" Style="max-width: 48rem;" Class="mb-4">
+            <MudList T="string" Dense="true">
+                @foreach (var category in categories)
+                {
+                    <MudListItem T="string" data-testid="category">
+                        @if (editing?.Id == category.Id)
+                        {
+                            <div class="d-flex align-center flex-wrap" style="gap: 8px;">
+                                <MudTextField T="string" data-testid="edit-name" Label="Name" @bind-Value="editName" MaxLength="CatalogRules.CategoryNameMaxLength" />
+                                <MudNumericField T="int" data-testid="edit-sort" Label="Order" @bind-Value="editSort" Style="max-width: 6rem;" />
+                                <MudSelect T="Guid" data-testid="edit-profile" Label="Default tax" @bind-Value="editProfile" Style="min-width: 12rem;">
+                                    @foreach (var profile in ProfilesFor(category.DefaultTaxProfileId))
+                                    {
+                                        <MudSelectItem T="Guid" Value="profile.Id">@profile.Name</MudSelectItem>
+                                    }
+                                </MudSelect>
+                                <MudButton data-testid="save-edit" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(busy || !NameValid(editName))"
+                                           OnClick="() => SaveEditAsync(category)">Save</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => editing = null">Cancel</MudButton>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex align-center" style="gap: 8px;">
+                                <MudText Class="flex-grow-1">
+                                    <b data-testid="category-name">@category.Name</b> · @ProfileName(category.DefaultTaxProfileId)
+                                    @if (!category.Active) { <MudChip T="string" Size="Size.Small">Inactive</MudChip> }
+                                </MudText>
+                                <MudButton data-testid="edit" Size="Size.Small" Variant="Variant.Text" OnClick="() => StartEdit(category)">Edit</MudButton>
+                                <MudButton data-testid="toggle-active" Size="Size.Small" Variant="Variant.Text" Disabled="busy"
+                                           OnClick="() => SetActiveAsync(category, !category.Active)">@(category.Active ? "Deactivate" : "Reactivate")</MudButton>
+                            </div>
+                        }
+                    </MudListItem>
+                }
+            </MudList>
+        </MudPaper>
+
+        <MudPaper Outlined="true" Class="pa-4" Style="max-width: 48rem;" data-testid="new-category">
+            <MudText Typo="Typo.h6">Add a category</MudText>
+            <div class="d-flex align-center flex-wrap" style="gap: 8px;">
+                <MudTextField T="string" data-testid="new-name" Label="Name" @bind-Value="newName" MaxLength="CatalogRules.CategoryNameMaxLength"
+                              Error="@(fieldErrors.ContainsKey("name"))" ErrorText="@fieldErrors.GetValueOrDefault("name")" />
+                <MudNumericField T="int" data-testid="new-sort" Label="Order" @bind-Value="newSort" Style="max-width: 6rem;" />
+                <MudSelect T="Guid" data-testid="new-profile" Label="Default tax" @bind-Value="newProfile" Style="min-width: 12rem;"
+                           Error="@(fieldErrors.ContainsKey("defaultTaxProfileId"))" ErrorText="@fieldErrors.GetValueOrDefault("defaultTaxProfileId")">
+                    @foreach (var profile in profiles.Where(p => p.Active))
+                    {
+                        <MudSelectItem T="Guid" Value="profile.Id">@profile.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+            <MudButton data-testid="create-category" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2"
+                       Disabled="@(busy || !NameValid(newName) || newProfile == Guid.Empty)" OnClick="CreateAsync">Add</MudButton>
+        </MudPaper>
+    }
+}
+
+@code {
+    private Guid pageBusiness;
+    private bool noBusiness;
+    private bool stale;
+    private bool busy;
+    private IReadOnlyList<CategoryItem>? categories;
+    private IReadOnlyList<TaxProfileItem>? profiles;
+    private string? loadError;
+    private string? message;
+    private bool failed;
+    private Dictionary<string, string> fieldErrors = new(StringComparer.Ordinal);
+    private string newName = string.Empty;
+    private int newSort;
+    private Guid newProfile;
+    private CategoryItem? editing;
+    private string editName = string.Empty;
+    private int editSort;
+    private Guid editProfile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        pageBusiness = id;
+        if (OpenBusiness.Role is StaffRole.Owner or StaffRole.Manager)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        var categoryResult = await CatalogApi.ListCategoriesAsync(pageBusiness);
+        var profileResult = await CatalogApi.ListTaxProfilesAsync(pageBusiness);
+        switch (categoryResult, profileResult)
+        {
+            case (LoadResult<IReadOnlyList<CategoryItem>>.Loaded c, LoadResult<IReadOnlyList<TaxProfileItem>>.Loaded p):
+                (categories, profiles, loadError) = (c.Value, p.Value, null);
+                if (newProfile == Guid.Empty)
+                {
+                    newProfile = p.Value.FirstOrDefault(x => x.Active)?.Id ?? Guid.Empty;
+                }
+
+                break;
+            case (LoadResult<IReadOnlyList<CategoryItem>>.BusinessChanged, _) or (_, LoadResult<IReadOnlyList<TaxProfileItem>>.BusinessChanged):
+                stale = true;
+                break;
+            case (LoadResult<IReadOnlyList<CategoryItem>>.Failed f, _):
+                loadError = f.Message;
+                break;
+            case (_, LoadResult<IReadOnlyList<TaxProfileItem>>.Failed f):
+                loadError = f.Message;
+                break;
+        }
+    }
+
+    /// <summary>Active profiles, plus the one already linked even if it was deactivated later.</summary>
+    private IEnumerable<TaxProfileItem> ProfilesFor(Guid current) => profiles!.Where(p => p.Active || p.Id == current);
+
+    private string ProfileName(Guid id) => profiles?.FirstOrDefault(p => p.Id == id)?.Name ?? "Unknown tax profile";
+
+    private static bool NameValid(string name) => CatalogRules.ValidateName(name, CatalogRules.CategoryNameMaxLength) is null;
+
+    private async Task CreateAsync()
+    {
+        if (await ApplyAsync(CatalogApi.CreateCategoryAsync(pageBusiness, newName.Trim(), newSort, newProfile), $"{newName.Trim()} was added."))
+        {
+            (newName, newSort) = (string.Empty, 0);
+        }
+    }
+
+    private void StartEdit(CategoryItem category)
+    {
+        editing = category;
+        (editName, editSort, editProfile) = (category.Name, category.SortOrder, category.DefaultTaxProfileId);
+    }
+
+    private async Task SaveEditAsync(CategoryItem category)
+    {
+        if (await ApplyAsync(CatalogApi.UpdateCategoryAsync(pageBusiness, category, editName.Trim(), editSort, editProfile), "The category was saved."))
+        {
+            editing = null;
+        }
+    }
+
+    private Task SetActiveAsync(CategoryItem category, bool active) =>
+        ApplyAsync(CatalogApi.SetCategoryActiveAsync(pageBusiness, category, active), $"{category.Name} is now {(active ? "active" : "inactive")}.");
+
+    private async Task<bool> ApplyAsync(Task<OwnerActionResult> call, string success)
+    {
+        busy = true;
+        message = null;
+        fieldErrors = new(StringComparer.Ordinal);
+        var result = await call;
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                (message, failed) = (success, false);
+                await LoadAsync();
+                return true;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                return false;
+            case OwnerActionResult.FieldErrors fields:
+                fieldErrors = new(fields.Errors, StringComparer.Ordinal);
+                (message, failed) = (string.Join(" ", fields.Errors.Values), true);
+                return false;
+            case OwnerActionResult.Failed changeFailed:
+                (message, failed) = (changeFailed.Message, true);
+                await LoadAsync();
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

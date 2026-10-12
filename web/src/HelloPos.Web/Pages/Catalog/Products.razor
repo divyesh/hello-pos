@@ -1,0 +1,200 @@
+@page "/catalog/products"
+@using HelloPos.Kernel.Staff
+@inject ICatalogService CatalogApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Products · Hello POS</PageTitle>
+
+<div class="d-flex align-center mb-2">
+    <MudText Typo="Typo.h4" Class="flex-grow-1">Products</MudText>
+    @if (allowed)
+    {
+        @if (exportHref is not null)
+        {
+            <MudLink data-testid="download" Href="@exportHref" download="price-list.csv" Class="mr-3">Download price-list.csv</MudLink>
+        }
+        <MudButton data-testid="export" Variant="Variant.Outlined" Class="mr-2" Disabled="exporting" OnClick="ExportAsync">Export price list</MudButton>
+        <MudButton data-testid="import-link" Href="catalog/import" Variant="Variant.Outlined" Class="mr-2">Import</MudButton>
+        <MudButton data-testid="add-product" Href="catalog/products/new" Variant="Variant.Filled" Color="Color.Primary">Add product</MudButton>
+    }
+</div>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (!allowed)
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers use the catalog.</MudAlert>
+}
+else
+{
+    <div class="d-flex align-center flex-wrap mb-3" style="gap: 12px;">
+        <MudTextField T="string" data-testid="search" Label="Search name, barcode or SKU" Value="search" ValueChanged="SearchAsync"
+                      Immediate="false" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Style="min-width: 18rem;" />
+        <MudSelect T="Guid?" data-testid="category-filter" Label="Category" Value="categoryId" ValueChanged="CategoryAsync" Clearable="true" Style="min-width: 12rem;">
+            @foreach (var category in categories)
+            {
+                <MudSelectItem T="Guid?" Value="category.Id">@category.Name</MudSelectItem>
+            }
+        </MudSelect>
+        @foreach (var (label, value) in Filters)
+        {
+            <MudButton data-testid="@($"filter-{label}")" Size="Size.Small" Variant="@(active == value ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
+                       OnClick="() => ActiveAsync(value)">@label</MudButton>
+        }
+    </div>
+
+    @if (loadError is not null)
+    {
+        <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else if (results is { Total: 0 })
+    {
+        <MudText data-testid="no-products">No products found.</MudText>
+    }
+    else if (results is not null)
+    {
+        <MudSimpleTable Dense="true" Hover="true" Style="max-width: 64rem;">
+            <thead><tr><th>Name</th><th>SKU</th><th>Category</th><th>Price</th><th>Barcodes</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var product in results.Items)
+                {
+                    <tr data-testid="product">
+                        <td><MudLink data-testid="product-name" Href="@($"catalog/products/{product.Id}")">@product.Name</MudLink>
+                            @if (!product.Active) { <MudChip T="string" Size="Size.Small">Inactive</MudChip> }
+                            @if (product.MinAge is { } age) { <MudChip T="string" Size="Size.Small" Color="Color.Warning">@(age)+</MudChip> }
+                        </td>
+                        <td>@product.Sku</td>
+                        <td>@CategoryName(product.CategoryId)</td>
+                        <td data-testid="price">@(product.OpenPrice ? "Open price" : MoneyText.Format(product.UnitPrice ?? 0, product.Currency) + (product.Unit == "piece" ? "" : $" / {product.Unit}"))</td>
+                        <td>@product.Barcodes.Count</td>
+                        <td><MudButton Size="Size.Small" Variant="Variant.Text" Href="@($"catalog/products/{product.Id}")">Edit</MudButton></td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+        <div class="d-flex align-center mt-2" style="gap: 8px;">
+            <MudButton data-testid="previous" Size="Size.Small" Disabled="@(pageNumber <= 1)" OnClick="() => PageAsync(pageNumber - 1)">Previous</MudButton>
+            <MudText data-testid="page" Typo="Typo.body2">Page @pageNumber of @results.Pages · @results.Total products</MudText>
+            <MudButton data-testid="next" Size="Size.Small" Disabled="@(pageNumber >= results.Pages)" OnClick="() => PageAsync(pageNumber + 1)">Next</MudButton>
+        </div>
+    }
+}
+
+@code {
+    private static readonly (string Label, bool? Value)[] Filters = [("active", true), ("inactive", false), ("all", null)];
+
+    private Guid pageBusiness;
+    private bool noBusiness;
+    private bool allowed;
+    private bool stale;
+    private string search = string.Empty;
+    private Guid? categoryId;
+    private bool? active = true;
+    private int pageNumber = 1;
+    private ProductPageItem? results;
+    private IReadOnlyList<CategoryItem> categories = [];
+    private string? loadError;
+    private string? exportHref;
+    private bool exporting;
+
+    /// <summary>Fetches the CSV through the API client (it carries the session) and offers it as a download link.</summary>
+    private async Task ExportAsync()
+    {
+        exporting = true;
+        var result = await CatalogApi.ExportAsync(pageBusiness);
+        exporting = false;
+        switch (result)
+        {
+            case LoadResult<string>.Loaded loaded:
+                exportHref = "data:text/csv;charset=utf-8," + Uri.EscapeDataString(loaded.Value);
+                break;
+            case LoadResult<string>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<string>.Failed failed:
+                loadError = failed.Message;
+                break;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        pageBusiness = id;
+        allowed = OpenBusiness.Role is StaffRole.Owner or StaffRole.Manager;
+        if (allowed)
+        {
+            if (await CatalogApi.ListCategoriesAsync(pageBusiness) is LoadResult<IReadOnlyList<CategoryItem>>.Loaded loaded)
+            {
+                categories = loaded.Value;
+            }
+
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        switch (await CatalogApi.ListProductsAsync(pageBusiness, search, categoryId, active, pageNumber))
+        {
+            case LoadResult<ProductPageItem>.Loaded loaded:
+                (results, loadError) = (loaded.Value, null);
+                break;
+            case LoadResult<ProductPageItem>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<ProductPageItem>.Failed failed:
+                loadError = failed.Message;
+                break;
+        }
+    }
+
+    private Task SearchAsync(string value)
+    {
+        (search, pageNumber) = (value ?? string.Empty, 1);
+        return LoadAsync();
+    }
+
+    private Task CategoryAsync(Guid? value)
+    {
+        (categoryId, pageNumber) = (value, 1);
+        return LoadAsync();
+    }
+
+    private Task ActiveAsync(bool? value)
+    {
+        (active, pageNumber) = (value, 1);
+        return LoadAsync();
+    }
+
+    private Task PageAsync(int value)
+    {
+        pageNumber = value;
+        return LoadAsync();
+    }
+
+    private string CategoryName(Guid id) => categories.FirstOrDefault(c => c.Id == id)?.Name ?? string.Empty;
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

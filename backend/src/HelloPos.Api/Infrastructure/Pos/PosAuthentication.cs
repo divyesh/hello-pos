@@ -88,7 +88,7 @@ public static class PosAuthentication
     }
 
     /// <summary>A context acting as <paramref name="businessId"/>, for checking a secret of that business.</summary>
-    internal static HelloPosDbContext ActingAs(IServiceProvider services, Guid businessId) =>
+    public static HelloPosDbContext ActingAs(IServiceProvider services, Guid businessId) =>
         new(services.GetRequiredService<DbContextOptions<HelloPosDbContext>>(), new FixedCurrentBusiness(businessId));
 
     internal static bool ShouldTouch(DateTimeOffset? last, DateTimeOffset now) => last is null || now - last.Value >= TouchInterval;

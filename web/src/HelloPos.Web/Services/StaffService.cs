@@ -184,6 +184,11 @@ public sealed partial class StaffService(HttpClient http, ILogger<StaffService> 
         {
             return new LoadResult<T>.BusinessChanged();
         }
+        catch (ValidationProblemDetails problem)
+        {
+            var messages = OwnerAccountService.FieldMessages(problem).Values;
+            return new LoadResult<T>.Failed(messages.Count > 0 ? string.Join(" ", messages) : problem.Title ?? "The request was not accepted.");
+        }
         catch (ProblemDetails problem)
         {
             return new LoadResult<T>.Failed(problem.Status switch

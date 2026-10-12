@@ -14,6 +14,8 @@ servers:
 security:
   - ownerSession: []
 tags:
+  - name: Catalog
+    description: Tax profiles, categories, products, discounts, import and export (feature #11).
   - name: System
     description: Service status
   - name: Business
@@ -1138,6 +1140,895 @@ paths:
           $ref: '#/components/responses/ValidationProblem'
         '401':
           description: The device is not registered or was revoked.
+  /catalog/tax-profiles:
+    get:
+      tags: [Catalog]
+      operationId: listTaxProfiles
+      summary: Tax profiles of the open business with their versions
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ActiveFilter'
+      responses:
+        '200':
+          description: The profiles, by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaxProfile'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    post:
+      tags: [Catalog]
+      operationId: createTaxProfile
+      summary: Create a tax profile (owners)
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewTaxProfile'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxProfile'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/tax-profiles/{taxProfileId}:
+    get:
+      tags: [Catalog]
+      operationId: getTaxProfile
+      summary: One tax profile
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TaxProfileId'
+      responses:
+        '200':
+          description: The profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxProfile'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    put:
+      tags: [Catalog]
+      operationId: renameTaxProfile
+      summary: Rename a tax profile (owners)
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TaxProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxProfileRename'
+      responses:
+        '200':
+          description: Renamed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxProfile'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/tax-profiles/{taxProfileId}/versions:
+    post:
+      tags: [Catalog]
+      operationId: addTaxProfileVersion
+      summary: Add rates effective from a date (owners)
+      description: >
+        The new version applies from its date (business time zone); today or later.
+        Completed sales keep the tax they were sold with.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TaxProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxProfileVersionInput'
+      responses:
+        '201':
+          description: Added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxProfile'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/tax-profiles/{taxProfileId}/versions/{taxProfileVersionId}:
+    put:
+      tags: [Catalog]
+      operationId: updateTaxProfileVersion
+      summary: Change a future version (owners)
+      description: >
+        Only versions that are not yet in force can change.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TaxProfileId'
+        - $ref: '#/components/parameters/TaxProfileVersionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxProfileVersionInput'
+      responses:
+        '200':
+          description: Changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxProfile'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    delete:
+      tags: [Catalog]
+      operationId: deleteTaxProfileVersion
+      summary: Remove a future version (owners)
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TaxProfileId'
+        - $ref: '#/components/parameters/TaxProfileVersionId'
+      responses:
+        '200':
+          description: Removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxProfile'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/tax-profiles/{taxProfileId}/deactivate:
+    post:
+      tags: [Catalog]
+      operationId: deactivateTaxProfile
+      summary: Deactivate a tax profile (owners)
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TaxProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVersion'
+      responses:
+        '200':
+          description: Deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxProfile'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/tax-profiles/{taxProfileId}/reactivate:
+    post:
+      tags: [Catalog]
+      operationId: reactivateTaxProfile
+      summary: Reactivate a tax profile (owners)
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TaxProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVersion'
+      responses:
+        '200':
+          description: Reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxProfile'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/categories:
+    get:
+      tags: [Catalog]
+      operationId: listCategories
+      summary: Categories, in sort order
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ActiveFilter'
+      responses:
+        '200':
+          description: The categories.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    post:
+      tags: [Catalog]
+      operationId: createCategory
+      summary: Create a category
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/categories/{categoryId}:
+    get:
+      tags: [Catalog]
+      operationId: getCategory
+      summary: One category
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/CategoryId'
+      responses:
+        '200':
+          description: The category.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    put:
+      tags: [Catalog]
+      operationId: updateCategory
+      summary: Change a category
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/CategoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdate'
+      responses:
+        '200':
+          description: Changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/categories/{categoryId}/deactivate:
+    post:
+      tags: [Catalog]
+      operationId: deactivateCategory
+      summary: Deactivate a category
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/CategoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVersion'
+      responses:
+        '200':
+          description: Deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/categories/{categoryId}/reactivate:
+    post:
+      tags: [Catalog]
+      operationId: reactivateCategory
+      summary: Reactivate a category
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/CategoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVersion'
+      responses:
+        '200':
+          description: Reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/products:
+    get:
+      tags: [Catalog]
+      operationId: listProducts
+      summary: Search and filter products
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - name: q
+          in: query
+          required: false
+          description: Part of the name, a full barcode or a SKU.
+          schema:
+            type: string
+            maxLength: 120
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveFilter'
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: One page of products, by name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    post:
+      tags: [Catalog]
+      operationId: createProduct
+      summary: Create a product
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/products/export:
+    get:
+      tags: [Catalog]
+      operationId: exportProducts
+      summary: Price list as CSV (the import format)
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+      responses:
+        '200':
+          description: The CSV file.
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/products/{productId}:
+    get:
+      tags: [Catalog]
+      operationId: getProduct
+      summary: One product
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: The product.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    put:
+      tags: [Catalog]
+      operationId: updateProduct
+      summary: Change a product (barcodes are replaced as a set)
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdate'
+      responses:
+        '200':
+          description: Changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/products/{productId}/deactivate:
+    post:
+      tags: [Catalog]
+      operationId: deactivateProduct
+      summary: Deactivate a product
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVersion'
+      responses:
+        '200':
+          description: Deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/products/{productId}/reactivate:
+    post:
+      tags: [Catalog]
+      operationId: reactivateProduct
+      summary: Reactivate a product
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVersion'
+      responses:
+        '200':
+          description: Reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/products/{productId}/discounts:
+    get:
+      tags: [Catalog]
+      operationId: listItemDiscounts
+      summary: Scheduled discounts of a product, newest first
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: The discounts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ItemDiscount'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    post:
+      tags: [Catalog]
+      operationId: createItemDiscount
+      summary: Schedule a discount
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemDiscountInput'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemDiscount'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/products/{productId}/discounts/{discountId}:
+    put:
+      tags: [Catalog]
+      operationId: updateItemDiscount
+      summary: Change a future discount, or end a running one early
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/DiscountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemDiscountInput'
+      responses:
+        '200':
+          description: Changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemDiscount'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    delete:
+      tags: [Catalog]
+      operationId: deleteItemDiscount
+      summary: Remove a future discount
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/DiscountId'
+      responses:
+        '204':
+          description: Removed.
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/imports/preview:
+    post:
+      tags: [Catalog]
+      operationId: previewCatalogImport
+      summary: Check a CSV file; saves nothing
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              { type: object, required: [file], properties: { file: { type: string, format: binary } } }
+      responses:
+        '200':
+          description: Every row with its outcome.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreview'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/imports:
+    get:
+      tags: [Catalog]
+      operationId: listCatalogImports
+      summary: Past imports, newest first
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+      responses:
+        '200':
+          description: The imports.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogImport'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+    post:
+      tags: [Catalog]
+      operationId: importCatalog
+      summary: Import a CSV file (all or nothing)
+      description: >
+        The file is checked again; any row error refuses the whole import (400 with the preview).
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              { type: object, required: [file], properties: { file: { type: string, format: binary } } }
+      responses:
+        '200':
+          description: Imported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogImport'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+  /catalog/changes:
+    get:
+      tags: [Catalog]
+      operationId: listCatalogChanges
+      summary: Catalog history, newest first
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - name: entityId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+      responses:
+        '200':
+          description: One page of changes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogChange'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
 components:
   schemas:
     HealthStatus:
@@ -1312,10 +2203,13 @@ components:
           format: int64
           description: Cash rounding step in minor units (paise, cents); 0 (none), 5, 10 or 100.
           enum: [0, 5, 10, 100]
+        depositsTaxable:
+          type: boolean
+          description: Container deposits are taxed with the product (owners); default false.
     Business:
       type: object
       additionalProperties: false
-      required: [id, name, countryCode, currencyCode, pricingMode, financialYearStartMonth, timeZone, cashRoundingStepMinor, createdAt, updatedAt]
+      required: [id, name, countryCode, currencyCode, pricingMode, financialYearStartMonth, timeZone, cashRoundingStepMinor, depositsTaxable, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -1338,6 +2232,8 @@ components:
         cashRoundingStepMinor:
           type: integer
           format: int64
+        depositsTaxable:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -1730,6 +2626,499 @@ components:
           maxItems: 100
           items:
             $ref: '#/components/schemas/PosAttempt'
+    TaxComponent:
+      type: object
+      additionalProperties: false
+      required: [label, ratePercent]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 20
+        ratePercent:
+          type: string
+          description: Percent as an invariant decimal string, 0 to 100, at most 3 decimals.
+          pattern: '^[0-9]{1,3}(\.[0-9]{1,3})?$'
+          example: '2.5'
+    TaxProfileVersion:
+      type: object
+      additionalProperties: false
+      required: [id, effectiveFrom, components, current, editable]
+      properties:
+        id:
+          type: string
+          format: uuid
+        effectiveFrom:
+          type: string
+          format: date
+          description: First day it applies, in the business time zone.
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxComponent'
+        current:
+          type: boolean
+          description: The version in force now.
+        editable:
+          type: boolean
+          description: True only for versions not yet in force.
+    TaxProfile:
+      type: object
+      additionalProperties: false
+      required: [id, name, kind, active, version, versions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [taxable, zeroRated, exempt]
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+        versions:
+          type: array
+          description: Oldest first; past versions older than the current one are omitted.
+          items:
+            $ref: '#/components/schemas/TaxProfileVersion'
+    NewTaxProfile:
+      type: object
+      additionalProperties: false
+      required: [name, kind, components]
+      properties:
+        name:
+          type: string
+          maxLength: 60
+        kind:
+          type: string
+          enum: [taxable, zeroRated, exempt]
+        effectiveFrom:
+          type: string
+          format: date
+          description: Defaults to today (business time zone).
+        components:
+          type: array
+          description: At least one for taxable profiles; none for zero-rated and exempt.
+          items:
+            $ref: '#/components/schemas/TaxComponent'
+    TaxProfileRename:
+      type: object
+      additionalProperties: false
+      required: [name, version]
+      properties:
+        name:
+          type: string
+          maxLength: 60
+        version:
+          type: integer
+          format: int32
+    TaxProfileVersionInput:
+      type: object
+      additionalProperties: false
+      required: [effectiveFrom, components, version]
+      properties:
+        effectiveFrom:
+          type: string
+          format: date
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxComponent'
+        version:
+          type: integer
+          format: int32
+          description: The profile's version.
+    CatalogVersion:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version:
+          type: integer
+          format: int32
+    Category:
+      type: object
+      additionalProperties: false
+      required: [id, name, sortOrder, defaultTaxProfileId, active, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        defaultTaxProfileId:
+          type: string
+          format: uuid
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+    CategoryInput:
+      type: object
+      additionalProperties: false
+      required: [name, sortOrder, defaultTaxProfileId]
+      properties:
+        name:
+          type: string
+          maxLength: 60
+        sortOrder:
+          type: integer
+          format: int32
+        defaultTaxProfileId:
+          type: string
+          format: uuid
+    CategoryUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, sortOrder, defaultTaxProfileId, version]
+      properties:
+        name:
+          type: string
+          maxLength: 60
+        sortOrder:
+          type: integer
+          format: int32
+        defaultTaxProfileId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int32
+    ProductInput:
+      type: object
+      additionalProperties: false
+      required: [name, categoryId, unit, openPrice, minQuantity, step, depositPerUnit, barcodes]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        sku:
+          type: string
+          maxLength: 40
+        categoryId:
+          type: string
+          format: uuid
+        taxProfileId:
+          type: string
+          format: uuid
+          description: Overrides the category's default tax profile; omit to follow it.
+        unit:
+          type: string
+          enum: [piece, g, kg, ml, l]
+        unitPrice:
+          type: integer
+          format: int64
+          description: Minor units of the business currency; required unless openPrice.
+        openPrice:
+          type: boolean
+        minQuantity:
+          type: string
+          pattern: '^[0-9]+(\.[0-9]{1,3})?$'
+        step:
+          type: string
+          pattern: '^[0-9]+(\.[0-9]{1,3})?$'
+        minAge:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 99
+        depositPerUnit:
+          type: integer
+          format: int64
+          minimum: 0
+        barcodes:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 20
+    ProductUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, categoryId, unit, openPrice, minQuantity, step, depositPerUnit, barcodes, version]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        sku:
+          type: string
+          maxLength: 40
+        categoryId:
+          type: string
+          format: uuid
+        taxProfileId:
+          type: string
+          format: uuid
+        unit:
+          type: string
+          enum: [piece, g, kg, ml, l]
+        unitPrice:
+          type: integer
+          format: int64
+        openPrice:
+          type: boolean
+        minQuantity:
+          type: string
+          pattern: '^[0-9]+(\.[0-9]{1,3})?$'
+        step:
+          type: string
+          pattern: '^[0-9]+(\.[0-9]{1,3})?$'
+        minAge:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 99
+        depositPerUnit:
+          type: integer
+          format: int64
+          minimum: 0
+        barcodes:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 20
+        version:
+          type: integer
+          format: int32
+    Barcode:
+      type: object
+      additionalProperties: false
+      required: [code, kind]
+      properties:
+        code:
+          type: string
+          description: Normalized (UPC-A shown in its 13-digit form).
+        kind:
+          type: string
+          enum: [ean13, ean8, plu]
+    Product:
+      type: object
+      additionalProperties: false
+      required: [id, name, categoryId, effectiveTaxProfileId, unit, openPrice, minQuantity, step, depositPerUnit, barcodes, currency, active, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sku:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        taxProfileId:
+          type: string
+          format: uuid
+          description: Present only when the product overrides its category's tax profile.
+        effectiveTaxProfileId:
+          type: string
+          format: uuid
+        unit:
+          type: string
+          enum: [piece, g, kg, ml, l]
+        unitPrice:
+          type: integer
+          format: int64
+          description: Absent for open-price products.
+        openPrice:
+          type: boolean
+        minQuantity:
+          type: string
+        step:
+          type: string
+        minAge:
+          type: integer
+          format: int32
+        depositPerUnit:
+          type: integer
+          format: int64
+        barcodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Barcode'
+        currency:
+          type: string
+          description: ISO 4217 code of the amounts.
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+    ProductPage:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int32
+    ItemDiscountInput:
+      type: object
+      additionalProperties: false
+      required: [kind, value, fromDate]
+      properties:
+        kind:
+          type: string
+          enum: [percent, fixed]
+        value:
+          type: string
+          description: Percent (0 to 100, at most 3 decimals) or a fixed amount per unit in minor units, as a decimal string.
+          pattern: '^[0-9]+(\.[0-9]{1,3})?$'
+        fromDate:
+          type: string
+          format: date
+        toDate:
+          type: string
+          format: date
+          description: Inclusive; omit for open-ended.
+    ItemDiscount:
+      type: object
+      additionalProperties: false
+      required: [id, kind, value, fromDate, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [percent, fixed]
+        value:
+          type: string
+        fromDate:
+          type: string
+          format: date
+        toDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [future, running, ended]
+    ImportRow:
+      type: object
+      additionalProperties: false
+      required: [row, outcome, errors]
+      properties:
+        row:
+          type: integer
+          format: int32
+          description: Line number in the file (the header is line 1).
+        outcome:
+          type: string
+          enum: [create, update, unchanged, error]
+        sku:
+          type: string
+        name:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [column, message]
+            properties:
+              column:
+                type: string
+              message:
+                type: string
+    ImportPreview:
+      type: object
+      additionalProperties: false
+      required: [rows, create, update, unchanged, errors]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportRow'
+        create:
+          type: integer
+          format: int32
+        update:
+          type: integer
+          format: int32
+        unchanged:
+          type: integer
+          format: int32
+        errors:
+          type: integer
+          format: int32
+    CatalogImport:
+      type: object
+      additionalProperties: false
+      required: [id, at, fileName, rows, created, updated, unchanged]
+      properties:
+        id:
+          type: string
+          format: uuid
+        at:
+          type: string
+          format: date-time
+        fileName:
+          type: string
+        rows:
+          type: integer
+          format: int32
+        created:
+          type: integer
+          format: int32
+        updated:
+          type: integer
+          format: int32
+        unchanged:
+          type: integer
+          format: int32
+    CatalogChange:
+      type: object
+      additionalProperties: false
+      required: [at, actor, entity, entityId, action, changes]
+      properties:
+        at:
+          type: string
+          format: date-time
+        actor:
+          type: string
+          description: Display name of the person who made the change.
+        entity:
+          type: string
+          enum: [taxProfile, taxProfileVersion, category, product, itemDiscount, business]
+        entityId:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum: [created, updated, deactivated, reactivated, deleted, imported]
+        changes:
+          type: array
+          description: Each changed field with its old and new value as text (absent when there was none).
+          items:
+            type: object
+            additionalProperties: false
+            required: [field]
+            properties:
+              field:
+                type: string
+              old:
+                type: string
+              new:
+                type: string
   parameters:
     ClientHeader:
       name: X-HelloPos-Client
@@ -1764,6 +3153,48 @@ components:
       schema:
         type: string
         format: uuid
+    TaxProfileId:
+      name: taxProfileId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TaxProfileVersionId:
+      name: taxProfileVersionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DiscountId:
+      name: discountId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ActiveFilter:
+      name: active
+      in: query
+      required: false
+      description: Omit for all; true for active only; false for inactive only.
+      schema:
+        type: boolean
   responses:
     ValidationProblem:
       description: The request is invalid; errors are listed per field.
@@ -1825,6 +3256,14 @@ components:
             $ref: '#/components/schemas/ProblemDetails'
     DeviceConflict:
       description: Someone else changed this device (device-changed), or another business is open now.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    CatalogConflict:
+      description: >
+        Someone else changed this record (catalog-changed), it is in use or not editable any more, or
+        another business is open in this session now (business-changed).
       content:
         application/problem+json:
           schema:

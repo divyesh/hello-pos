@@ -1,0 +1,140 @@
+@page "/catalog/import"
+@using HelloPos.Kernel.Staff
+@inject ICatalogService CatalogApi
+@inject OpenBusinessState OpenBusiness
+
+<PageTitle>Import products · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Import products</MudText>
+
+@if (OpenBusiness.Id is null)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers use the catalog.</MudAlert>
+}
+else
+{
+    <MudText Class="mb-2">
+        Upload a CSV file with a header row. Existing products are matched by SKU, then by barcode.
+        Nothing is saved until you import a file without errors, and then everything is saved at once.
+        <MudLink data-testid="template" Href="@TemplateHref" download="catalog-template.csv">Download the template</MudLink>.
+    </MudText>
+
+    <label class="d-block my-2">
+        <MudText Typo="Typo.body2">Choose a CSV file (at most 5 MB):</MudText>
+        <InputFile data-testid="upload" accept=".csv,text/csv" OnChange="e => PreviewAsync(e.File)" disabled="@busy" />
+    </label>
+
+    @if (message is not null)
+    {
+        <MudAlert data-testid="message" Severity="@(failed ? Severity.Error : Severity.Success)" Class="my-3">@message</MudAlert>
+    }
+
+    @if (preview is not null)
+    {
+        <div class="d-flex align-center flex-wrap my-3" style="gap: 8px;" data-testid="counts">
+            <MudChip T="string" Color="Color.Success">@preview.Create new</MudChip>
+            <MudChip T="string" Color="Color.Info">@preview.Update changed</MudChip>
+            <MudChip T="string">@preview.Unchanged unchanged</MudChip>
+            <MudChip T="string" Color="@(preview.Errors > 0 ? Color.Error : Color.Default)" data-testid="error-count">@preview.Errors with errors</MudChip>
+            <MudSwitch T="bool" data-testid="only-errors" @bind-Value="onlyErrors" Label="Show only rows with errors" Color="Color.Primary" />
+            <MudButton data-testid="import" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(busy || preview.Errors > 0 || preview.Create + preview.Update == 0)"
+                       OnClick="ImportAsync">Import @fileName</MudButton>
+        </div>
+
+        <MudSimpleTable Dense="true" Style="max-width: 64rem;">
+            <thead><tr><th>Row</th><th>Result</th><th>SKU</th><th>Name</th><th>Problems</th></tr></thead>
+            <tbody>
+                @foreach (var row in preview.Rows.Where(r => !onlyErrors || r.Outcome == "error"))
+                {
+                    <tr data-testid="row">
+                        <td>@row.Row</td>
+                        <td data-testid="outcome">@row.Outcome</td>
+                        <td>@row.Sku</td>
+                        <td>@row.Name</td>
+                        <td data-testid="problems">@string.Join("; ", row.Errors.Select(e => $"{e.Column}: {e.Message}"))</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+}
+
+@code {
+    private const long MaxBytes = 5 * 1024 * 1024;
+    private const string Header = "sku,name,category,category_tax_profile,tax_profile,unit,price,open_price,min_quantity,step,barcodes,min_age,deposit,active";
+
+    private bool busy;
+    private bool onlyErrors;
+    private string? message;
+    private bool failed;
+    private string fileName = string.Empty;
+    private byte[] content = [];
+    private ImportPreviewItem? preview;
+
+    private static string TemplateHref => "data:text/csv;charset=utf-8," + Uri.EscapeDataString(
+        Header + "\nCOLA-355,Cola 355 ml,Drinks,GST 5%,,piece,1.99,false,1,1,067000004568,,0.10,true\n");
+
+    private async Task PreviewAsync(IBrowserFile? file)
+    {
+        if (file is null || OpenBusiness.Id is not { } business)
+        {
+            return;
+        }
+
+        (message, preview) = (null, null);
+        if (file.Size > MaxBytes)
+        {
+            (message, failed) = ("The file is larger than 5 MB; split it.", true);
+            return;
+        }
+
+        busy = true;
+        using var buffer = new MemoryStream();
+        await using (var stream = file.OpenReadStream(MaxBytes))
+        {
+            await stream.CopyToAsync(buffer);
+        }
+
+        (fileName, content) = (file.Name, buffer.ToArray());
+        var result = await CatalogApi.PreviewImportAsync(business, fileName, content);
+        busy = false;
+        switch (result)
+        {
+            case LoadResult<ImportPreviewItem>.Loaded { Value.FileError: { } fileError }:
+                (message, failed) = (fileError, true);
+                break;
+            case LoadResult<ImportPreviewItem>.Loaded loaded:
+                (preview, onlyErrors) = (loaded.Value, loaded.Value.Errors > 0);
+                break;
+            case LoadResult<ImportPreviewItem>.Failed loadFailed:
+                (message, failed) = (loadFailed.Message, true);
+                break;
+            case LoadResult<ImportPreviewItem>.BusinessChanged:
+                (message, failed) = ("Another business was opened in this session; reload the page.", true);
+                break;
+        }
+    }
+
+    private async Task ImportAsync()
+    {
+        busy = true;
+        var result = await CatalogApi.ImportAsync(OpenBusiness.Id!.Value, fileName, content);
+        busy = false;
+        switch (result)
+        {
+            case LoadResult<ImportResultItem>.Loaded loaded:
+                (message, failed, preview) = ($"Imported: {loaded.Value.Created} new, {loaded.Value.Updated} changed, {loaded.Value.Unchanged} unchanged.", false, null);
+                break;
+            case LoadResult<ImportResultItem>.Failed importFailed:
+                (message, failed) = (importFailed.Message, true);
+                break;
+            case LoadResult<ImportResultItem>.BusinessChanged:
+                (message, failed) = ("Another business was opened in this session; reload the page.", true);
+                break;
+        }
+    }
+}

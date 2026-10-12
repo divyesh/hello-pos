@@ -1,3 +1,4 @@
+using HelloPos.Api.Features.Catalog;
 using HelloPos.Api.Features.Owners;
 using HelloPos.Api.Infrastructure;
 using HelloPos.Api.Infrastructure.Identity;
@@ -48,9 +49,11 @@ public sealed class CurrentBusiness : IEndpointMapper
     }
 
     public static async Task<Results<Ok<BusinessResponse>, ValidationProblem, ProblemHttpResult>> UpdateAsync(
-        BusinessSettingsRequest request, ICurrentBusiness current, HelloPosDbContext db, TimeProvider clock,
+        BusinessSettingsRequest request, ICurrentBusiness current, ICurrentStaff staff, HelloPosDbContext db, TimeProvider clock,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(staff);
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(clock);
@@ -69,6 +72,16 @@ public sealed class CurrentBusiness : IEndpointMapper
         }
 
         BusinessContracts.Apply(settings, business);
+
+        // Absent means unchanged, so an older client cannot switch it off by omission (feature #11, FR-016).
+        if (request.DepositsTaxable is { } depositsTaxable && depositsTaxable != business.DepositsTaxable)
+        {
+            var actor = (await staff.GetAsync(cancellationToken).ConfigureAwait(false))!;
+            db.RecordChange(clock, actor.Id, CatalogEntityNames.Business, business.Id, CatalogActions.Updated,
+                new Dictionary<string, object?[]> { ["depositsTaxable"] = [business.DepositsTaxable, depositsTaxable] });
+            business.DepositsTaxable = depositsTaxable;
+        }
+
         business.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(BusinessContracts.ToResponse(business));

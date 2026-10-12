@@ -29,6 +29,9 @@ public sealed class Business
     /// <summary>Cash rounding step in currency units: 0 (none), 0.05, 0.10 or 1.00 (pricing-rules.md §5).</summary>
     public decimal CashRoundingStep { get; set; }
 
+    /// <summary>Container deposits are taxed with the product (feature #11, FR-016); owners decide.</summary>
+    public bool DepositsTaxable { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }

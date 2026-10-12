@@ -164,7 +164,7 @@ public sealed partial class OwnerAccountService(HttpClient http, ILogger<OwnerAc
         }
     }
 
-    private static Dictionary<string, string> FieldMessages(ValidationProblemDetails problem)
+    internal static Dictionary<string, string> FieldMessages(ValidationProblemDetails problem)
     {
         var errors = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (field, value) in problem.Errors?.AdditionalData ?? new Dictionary<string, object>())

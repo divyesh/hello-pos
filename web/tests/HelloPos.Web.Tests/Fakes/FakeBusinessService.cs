@@ -51,11 +51,14 @@ public sealed class FakeBusinessService : IBusinessService
             ? new CurrentBusinessResult.Loaded(pageBusiness, settings)
             : new CurrentBusinessResult.Failed("not found")));
 
-    public Task<OwnerActionResult> UpdateCurrentAsync(Guid pageBusiness, BusinessSettings settings, CancellationToken cancellationToken = default)
+    public List<bool?> DepositsTaxableSent { get; } = [];
+
+    public Task<OwnerActionResult> UpdateCurrentAsync(Guid pageBusiness, BusinessSettings settings, bool? depositsTaxable = null, CancellationToken cancellationToken = default)
     {
         if (NextUpdate is OwnerActionResult.Succeeded)
         {
             Updated.Add((pageBusiness, settings));
+            DepositsTaxableSent.Add(depositsTaxable);
             Settings[pageBusiness] = settings;
         }
 

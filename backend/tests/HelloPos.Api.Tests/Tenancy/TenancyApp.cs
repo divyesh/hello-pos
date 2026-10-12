@@ -192,6 +192,13 @@ public sealed class TenancyApp : IAsyncDisposable
 
     private sealed record AccountId(Guid OwnerId);
 
+    /// <summary>The API's services (for calling slices directly in tests).</summary>
+    public IServiceProvider Services => factory.Services;
+
+    /// <summary>The API's own context, acting as <paramref name="businessId"/> (as device and session calls do).</summary>
+    public static HelloPos.Api.Infrastructure.Persistence.HelloPosDbContext ActingAs(IServiceProvider services, Guid businessId) =>
+        HelloPos.Api.Infrastructure.Pos.PosAuthentication.ActingAs(services, businessId);
+
     /// <summary>An HTTP client acting as <paramref name="businessId"/>, or anonymous when null.</summary>
     public HttpClient Client(Guid? businessId = null)
     {

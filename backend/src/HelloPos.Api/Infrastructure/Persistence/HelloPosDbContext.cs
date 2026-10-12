@@ -1,4 +1,5 @@
 using HelloPos.Api.Features.Businesses;
+using HelloPos.Api.Features.Catalog;
 using HelloPos.Api.Features.Devices;
 using HelloPos.Api.Features.Invitations;
 using HelloPos.Api.Features.Staff;
@@ -68,6 +69,24 @@ public class HelloPosDbContext : DbContext
     public DbSet<DevicePairing> DevicePairings => Set<DevicePairing>();
 
     public DbSet<StaffSession> StaffSessions => Set<StaffSession>();
+
+    public DbSet<TaxProfile> TaxProfiles => Set<TaxProfile>();
+
+    public DbSet<TaxProfileVersion> TaxProfileVersions => Set<TaxProfileVersion>();
+
+    public DbSet<TaxComponent> TaxComponents => Set<TaxComponent>();
+
+    public DbSet<Category> Categories => Set<Category>();
+
+    public DbSet<Product> Products => Set<Product>();
+
+    public DbSet<ProductBarcode> ProductBarcodes => Set<ProductBarcode>();
+
+    public DbSet<ItemDiscount> ItemDiscounts => Set<ItemDiscount>();
+
+    public DbSet<CatalogChange> CatalogChanges => Set<CatalogChange>();
+
+    public DbSet<CatalogImport> CatalogImports => Set<CatalogImport>();
 
     protected sealed override void OnModelCreating(ModelBuilder modelBuilder)
     {

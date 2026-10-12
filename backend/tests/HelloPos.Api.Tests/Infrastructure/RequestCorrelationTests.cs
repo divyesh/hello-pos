@@ -29,11 +29,8 @@ public sealed class RequestCorrelationTests(WebApplicationFactory<Program> facto
         var traceId = body.RootElement.GetProperty("traceId").GetString();
         Assert.False(string.IsNullOrEmpty(traceId));
 
-        var summaries = sink.LogEvents
-            .Where(e => e.Properties.TryGetValue("RequestPath", out var path)
-                        && path.ToString() == "\"/does-not-exist\""
-                        && e.Properties.ContainsKey("StatusCode"))
-            .ToList();
+        // The summary is written when the pipeline unwinds, which can be after the client already has the response.
+        var summaries = await SummariesAsync(sink, "/does-not-exist");
         var summary = Assert.Single(summaries);
 
         Assert.Equal("\"GET\"", summary.Properties["RequestMethod"].ToString());
@@ -64,5 +61,26 @@ public sealed class RequestCorrelationTests(WebApplicationFactory<Program> facto
         using var response = await client.GetAsync(new Uri("/does-not-exist", UriKind.Relative), TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>Waits (up to 5 s) for the request summary events of a path; returns what arrived.</summary>
+    private static async Task<List<Serilog.Events.LogEvent>> SummariesAsync(InMemorySink sink, string path)
+    {
+        var quoted = $"\"{path}\"";
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (true)
+        {
+            var summaries = sink.LogEvents
+                .Where(e => e.Properties.TryGetValue("RequestPath", out var value)
+                            && value.ToString() == quoted
+                            && e.Properties.ContainsKey("StatusCode"))
+                .ToList();
+            if (summaries.Count > 0 || DateTime.UtcNow > deadline)
+            {
+                return summaries;
+            }
+
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
     }
 }
