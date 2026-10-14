@@ -29,6 +29,7 @@ builder.Services.AddScoped<OpenBusinessState>();
 builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<OwnerAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<OwnerAuthenticationStateProvider>());

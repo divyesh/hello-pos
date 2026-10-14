@@ -46,8 +46,13 @@ Status: agreed 2026-10-10; open questions resolved or deferred 2026-10-11 by the
 
 - **Item discounts** are scheduled on a product (from/to dates) as a percentage, or a fixed
   amount per unit.
-- **Order discount** is entered at checkout as a percentage or a fixed amount. Above a
-  per-business limit it needs manager or owner approval.
+- **Order discount** is entered at checkout as a percentage or a fixed amount.
+- **Approval limit** (business settings, #12): a cashier may give discounts (order discount plus
+  item discounts entered at the till) up to the business's limit: a percentage of the sale before
+  those discounts and, when set, an amount. Above either, a manager or owner approves at the till.
+  Changing the price of a product that is not open-price always needs approval. New businesses
+  start at 0%, so every cashier discount needs approval until an owner raises the limit. The engine
+  only computes amounts; the till enforces approval (#14).
 - Tax is always calculated after discounts.
 
 ## 5. Calculation order
@@ -107,10 +112,12 @@ Resolved 2026-10-11 (feature #10):
   refunded with the item when refunds exist (#19).
 - **Return lines in a sale**: not allowed (section 2).
 
+Resolved 2026-10-14 (feature #12):
+
+- **Discount limit**: per business, a percentage (default 0%) and an optional amount (section 4).
+
 Deferred:
 
 - **Refunds**: partial refunds and how tax and rounding are reversed — decided in refunds (#19).
-- **Discount limit**: the default limit above which an order discount needs approval — decided in
-  business settings (#12). The engine only computes amounts.
 - **Multi-buy promotions**: their place in the calculation order, how the promotion amount is spread
   for tax and refunds, and whether a product can be in two promotions — decided in promotions (#28).

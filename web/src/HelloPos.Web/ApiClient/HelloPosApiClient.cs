@@ -7,6 +7,7 @@ using HelloPos.Web.ApiClient.Health;
 using HelloPos.Web.ApiClient.Invitations;
 using HelloPos.Web.ApiClient.Owner;
 using HelloPos.Web.ApiClient.Pos;
+using HelloPos.Web.ApiClient.Settings;
 using HelloPos.Web.ApiClient.Staff;
 using Microsoft.Kiota.Abstractions.Extensions;
 using Microsoft.Kiota.Abstractions;
@@ -60,6 +61,11 @@ namespace HelloPos.Web.ApiClient
         public global::HelloPos.Web.ApiClient.Pos.PosRequestBuilder Pos
         {
             get => new global::HelloPos.Web.ApiClient.Pos.PosRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The settings property</summary>
+        public global::HelloPos.Web.ApiClient.Settings.SettingsRequestBuilder Settings
+        {
+            get => new global::HelloPos.Web.ApiClient.Settings.SettingsRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>The staff property</summary>
         public global::HelloPos.Web.ApiClient.Staff.StaffRequestBuilder Staff

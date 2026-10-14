@@ -1,4 +1,5 @@
 using HelloPos.Api.Features.Owners;
+using HelloPos.Api.Features.Settings;
 using HelloPos.Api.Features.Staff;
 using HelloPos.Api.Infrastructure;
 using HelloPos.Api.Infrastructure.Identity;
@@ -13,7 +14,7 @@ namespace HelloPos.Api.Features.Businesses;
 /// <summary>
 /// <c>POST /owner/businesses</c> (FR-009–FR-012). The server generates the id, then, in one
 /// transaction acting as that new business (research R6), inserts the business and the creator as its
-/// first owner staff member (feature 006). Nothing in the request can choose or reach another business.
+/// first owner staff member (feature 006), with its Cash and selling settings (feature #12). Nothing in the request can choose or reach another business.
 /// </summary>
 public sealed class CreateBusiness : IEndpointMapper
 {
@@ -88,6 +89,10 @@ public sealed class CreateBusiness : IEndpointMapper
             NewValue = StaffRoleNames.Owner,
             At = now,
         });
+
+        // Every business can take cash and has its selling rules from the start (feature #12, research R2).
+        asNewBusiness.PaymentTypes.Add(SettingsSupport.NewCash(now));
+        asNewBusiness.SellingSettings.Add(SettingsSupport.NewSelling(business.Id, now));
         await asNewBusiness.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return TypedResults.Created((string?)null, BusinessContracts.ToResponse(business));
