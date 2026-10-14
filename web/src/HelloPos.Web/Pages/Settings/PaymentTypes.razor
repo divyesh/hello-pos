@@ -1,0 +1,263 @@
+@page "/settings/payment-types"
+@using HelloPos.Kernel.Settings
+@using HelloPos.Kernel.Staff
+@inject ISettingsService SettingsApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Payment types · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Payment types</MudText>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session. Nothing was saved.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers see business settings.</MudAlert>
+}
+else
+{
+    <MudText Class="mb-3">How customers can pay, in the order the till offers them. Card, UPI and the like are recorded only; the money moves on your own terminal.</MudText>
+
+    @if (!IsOwner)
+    {
+        <MudAlert data-testid="read-only" Severity="Severity.Info" Dense="true" Class="mb-3">Only an owner can change payment types.</MudAlert>
+    }
+
+    @if (message is not null)
+    {
+        <MudAlert data-testid="message" Severity="@(failed ? Severity.Error : Severity.Success)" Dense="true" Class="mb-3">@message</MudAlert>
+    }
+
+    @if (loadError is not null)
+    {
+        <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else if (types is not null)
+    {
+        <MudPaper Outlined="true" Style="max-width: 48rem;" Class="mb-4">
+            <MudList T="string" Dense="true">
+                @for (var i = 0; i < types.Count; i++)
+                {
+                    var type = types[i];
+                    var index = i;
+                    <MudListItem T="string" data-testid="payment-type">
+                        @if (editing?.Id == type.Id)
+                        {
+                            <div class="d-flex align-center flex-wrap" style="gap: 8px;">
+                                <MudTextField T="string" data-testid="edit-name" Label="Name" @bind-Value="editName" MaxLength="SettingsRules.PaymentTypeNameMaxLength" />
+                                @if (!type.BuiltIn)
+                                {
+                                    <MudSelect T="string" data-testid="edit-kind" Label="Kind" @bind-Value="editKind" Style="min-width: 14rem;">
+                                        @foreach (var (kind, label) in SettingsService.Kinds)
+                                        {
+                                            <MudSelectItem T="string" Value="kind">@label</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                }
+                                <MudCheckBox T="bool" data-testid="edit-drawer" Label="Opens the drawer" @bind-Value="editDrawer" />
+                                <MudCheckBox T="bool" data-testid="edit-reference" Label="Asks for a reference" @bind-Value="editReference" />
+                                <MudButton data-testid="save-edit" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(busy || !NameValid(editName))"
+                                           OnClick="() => SaveEditAsync(type)">Save</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => editing = null">Cancel</MudButton>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex align-center" style="gap: 8px;">
+                                <MudText Class="flex-grow-1">
+                                    <b data-testid="type-name">@type.Name</b> · @SettingsService.KindLabel(type.Kind)@Describe(type)
+                                    @if (type.BuiltIn) { <MudChip T="string" Size="Size.Small">Built in</MudChip> }
+                                    @if (!type.Active) { <MudChip T="string" Size="Size.Small">Inactive</MudChip> }
+                                </MudText>
+                                @if (IsOwner)
+                                {
+                                    <MudIconButton data-testid="move-up" Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(busy || index == 0)"
+                                                   OnClick="() => MoveAsync(index, -1)" aria-label="Move up" />
+                                    <MudIconButton data-testid="move-down" Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(busy || index == types.Count - 1)"
+                                                   OnClick="() => MoveAsync(index, 1)" aria-label="Move down" />
+                                    <MudButton data-testid="edit" Size="Size.Small" Variant="Variant.Text" OnClick="() => StartEdit(type)">Edit</MudButton>
+                                    @if (!type.BuiltIn)
+                                    {
+                                        <MudButton data-testid="toggle-active" Size="Size.Small" Variant="Variant.Text" Disabled="busy"
+                                                   OnClick="() => SetActiveAsync(type, !type.Active)">@(type.Active ? "Deactivate" : "Reactivate")</MudButton>
+                                    }
+                                }
+                            </div>
+                        }
+                    </MudListItem>
+                }
+            </MudList>
+        </MudPaper>
+
+        @if (IsOwner)
+        {
+            <MudPaper Outlined="true" Class="pa-4" Style="max-width: 48rem;" data-testid="new-payment-type">
+                <MudText Typo="Typo.h6">Add a payment type</MudText>
+                <div class="d-flex align-center flex-wrap" style="gap: 8px;">
+                    <MudTextField T="string" data-testid="new-name" Label="Name" @bind-Value="newName" MaxLength="SettingsRules.PaymentTypeNameMaxLength"
+                                  Error="@(fieldErrors.ContainsKey("name"))" ErrorText="@fieldErrors.GetValueOrDefault("name")" />
+                    <MudSelect T="string" data-testid="new-kind" Label="Kind" Value="newKind" ValueChanged="KindChanged" Style="min-width: 14rem;">
+                        @foreach (var (kind, label) in SettingsService.Kinds)
+                        {
+                            <MudSelectItem T="string" Value="kind">@label</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudCheckBox T="bool" data-testid="new-drawer" Label="Opens the drawer" @bind-Value="newDrawer" />
+                    <MudCheckBox T="bool" data-testid="new-reference" Label="Asks for a reference" @bind-Value="newReference" />
+                </div>
+                <MudButton data-testid="create-payment-type" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2"
+                           Disabled="@(busy || !NameValid(newName))" OnClick="CreateAsync">Add</MudButton>
+            </MudPaper>
+        }
+    }
+}
+
+@code {
+    private Guid pageBusiness;
+    private bool noBusiness;
+    private bool stale;
+    private bool busy;
+    private IReadOnlyList<PaymentTypeItem>? types;
+    private string? loadError;
+    private string? message;
+    private bool failed;
+    private Dictionary<string, string> fieldErrors = new(StringComparer.Ordinal);
+    private string newName = string.Empty;
+    private string newKind = "digitalWallet";
+    private bool newDrawer;
+    private bool newReference = true;
+    private PaymentTypeItem? editing;
+    private string editName = string.Empty;
+    private string editKind = string.Empty;
+    private bool editDrawer;
+    private bool editReference;
+
+    private bool IsOwner => OpenBusiness.Role == StaffRole.Owner;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        pageBusiness = id;
+        if (OpenBusiness.Role is StaffRole.Owner or StaffRole.Manager)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        switch (await SettingsApi.ListPaymentTypesAsync(pageBusiness))
+        {
+            case LoadResult<IReadOnlyList<PaymentTypeItem>>.Loaded loaded:
+                (types, loadError) = (loaded.Value, null);
+                break;
+            case LoadResult<IReadOnlyList<PaymentTypeItem>>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<IReadOnlyList<PaymentTypeItem>>.Failed f:
+                loadError = f.Message;
+                break;
+        }
+    }
+
+    private static string Describe(PaymentTypeItem type)
+    {
+        var notes = new List<string>();
+        if (type.GivesChange) { notes.Add("gives change"); }
+        if (type.OpensDrawer) { notes.Add("opens the drawer"); }
+        if (type.AsksReference) { notes.Add("asks for a reference"); }
+        return notes.Count == 0 ? string.Empty : " · " + string.Join(", ", notes);
+    }
+
+    private static bool NameValid(string name) => SettingsRules.ValidateName(name, SettingsRules.PaymentTypeNameMaxLength) is null;
+
+    private void KindChanged(string kind)
+    {
+        newKind = kind;
+        newReference = SettingsRules.ReferenceKinds.Contains(kind);
+    }
+
+    private async Task CreateAsync()
+    {
+        if (await ApplyAsync(SettingsApi.CreatePaymentTypeAsync(pageBusiness, newName.Trim(), newKind, newDrawer, newReference), $"{newName.Trim()} was added."))
+        {
+            newName = string.Empty;
+        }
+    }
+
+    private void StartEdit(PaymentTypeItem type)
+    {
+        editing = type;
+        (editName, editKind, editDrawer, editReference) = (type.Name, type.Kind, type.OpensDrawer, type.AsksReference);
+    }
+
+    private async Task SaveEditAsync(PaymentTypeItem type)
+    {
+        if (await ApplyAsync(SettingsApi.UpdatePaymentTypeAsync(pageBusiness, type, editName.Trim(), editKind, editDrawer, editReference), "The payment type was saved."))
+        {
+            editing = null;
+        }
+    }
+
+    private Task SetActiveAsync(PaymentTypeItem type, bool active) =>
+        ApplyAsync(SettingsApi.SetPaymentTypeActiveAsync(pageBusiness, type, active), $"{type.Name} is now {(active ? "active" : "inactive")}.");
+
+    private Task MoveAsync(int index, int by)
+    {
+        var ids = types!.Select(t => t.Id).ToList();
+        (ids[index], ids[index + by]) = (ids[index + by], ids[index]);
+        return ApplyAsync(SettingsApi.ReorderPaymentTypesAsync(pageBusiness, ids), "The order was saved.");
+    }
+
+    private async Task<bool> ApplyAsync(Task<OwnerActionResult> call, string success)
+    {
+        busy = true;
+        message = null;
+        fieldErrors = new(StringComparer.Ordinal);
+        var result = await call;
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                (message, failed) = (success, false);
+                await LoadAsync();
+                return true;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                return false;
+            case OwnerActionResult.FieldErrors fields:
+                fieldErrors = new(fields.Errors, StringComparer.Ordinal);
+                (message, failed) = (string.Join(" ", fields.Errors.Values), true);
+                return false;
+            case OwnerActionResult.Failed changeFailed:
+                (message, failed) = (changeFailed.Message, true);
+                await LoadAsync();
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

@@ -2,6 +2,7 @@ using HelloPos.Api.Features.Businesses;
 using HelloPos.Api.Features.Catalog;
 using HelloPos.Api.Features.Devices;
 using HelloPos.Api.Features.Invitations;
+using HelloPos.Api.Features.Settings;
 using HelloPos.Api.Features.Staff;
 using HelloPos.Api.Infrastructure.Pos;
 using HelloPos.Api.Infrastructure.Tenancy;
@@ -87,6 +88,16 @@ public class HelloPosDbContext : DbContext
     public DbSet<CatalogChange> CatalogChanges => Set<CatalogChange>();
 
     public DbSet<CatalogRemoval> CatalogRemovals => Set<CatalogRemoval>();
+
+    public DbSet<PaymentType> PaymentTypes => Set<PaymentType>();
+
+    public DbSet<TableArea> TableAreas => Set<TableArea>();
+
+    public DbSet<DiningTable> DiningTables => Set<DiningTable>();
+
+    public DbSet<SellingSettings> SellingSettings => Set<SellingSettings>();
+
+    public DbSet<SettingsChange> SettingsChanges => Set<SettingsChange>();
 
     public DbSet<CatalogImport> CatalogImports => Set<CatalogImport>();
 

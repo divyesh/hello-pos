@@ -1,5 +1,6 @@
 using Bunit;
 using HelloPos.Kernel.Businesses;
+using HelloPos.Kernel.Staff;
 using HelloPos.Web.Layout;
 using HelloPos.Web.Services;
 using HelloPos.Web.Tests.Fakes;
@@ -74,6 +75,23 @@ public sealed class AppRenderTests : BunitContext
         var layout = RenderLayout();
 
         Assert.Empty(layout.FindAll("[data-testid=open-business]"));
+    }
+
+    [Theory]
+    [InlineData(StaffRole.Owner, true)]
+    [InlineData(StaffRole.Manager, true)]
+    [InlineData(StaffRole.Cashier, false)]
+    public void MainLayout_ShowsTheSettingsMenu_ToOwnersAndManagers(StaffRole role, bool shown)
+    {
+        var shop = Guid.NewGuid();
+        accounts.Session = new OwnerSession(Guid.NewGuid(), "Asha Patel", "asha@example.com", shop, role);
+        businesses.Settings[shop] = new BusinessSettings("Patel Grocers", "IN", "INR", PricingMode.TaxInclusive, 4, "Asia/Kolkata", 1m);
+        AddAuthorization().SetAuthorized("Asha Patel");
+
+        var layout = RenderLayout();
+
+        layout.WaitForAssertion(() => Assert.NotNull(layout.Find("[data-testid=open-business]")));
+        Assert.Equal(shown, layout.FindAll("[data-testid=settings-menu]").Count == 1);
     }
 
     private IRenderedComponent<MainLayout> RenderLayout()

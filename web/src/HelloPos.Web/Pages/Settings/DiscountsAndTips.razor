@@ -1,0 +1,167 @@
+@page "/settings/discounts-and-tips"
+@using System.Globalization
+@using HelloPos.Kernel.Settings
+@using HelloPos.Kernel.Staff
+@inject ISettingsService SettingsApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Discounts and tips · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Discounts and tips</MudText>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session. Nothing was saved.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers see business settings.</MudAlert>
+}
+else
+{
+    @if (message is not null)
+    {
+        <MudAlert data-testid="message" Severity="@(failed ? Severity.Error : Severity.Success)" Dense="true" Class="mb-3">@message</MudAlert>
+    }
+
+    @if (loadError is not null)
+    {
+        <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else if (selling is not null)
+    {
+        <MudPaper Outlined="true" Class="pa-4" Style="max-width: 48rem;" data-testid="discount-limit">
+            <MudText Typo="Typo.h6">Discount approval</MudText>
+            <MudText Class="mb-2">
+                Cashiers may give discounts on a sale (order discount plus item discounts entered at the till) up to this limit.
+                Above it, a manager or owner approves at the till. At 0% every cashier discount needs approval.
+            </MudText>
+
+            @if (IsOwner)
+            {
+                <div class="d-flex align-start flex-wrap" style="gap: 8px;">
+                    <MudTextField T="string" data-testid="limit-percent" Label="Up to (% of the sale)" @bind-Value="percent" Style="max-width: 12rem;"
+                                  Error="@(Error("discountLimitPercent") is not null)" ErrorText="@Error("discountLimitPercent")" />
+                    <MudTextField T="string" data-testid="limit-amount" Label="@($"And at most ({selling.Currency}, optional)")" @bind-Value="amount" Style="max-width: 14rem;"
+                                  Error="@(Error("discountLimitAmount") is not null)" ErrorText="@Error("discountLimitAmount")" />
+                </div>
+                <MudButton data-testid="save-limit" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2" Disabled="busy" OnClick="SaveAsync">Save</MudButton>
+            }
+            else
+            {
+                <MudText data-testid="limit-text"><b>@LimitText</b></MudText>
+                <MudText data-testid="read-only" Typo="Typo.body2" Class="mt-2">Only an owner can change the discount limit.</MudText>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    private Guid pageBusiness;
+    private bool noBusiness;
+    private bool stale;
+    private bool busy;
+    private SellingItem? selling;
+    private string? loadError;
+    private string? message;
+    private bool failed;
+    private Dictionary<string, string> fieldErrors = new(StringComparer.Ordinal);
+    private string percent = "0";
+    private string amount = string.Empty;
+
+    private bool IsOwner => OpenBusiness.Role == StaffRole.Owner;
+
+    private string LimitText => selling!.DiscountLimitAmount is { } limit
+        ? $"Up to {selling.DiscountLimitPercent}% of the sale and at most {MoneyText.Format(limit, selling.Currency)} {selling.Currency}"
+        : $"Up to {selling.DiscountLimitPercent}% of the sale";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        pageBusiness = id;
+        if (OpenBusiness.Role is StaffRole.Owner or StaffRole.Manager)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        switch (await SettingsApi.GetSellingAsync(pageBusiness))
+        {
+            case LoadResult<SellingItem>.Loaded loaded:
+                (selling, loadError) = (loaded.Value, null);
+                percent = loaded.Value.DiscountLimitPercent;
+                amount = loaded.Value.DiscountLimitAmount is { } limit ? MoneyText.Format(limit, loaded.Value.Currency) : string.Empty;
+                break;
+            case LoadResult<SellingItem>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<SellingItem>.Failed f:
+                loadError = f.Message;
+                break;
+        }
+    }
+
+    private string? Error(string field) => fieldErrors.GetValueOrDefault(field);
+
+    private async Task SaveAsync()
+    {
+        message = null;
+        fieldErrors = new(StringComparer.Ordinal);
+        var text = percent?.Trim() ?? string.Empty;
+        var percentError = decimal.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var value)
+            ? SettingsRules.ValidateLimitPercent(value)
+            : "Enter the limit as a percentage, for example 10 or 12.5.";
+        var (minor, amountError) = string.IsNullOrWhiteSpace(amount) ? (null, null) : MoneyText.Parse(amount, selling!.Currency);
+        if (percentError is not null) { fieldErrors["discountLimitPercent"] = percentError; }
+        if (amountError is not null) { fieldErrors["discountLimitAmount"] = amountError; }
+        if (fieldErrors.Count > 0)
+        {
+            return;
+        }
+
+        busy = true;
+        var result = await SettingsApi.UpdateSellingAsync(pageBusiness, selling! with { DiscountLimitPercent = text, DiscountLimitAmount = minor });
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                (message, failed) = ("The discount limit was saved.", false);
+                await LoadAsync();
+                break;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                break;
+            case OwnerActionResult.FieldErrors fields:
+                fieldErrors = new(fields.Errors, StringComparer.Ordinal);
+                (message, failed) = (string.Join(" ", fields.Errors.Values), true);
+                break;
+            case OwnerActionResult.Failed changeFailed:
+                (message, failed) = (changeFailed.Message, true);
+                await LoadAsync();
+                break;
+        }
+    }
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

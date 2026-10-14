@@ -1,0 +1,44 @@
+# Additions to contracts/openapi.yaml for feature #12 (summary; full definitions go into the contract first).
+# Web operations: cookie session + X-HelloPos-Client, business from the session, X-HelloPos-Business stale-tab
+# check, owners and managers may read; writes as marked. 409 settings-changed on a stale version.
+paths:
+  /settings/payment-types:
+    get:  { operationId: listPaymentTypes }            # all, in position order
+    post: { operationId: createPaymentType }           # (owner) { name, kind, opensDrawer?, asksReference?, position? }
+  /settings/payment-types/{paymentTypeId}:
+    put:  { operationId: updatePaymentType }           # (owner) { name, kind, opensDrawer, asksReference, version }; Cash: kind fixed
+  /settings/payment-types/{paymentTypeId}/deactivate: { post: { operationId: deactivatePaymentType } }  # (owner) not Cash
+  /settings/payment-types/{paymentTypeId}/reactivate: { post: { operationId: reactivatePaymentType } }  # (owner)
+  /settings/payment-types/order:
+    put:  { operationId: reorderPaymentTypes }         # (owner) { ids[] } every type exactly once
+  /settings/tables/areas:
+    get:  { operationId: listTableAreas }              # with their tables
+    post: { operationId: createTableArea }             # { name }
+  /settings/tables/areas/{areaId}:
+    put:  { operationId: updateTableArea }             # { name, position, version }
+  /settings/tables/areas/{areaId}/deactivate: { post: { operationId: deactivateTableArea } }  # refused with active tables
+  /settings/tables/areas/{areaId}/reactivate: { post: { operationId: reactivateTableArea } }
+  /settings/tables:
+    post: { operationId: createTable }                 # { areaId, name, seats }
+  /settings/tables/bulk:
+    post: { operationId: createTables }                # { areaId, from, to, prefix?, suffix?, seats } all or nothing, ≤ 200
+  /settings/tables/{tableId}:
+    put:  { operationId: updateTable }                 # { areaId, name, seats, position, version }
+  /settings/tables/{tableId}/deactivate: { post: { operationId: deactivateTable } }
+  /settings/tables/{tableId}/reactivate: { post: { operationId: reactivateTable } }
+  /settings/selling:
+    get:  { operationId: getSellingSettings }
+    put:  { operationId: updateSellingSettings }       # owners: all; managers: usesTables only (else 403)
+  /settings/changes:
+    get:  { operationId: listSettingsChanges }         # ?entityId= &page=
+
+components:
+  schemas:
+    PaymentType:        # id, name, kind, builtIn, opensDrawer, asksReference, givesChange, position, active, version
+    TableArea:          # id, name, position, active, version, tables[]
+    DiningTable:        # id, areaId, name, seats, position, active, version
+    SellingSettings:    # usesTables, discountLimitPercent (string), discountLimitAmount? (int64 minor), currency,
+                        # tipsEnabled, tipPresets[] (strings), version
+    SettingsChange:     # at, actor, entity, entityId, action, changes[] { field, old?, new? }
+    # CatalogSync gains: paymentTypes[] (SyncPaymentType), tableAreas[] (SyncTableArea), tables[] (SyncTable),
+    #                    selling (SyncSellingSettings)

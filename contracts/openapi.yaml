@@ -2063,8 +2063,898 @@ paths:
           $ref: '#/components/responses/RoleNotAllowed'
         '409':
           $ref: '#/components/responses/CatalogConflict'
+  /settings/payment-types:
+    get:
+      tags: [Settings]
+      operationId: listPaymentTypes
+      summary: Payment types, in the order the till shows them
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+      responses:
+        '200':
+          description: The payment types.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentType'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+    post:
+      tags: [Settings]
+      operationId: createPaymentType
+      summary: Add a payment type (owners)
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentTypeInput'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentType'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/payment-types/order:
+    put:
+      tags: [Settings]
+      operationId: reorderPaymentTypes
+      summary: Put the payment types in a new order (owners)
+      description: >
+        Every payment type of the business exactly once, in the new order.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentTypeOrder'
+      responses:
+        '200':
+          description: The payment types in their new order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentType'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/payment-types/{paymentTypeId}:
+    put:
+      tags: [Settings]
+      operationId: updatePaymentType
+      summary: Change a payment type (owners); Cash keeps its kind
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/PaymentTypeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentTypeUpdate'
+      responses:
+        '200':
+          description: Changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentType'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/payment-types/{paymentTypeId}/deactivate:
+    post:
+      tags: [Settings]
+      operationId: deactivatePaymentType
+      summary: Deactivate a payment type (owners); never Cash
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/PaymentTypeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsVersion'
+      responses:
+        '200':
+          description: Deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentType'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/payment-types/{paymentTypeId}/reactivate:
+    post:
+      tags: [Settings]
+      operationId: reactivatePaymentType
+      summary: Reactivate a payment type (owners)
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/PaymentTypeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsVersion'
+      responses:
+        '200':
+          description: Reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentType'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/tables/areas:
+    get:
+      tags: [Settings]
+      operationId: listTableAreas
+      summary: Areas with their tables, in order
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+      responses:
+        '200':
+          description: The areas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TableArea'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+    post:
+      tags: [Settings]
+      operationId: createTableArea
+      summary: Add an area
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableAreaInput'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableArea'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/tables/areas/{areaId}:
+    put:
+      tags: [Settings]
+      operationId: updateTableArea
+      summary: Rename or move an area
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TableAreaId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableAreaUpdate'
+      responses:
+        '200':
+          description: Changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableArea'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/tables/areas/{areaId}/deactivate:
+    post:
+      tags: [Settings]
+      operationId: deactivateTableArea
+      summary: Deactivate an area without active tables
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TableAreaId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsVersion'
+      responses:
+        '200':
+          description: Deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableArea'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/tables/areas/{areaId}/reactivate:
+    post:
+      tags: [Settings]
+      operationId: reactivateTableArea
+      summary: Reactivate an area
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TableAreaId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsVersion'
+      responses:
+        '200':
+          description: Reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableArea'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/tables:
+    post:
+      tags: [Settings]
+      operationId: createTable
+      summary: Add a table
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiningTableInput'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiningTable'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/tables/bulk:
+    post:
+      tags: [Settings]
+      operationId: createTables
+      summary: Add a numbered range of tables to an area, all or nothing
+      description: >
+        At most 200 tables. If any name is taken, nothing is created and every clash is listed.
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableRangeInput'
+      responses:
+        '201':
+          description: Created, in order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DiningTable'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/tables/{tableId}:
+    put:
+      tags: [Settings]
+      operationId: updateTable
+      summary: Rename, move or resize a table
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TableId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiningTableUpdate'
+      responses:
+        '200':
+          description: Changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiningTable'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/tables/{tableId}/deactivate:
+    post:
+      tags: [Settings]
+      operationId: deactivateTable
+      summary: Deactivate a table
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TableId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsVersion'
+      responses:
+        '200':
+          description: Deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiningTable'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/tables/{tableId}/reactivate:
+    post:
+      tags: [Settings]
+      operationId: reactivateTable
+      summary: Reactivate a table
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+        - $ref: '#/components/parameters/TableId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsVersion'
+      responses:
+        '200':
+          description: Reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiningTable'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/selling:
+    get:
+      tags: [Settings]
+      operationId: getSellingSettings
+      summary: Tables switch, discount approval limit and tips
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+      responses:
+        '200':
+          description: The settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellingSettings'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+    put:
+      tags: [Settings]
+      operationId: updateSellingSettings
+      summary: Change selling settings (owners; managers only the tables switch)
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - $ref: '#/components/parameters/BusinessHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SellingSettingsUpdate'
+      responses:
+        '200':
+          description: Changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellingSettings'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
+  /settings/changes:
+    get:
+      tags: [Settings]
+      operationId: listSettingsChanges
+      summary: Settings history, newest first
+      parameters:
+        - $ref: '#/components/parameters/BusinessHeader'
+        - name: entityId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+      responses:
+        '200':
+          description: One page of changes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SettingsChange'
+        '400':
+          $ref: '#/components/responses/ValidationProblem'
+        '401':
+          $ref: '#/components/responses/NotSignedIn'
+        '403':
+          $ref: '#/components/responses/RoleNotAllowed'
+        '409':
+          $ref: '#/components/responses/SettingsConflict'
 components:
   schemas:
+    PaymentType:
+      type: object
+      additionalProperties: false
+      required: [id, name, kind, builtIn, opensDrawer, asksReference, givesChange, position, active, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/PaymentKind'
+        builtIn:
+          type: boolean
+          description: True for the business's Cash, which always exists and cannot be deactivated.
+        opensDrawer:
+          type: boolean
+        asksReference:
+          type: boolean
+          description: The till asks for a reference (UPI transaction id, cheque number); optional at checkout.
+        givesChange:
+          type: boolean
+          description: True only for cash.
+        position:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+    PaymentKind:
+      type: string
+      enum: [cash, externalCard, digitalWallet, cheque, voucher, other]
+    PaymentTypeInput:
+      type: object
+      additionalProperties: false
+      required: [name, kind]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        kind:
+          type: string
+          enum: [externalCard, digitalWallet, cheque, voucher, other]
+        opensDrawer:
+          type: boolean
+          description: Default false.
+        asksReference:
+          type: boolean
+          description: Default true for externalCard, digitalWallet and cheque.
+    PaymentTypeUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, kind, opensDrawer, asksReference, version]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        kind:
+          $ref: '#/components/schemas/PaymentKind'
+        opensDrawer:
+          type: boolean
+        asksReference:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+    PaymentTypeOrder:
+      type: object
+      additionalProperties: false
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    SettingsVersion:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version:
+          type: integer
+          format: int32
+    TableArea:
+      type: object
+      additionalProperties: false
+      required: [id, name, position, active, version, tables]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        position:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiningTable'
+    TableAreaInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+    TableAreaUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, position, version]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        position:
+          type: integer
+          format: int32
+          minimum: 0
+        version:
+          type: integer
+          format: int32
+    DiningTable:
+      type: object
+      additionalProperties: false
+      required: [id, areaId, name, seats, position, active, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        areaId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        seats:
+          type: integer
+          format: int32
+        position:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int32
+    DiningTableInput:
+      type: object
+      additionalProperties: false
+      required: [areaId, name]
+      properties:
+        areaId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+        seats:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 50
+          description: Default 4.
+    DiningTableUpdate:
+      type: object
+      additionalProperties: false
+      required: [areaId, name, seats, position, version]
+      properties:
+        areaId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+        seats:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 50
+        position:
+          type: integer
+          format: int32
+          minimum: 0
+        version:
+          type: integer
+          format: int32
+    TableRangeInput:
+      type: object
+      additionalProperties: false
+      required: [areaId, from, to]
+      properties:
+        areaId:
+          type: string
+          format: uuid
+        from:
+          type: integer
+          format: int32
+          minimum: 1
+        to:
+          type: integer
+          format: int32
+          minimum: 1
+        prefix:
+          type: string
+          maxLength: 10
+        suffix:
+          type: string
+          maxLength: 10
+        seats:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 50
+          description: Default 4.
+    SellingSettings:
+      type: object
+      additionalProperties: false
+      required: [usesTables, discountLimitPercent, currency, tipsEnabled, tipPresets, version]
+      properties:
+        usesTables:
+          type: boolean
+        discountLimitPercent:
+          type: string
+          description: >
+            Cashier discounts on one sale (order discount plus item discounts entered at the till) above this
+            percentage of the sale need a manager's or owner's approval. New businesses start at 0.
+          pattern: '^[0-9]{1,3}(\.[0-9]{1,2})?$'
+        discountLimitAmount:
+          type: integer
+          format: int64
+          description: Optional second limit in minor units of the business currency.
+        currency:
+          type: string
+          description: ISO 4217 code of discountLimitAmount.
+        tipsEnabled:
+          type: boolean
+        tipPresets:
+          type: array
+          description: Up to 3 distinct percentages, ascending.
+          maxItems: 3
+          items:
+            type: string
+        version:
+          type: integer
+          format: int32
+    SellingSettingsUpdate:
+      type: object
+      additionalProperties: false
+      required: [usesTables, discountLimitPercent, tipsEnabled, tipPresets, version]
+      properties:
+        usesTables:
+          type: boolean
+        discountLimitPercent:
+          type: string
+        discountLimitAmount:
+          type: integer
+          format: int64
+          minimum: 0
+        tipsEnabled:
+          type: boolean
+        tipPresets:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+        version:
+          type: integer
+          format: int32
+    SettingsChange:
+      type: object
+      additionalProperties: false
+      required: [at, actor, entity, entityId, action, changes]
+      properties:
+        at:
+          type: string
+          format: date-time
+        actor:
+          type: string
+          description: Display name of the person who made the change.
+        entity:
+          type: string
+          enum: [paymentType, tableArea, table, selling]
+        entityId:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum: [created, updated, deactivated, reactivated, reordered, bulkCreated]
+        changes:
+          type: array
+          description: Each changed field with its old and new value as text (absent when there was none).
+          items:
+            type: object
+            additionalProperties: false
+            required: [field]
+            properties:
+              field:
+                type: string
+              old:
+                type: string
+              new:
+                type: string
     HealthStatus:
       type: object
       additionalProperties: false
@@ -3387,6 +4277,27 @@ components:
       schema:
         type: string
         format: uuid
+    PaymentTypeId:
+      name: paymentTypeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TableAreaId:
+      name: areaId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TableId:
+      name: tableId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     CategoryId:
       name: categoryId
       in: path
@@ -3476,6 +4387,15 @@ components:
             $ref: '#/components/schemas/ProblemDetails'
     DeviceConflict:
       description: Someone else changed this device (device-changed), or another business is open now.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    SettingsConflict:
+      description: >
+        Someone else changed this setting (settings-changed), it cannot be changed this way (for example
+        deactivating Cash or an area with active tables), or another business is open in this session now
+        (business-changed).
       content:
         application/problem+json:
           schema:
