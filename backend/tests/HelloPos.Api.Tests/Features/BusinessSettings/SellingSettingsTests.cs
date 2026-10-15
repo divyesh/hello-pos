@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json.Nodes;
 using HelloPos.Api.Tests.Infrastructure.Database;
 using static HelloPos.Api.Tests.Features.Catalog.CatalogApi;
 using static HelloPos.Api.Tests.Features.Owners.OwnerApi;
@@ -6,7 +7,7 @@ using static HelloPos.Api.Tests.Features.BusinessSettings.SettingsApi;
 
 namespace HelloPos.Api.Tests.Features.BusinessSettings;
 
-/// <summary>Feature #12 US2 (discount approval limit, FR-006–FR-008, clarification Q2) and the selling settings row.</summary>
+/// <summary>Feature #12 US2 (discount approval limit, FR-006–FR-008, clarification Q2), US4 (tips, FR-014) and the selling settings row.</summary>
 [Collection(PostgresTests.Name)]
 public sealed class SellingSettingsTests(PostgresFixture postgres)
 {
@@ -83,5 +84,63 @@ public sealed class SellingSettingsTests(PostgresFixture postgres)
 
         Assert.Equal("0", (string)(await JsonAsync(await GetSellingAsync(shop.Owner, shop.Id)))["discountLimitPercent"]!);
         Assert.Empty(await SettingsHistoryAsync(shop.App));
+    }
+
+    [Fact]
+    public async Task AnOwner_TurnsTipsOn_AndPresetsAreSavedAscending()
+    {
+        await using var shop = await ShopAsync(postgres);
+        var body = SellingBody(await JsonAsync(await GetSellingAsync(shop.Owner, shop.Id)));
+        body["tipsEnabled"] = true;
+        body["tipPresets"] = new JsonArray("20", "10", "15");
+
+        var saved = await JsonAsync(await AssertContractAsync(await UpdateSellingAsync(shop.Owner, shop.Id, body), HttpStatusCode.OK, "updateSellingSettings"));
+
+        Assert.True((bool)saved["tipsEnabled"]!);
+        Assert.Equal(["10", "15", "20"], saved["tipPresets"]!.AsArray().Select(t => (string)t!));
+        Assert.Equal(["selling:updated"], await SettingsHistoryAsync(shop.App));
+
+        // Turning tips off keeps the presets for next time; tills are offered none (T021/T022).
+        var off = SellingBody(saved);
+        off["tipsEnabled"] = false;
+        var turnedOff = await JsonAsync(await AssertContractAsync(await UpdateSellingAsync(shop.Owner, shop.Id, off), HttpStatusCode.OK, "updateSellingSettings"));
+        Assert.False((bool)turnedOff["tipsEnabled"]!);
+        Assert.Equal(3, (int)turnedOff["version"]!);
+    }
+
+    [Theory]
+    [InlineData("10,10.00")]
+    [InlineData("5,10,15,20")]
+    [InlineData("0")]
+    [InlineData("101")]
+    [InlineData("12.555")]
+    [InlineData("ten")]
+    [InlineData("")]
+    public async Task BadTips_AreAFieldError(string presets)
+    {
+        await using var shop = await ShopAsync(postgres);
+        var body = SellingBody(await JsonAsync(await GetSellingAsync(shop.Owner, shop.Id)));
+        body["tipsEnabled"] = true;
+        body["tipPresets"] = new JsonArray(presets.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(p => (JsonNode)p).ToArray());
+
+        var problem = await JsonAsync(await AssertContractAsync(await UpdateSellingAsync(shop.Owner, shop.Id, body), HttpStatusCode.BadRequest, "updateSellingSettings"));
+
+        Assert.NotNull(problem["errors"]!["tipPresets"]);
+        Assert.Empty(await SettingsHistoryAsync(shop.App));
+    }
+
+    [Fact]
+    public async Task AManager_CannotChangeTips()
+    {
+        await using var shop = await ShopAsync(postgres);
+        var body = SellingBody(await JsonAsync(await GetSellingAsync(shop.Manager, shop.Id)));
+        body["tipsEnabled"] = true;
+        body["tipPresets"] = new JsonArray("10");
+
+        await AssertContractAsync(await UpdateSellingAsync(shop.Manager, shop.Id, body), HttpStatusCode.Forbidden, "updateSellingSettings");
+
+        var selling = await JsonAsync(await GetSellingAsync(shop.Owner, shop.Id));
+        Assert.False((bool)selling["tipsEnabled"]!);
+        Assert.Empty(selling["tipPresets"]!.AsArray());
     }
 }

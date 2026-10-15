@@ -57,6 +57,13 @@ public static class SettingsRules
             ?? (presets.Distinct().Count() != presets.Count ? "Each tip percentage must be different." : null);
     }
 
+    /// <summary>Tips: the presets as above, and with tips on at least one of them (FR-014).</summary>
+    public static string? ValidateTips(bool enabled, IReadOnlyList<decimal> presets)
+    {
+        ArgumentNullException.ThrowIfNull(presets);
+        return enabled && presets.Count == 0 ? "Add at least one tip percentage." : ValidateTipPresets(presets);
+    }
+
     /// <summary>The names of a bulk range, or why the range is refused.</summary>
     public static (IReadOnlyList<string> Names, string? Error) TableRange(int from, int to, string? prefix, string? suffix)
     {

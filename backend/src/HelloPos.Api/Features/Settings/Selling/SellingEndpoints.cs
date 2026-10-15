@@ -59,7 +59,7 @@ public sealed class SellingEndpoints : IEndpointMapper
         var presets = (request.TipPresets ?? []).Select(CatalogSupport.ParseDecimal).ToList();
         errors.Add("tipPresets", presets.Any(t => t is null)
             ? "Enter each tip as a percentage."
-            : SettingsRules.ValidateTipPresets(presets.Select(t => t!.Value).ToList()));
+            : SettingsRules.ValidateTips(request.TipsEnabled, presets.Select(t => t!.Value).ToList()));
         if (errors.Count > 0)
         {
             return CatalogSupport.Invalid(errors);

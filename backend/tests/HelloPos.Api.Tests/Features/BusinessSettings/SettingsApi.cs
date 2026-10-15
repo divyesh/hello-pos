@@ -81,8 +81,83 @@ internal static class SettingsApi
         return StaffApi.SendAsync(client, HttpMethod.Put, "/settings/selling", shop, body);
     }
 
+    public static Task<HttpResponseMessage> ListAreasAsync(HttpClient client, Guid shop) =>
+        StaffApi.SendAsync(client, HttpMethod.Get, "/settings/tables/areas", shop);
+
+    public static Task<HttpResponseMessage> CreateAreaAsync(HttpClient client, Guid shop, string name) =>
+        StaffApi.SendAsync(client, HttpMethod.Post, "/settings/tables/areas", shop, new JsonObject { ["name"] = name });
+
+    /// <summary>Creates an area and returns (id, version).</summary>
+    public static Task<(Guid Id, int Version)> AreaAsync(HttpClient client, Guid shop, string name) =>
+        IdAndVersionAsync(CreateAreaAsync(client, shop, name));
+
+    public static Task<HttpResponseMessage> UpdateAreaAsync(HttpClient client, Guid shop, Guid id, string name, int position, int version) =>
+        StaffApi.SendAsync(client, HttpMethod.Put, $"/settings/tables/areas/{id}", shop,
+            new JsonObject { ["name"] = name, ["position"] = position, ["version"] = version });
+
+    public static Task<HttpResponseMessage> SetAreaActiveAsync(HttpClient client, Guid shop, Guid id, bool active, int version) =>
+        StaffApi.SendAsync(client, HttpMethod.Post, $"/settings/tables/areas/{id}/{(active ? "reactivate" : "deactivate")}", shop,
+            new JsonObject { ["version"] = version });
+
+    public static Task<HttpResponseMessage> CreateTableAsync(HttpClient client, Guid shop, Guid areaId, string name, int? seats = null)
+    {
+        var body = new JsonObject { ["areaId"] = areaId.ToString(), ["name"] = name };
+        if (seats is { } count)
+        {
+            body["seats"] = count;
+        }
+
+        return StaffApi.SendAsync(client, HttpMethod.Post, "/settings/tables", shop, body);
+    }
+
+    /// <summary>Creates a table and returns (id, version).</summary>
+    public static Task<(Guid Id, int Version)> TableAsync(HttpClient client, Guid shop, Guid areaId, string name, int? seats = null) =>
+        IdAndVersionAsync(CreateTableAsync(client, shop, areaId, name, seats));
+
+    public static Task<HttpResponseMessage> CreateTablesAsync(
+        HttpClient client, Guid shop, Guid areaId, int from, int to, string? prefix = null, string? suffix = null, int? seats = null)
+    {
+        var body = new JsonObject { ["areaId"] = areaId.ToString(), ["from"] = from, ["to"] = to };
+        if (prefix is not null)
+        {
+            body["prefix"] = prefix;
+        }
+
+        if (suffix is not null)
+        {
+            body["suffix"] = suffix;
+        }
+
+        if (seats is { } count)
+        {
+            body["seats"] = count;
+        }
+
+        return StaffApi.SendAsync(client, HttpMethod.Post, "/settings/tables/bulk", shop, body);
+    }
+
+    public static Task<HttpResponseMessage> UpdateTableAsync(
+        HttpClient client, Guid shop, Guid id, Guid areaId, string name, int seats, int position, int version) =>
+        StaffApi.SendAsync(client, HttpMethod.Put, $"/settings/tables/{id}", shop, new JsonObject
+        {
+            ["areaId"] = areaId.ToString(), ["name"] = name, ["seats"] = seats, ["position"] = position, ["version"] = version,
+        });
+
+    public static Task<HttpResponseMessage> SetTableActiveAsync(HttpClient client, Guid shop, Guid id, bool active, int version) =>
+        StaffApi.SendAsync(client, HttpMethod.Post, $"/settings/tables/{id}/{(active ? "reactivate" : "deactivate")}", shop,
+            new JsonObject { ["version"] = version });
+
     public static Task<HttpResponseMessage> ListChangesAsync(HttpClient client, Guid shop, string query = "") =>
         StaffApi.SendAsync(client, HttpMethod.Get, "/settings/changes" + query, shop);
+
+    private static async Task<(Guid Id, int Version)> IdAndVersionAsync(Task<HttpResponseMessage> request)
+    {
+        using var created = await request;
+        var text = await created.Content.ReadAsStringAsync(Ct);
+        Assert.True(created.StatusCode == HttpStatusCode.Created, text);
+        var json = JsonNode.Parse(text)!;
+        return (Guid.Parse((string)json["id"]!), (int)json["version"]!);
+    }
 
     /// <summary>Settings history as "entity:action" in time order (read as the migrator).</summary>
     public static async Task<List<string>> SettingsHistoryAsync(TenancyApp app)

@@ -62,6 +62,37 @@ else
                 <MudText data-testid="read-only" Typo="Typo.body2" Class="mt-2">Only an owner can change the discount limit.</MudText>
             }
         </MudPaper>
+
+        <MudPaper Outlined="true" Class="pa-4 mt-4" Style="max-width: 48rem;" data-testid="tips">
+            <MudText Typo="Typo.h6">Tips</MudText>
+            <MudText Class="mb-2">With tips on, the till offers up to three tip percentages at checkout, smallest first.</MudText>
+
+            @if (IsOwner)
+            {
+                <MudSwitch T="bool" data-testid="tips-enabled" @bind-Value="tipsOn" Label="Take tips at the till" Color="Color.Primary" />
+                @if (tipsOn)
+                {
+                    <div class="d-flex align-start flex-wrap" style="gap: 8px;">
+                        @for (var i = 0; i < tipTexts.Length; i++)
+                        {
+                            var index = i;
+                            <MudTextField T="string" data-testid="@($"tip-{index + 1}")" Label="@($"Tip {index + 1} (%)")" Style="max-width: 9rem;"
+                                          Value="tipTexts[index]" ValueChanged="@(v => tipTexts[index] = v)" Error="@(Error("tipPresets") is not null)" />
+                        }
+                    </div>
+                    @if (Error("tipPresets") is { } tipError)
+                    {
+                        <MudText data-testid="tips-error" Typo="Typo.body2" Color="Color.Error">@tipError</MudText>
+                    }
+                }
+                <MudButton data-testid="save-tips" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2" Disabled="busy" OnClick="SaveTipsAsync">Save</MudButton>
+            }
+            else
+            {
+                <MudText data-testid="tips-text"><b>@TipsText</b></MudText>
+                <MudText Typo="Typo.body2" Class="mt-2">Only an owner can change tips.</MudText>
+            }
+        </MudPaper>
     }
 }
 
@@ -77,12 +108,18 @@ else
     private Dictionary<string, string> fieldErrors = new(StringComparer.Ordinal);
     private string percent = "0";
     private string amount = string.Empty;
+    private bool tipsOn;
+    private string[] tipTexts = new string[SettingsRules.MaxTipPresets];
 
     private bool IsOwner => OpenBusiness.Role == StaffRole.Owner;
 
     private string LimitText => selling!.DiscountLimitAmount is { } limit
         ? $"Up to {selling.DiscountLimitPercent}% of the sale and at most {MoneyText.Format(limit, selling.Currency)} {selling.Currency}"
         : $"Up to {selling.DiscountLimitPercent}% of the sale";
+
+    private string TipsText => selling!.TipsEnabled
+        ? $"Tips offered: {string.Join(", ", selling.TipPresets.Select(t => $"{t}%"))}"
+        : "Tips are off.";
 
     protected override async Task OnInitializedAsync()
     {
@@ -112,6 +149,8 @@ else
                 (selling, loadError) = (loaded.Value, null);
                 percent = loaded.Value.DiscountLimitPercent;
                 amount = loaded.Value.DiscountLimitAmount is { } limit ? MoneyText.Format(limit, loaded.Value.Currency) : string.Empty;
+                tipsOn = loaded.Value.TipsEnabled;
+                tipTexts = [.. Enumerable.Range(0, SettingsRules.MaxTipPresets).Select(i => i < loaded.Value.TipPresets.Count ? loaded.Value.TipPresets[i] : string.Empty)];
                 break;
             case LoadResult<SellingItem>.BusinessChanged:
                 stale = true;
@@ -140,13 +179,36 @@ else
             return;
         }
 
+        await SendAsync(selling! with { DiscountLimitPercent = text, DiscountLimitAmount = minor }, "The discount limit was saved.");
+    }
+
+    private async Task SaveTipsAsync()
+    {
+        message = null;
+        fieldErrors = new(StringComparer.Ordinal);
+        var texts = tipsOn ? tipTexts.Select(t => t?.Trim() ?? string.Empty).Where(t => t.Length > 0).ToList() : [.. selling!.TipPresets];
+        var values = texts.Select(t => decimal.TryParse(t, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var v) ? v : (decimal?)null).ToList();
+        var tipError = values.Any(v => v is null)
+            ? "Enter each tip as a percentage, for example 15."
+            : SettingsRules.ValidateTips(tipsOn, values.Select(v => v!.Value).ToList());
+        if (tipError is not null)
+        {
+            fieldErrors["tipPresets"] = tipError;
+            return;
+        }
+
+        await SendAsync(selling! with { TipsEnabled = tipsOn, TipPresets = texts }, tipsOn ? "Tips were saved." : "Tips were turned off.");
+    }
+
+    private async Task SendAsync(SellingItem changed, string saved)
+    {
         busy = true;
-        var result = await SettingsApi.UpdateSellingAsync(pageBusiness, selling! with { DiscountLimitPercent = text, DiscountLimitAmount = minor });
+        var result = await SettingsApi.UpdateSellingAsync(pageBusiness, changed);
         busy = false;
         switch (result)
         {
             case OwnerActionResult.Succeeded:
-                (message, failed) = ("The discount limit was saved.", false);
+                (message, failed) = (saved, false);
                 await LoadAsync();
                 break;
             case OwnerActionResult.BusinessChanged:
