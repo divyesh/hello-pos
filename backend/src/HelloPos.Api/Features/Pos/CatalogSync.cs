@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using HelloPos.Api.Features.Businesses;
 using HelloPos.Api.Features.Catalog;
 using HelloPos.Api.Features.Catalog.TaxProfiles;
+using HelloPos.Api.Features.Settings;
 using HelloPos.Api.Infrastructure;
 using HelloPos.Api.Infrastructure.Persistence;
 using HelloPos.Api.Infrastructure.Pos;
@@ -22,7 +23,11 @@ public sealed record CatalogSyncResponse(
     IReadOnlyList<SyncCategoryDto> Categories,
     IReadOnlyList<SyncProductDto> Products,
     IReadOnlyList<SyncDiscountDto> Discounts,
-    IReadOnlyList<Guid> RemovedDiscountIds);
+    IReadOnlyList<Guid> RemovedDiscountIds,
+    IReadOnlyList<SyncPaymentTypeDto> PaymentTypes,
+    IReadOnlyList<SyncTableAreaDto> TableAreas,
+    IReadOnlyList<SyncTableDto> Tables,
+    SyncSellingDto Selling);
 
 public sealed record CatalogSettingsDto(string Currency, string PricingMode, string TimeZone, long CashRoundingStep, bool DepositsTaxable);
 
@@ -56,6 +61,20 @@ public sealed record SyncDiscountDto(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? AmountOff,
     DateOnly FromDate,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateOnly? ToDate);
+
+public sealed record SyncPaymentTypeDto(
+    Guid Id, string Name, string Kind, bool BuiltIn, bool OpensDrawer, bool AsksReference, bool GivesChange, int Position, bool Active);
+
+public sealed record SyncTableAreaDto(Guid Id, string Name, int Position, bool Active);
+
+public sealed record SyncTableDto(Guid Id, Guid AreaId, string Name, int Seats, int Position, bool Active);
+
+public sealed record SyncSellingDto(
+    bool UsesTables,
+    string DiscountLimitPercent,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? DiscountLimitAmount,
+    bool TipsEnabled,
+    IReadOnlyList<string> TipPresets);
 
 /// <summary>
 /// <c>GET /pos/catalog</c> (feature #13, research R2–R5): the paired till's business catalog, read in one
@@ -137,6 +156,18 @@ public sealed class CatalogSync : IEndpointMapper
                 .Select(r => r.EntityId).Distinct()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
 
+        // Business settings (feature #12, FR-018): the lists like catalog roots, the selling rules always.
+        var paymentTypes = await db.PaymentTypes.AsNoTracking()
+            .Where(t => full || t.Revision >= from)
+            .OrderBy(t => t.Position).ThenBy(t => t.Name).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var areas = await db.TableAreas.AsNoTracking()
+            .Where(a => full || a.Revision >= from)
+            .OrderBy(a => a.Position).ThenBy(a => a.Name).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var tables = await db.DiningTables.AsNoTracking()
+            .Where(t => full || t.Revision >= from)
+            .OrderBy(t => t.AreaId).ThenBy(t => t.Position).ThenBy(t => t.Name).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var selling = await SettingsSupport.SellingAsync(db, cancellationToken).ConfigureAwait(false);
+
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
         return TypedResults.Ok(new CatalogSyncResponse(
@@ -175,8 +206,21 @@ public sealed class CatalogSync : IEndpointMapper
                 p.Active,
                 barcodes[p.Id].ToList())).ToList(),
             discounts.Select(d => ToDto(d, currency)).ToList(),
-            removed));
+            removed,
+            paymentTypes.Select(t => new SyncPaymentTypeDto(
+                t.Id, t.Name, PaymentKinds.ToWire(t.Kind), t.BuiltIn, t.OpensDrawer, t.AsksReference, t.GivesChange, t.Position, t.Active)).ToList(),
+            areas.Select(a => new SyncTableAreaDto(a.Id, a.Name, a.Position, a.Active)).ToList(),
+            tables.Select(t => new SyncTableDto(t.Id, t.AreaId, t.Name, t.Seats, t.Position, t.Active)).ToList(),
+            ToDto(selling, currency)));
     }
+
+    /// <summary>Tips off sends no presets, even though the business keeps them for when tips come back on.</summary>
+    private static SyncSellingDto ToDto(SellingSettings selling, string currency) => new(
+        selling.UsesTables,
+        CatalogSupport.Format(selling.DiscountLimitPercent),
+        selling.DiscountLimitAmount is { } amount ? CatalogSupport.ToMinor(amount, currency) : null,
+        selling.TipsEnabled,
+        selling.TipsEnabled ? selling.TipPresets.Order().Select(CatalogSupport.Format).ToList() : []);
 
     /// <summary>Percent stays a decimal string; a fixed amount goes to minor units (as the pricing engine takes it).</summary>
     private static SyncDiscountDto ToDto(ItemDiscount discount, string currency) => discount.Kind == "percent"

@@ -1,7 +1,6 @@
 package com.recbook.hellopos.data.catalog
 
 import android.content.Context
-import androidx.room.Room
 import com.recbook.hellopos.BuildConfig
 import com.recbook.hellopos.core.network.NetworkModule
 import com.recbook.hellopos.core.session.AuthInterceptor
@@ -37,7 +36,7 @@ abstract class CatalogModule {
         @Provides
         @Singleton
         fun provideDatabase(@ApplicationContext context: Context): CatalogDatabase =
-            Room.databaseBuilder(context, CatalogDatabase::class.java, CatalogDatabase.NAME).build()
+            CatalogDatabase.builder(context).build()
 
         @Provides
         @Singleton

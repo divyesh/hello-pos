@@ -126,6 +126,22 @@ public sealed class FakeSettingsService : ISettingsService
         Change($"selling {changed.DiscountLimitPercent}% {changed.DiscountLimitAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-"}{Tips(changed)} v{changed.Version}",
             () => Selling = changed with { Version = changed.Version + 1 });
 
+    /// <summary>The whole history, newest first; served in pages of <c>History.PageSize</c>.</summary>
+    public List<SettingsChangeItem> History { get; } = [];
+
+    /// <summary>What the page asked for: "entityId-or-all page".</summary>
+    public List<string> HistoryRequests { get; } = [];
+
+    public LoadResult<IReadOnlyList<SettingsChangeItem>>? NextHistory { get; set; }
+
+    public Task<LoadResult<IReadOnlyList<SettingsChangeItem>>> ListChangesAsync(Guid pageBusiness, Guid? entityId, int page, CancellationToken cancellationToken = default)
+    {
+        HistoryRequests.Add($"{entityId?.ToString() ?? "all"} {page}");
+        return Task.FromResult(NextHistory ?? new LoadResult<IReadOnlyList<SettingsChangeItem>>.Loaded(History
+            .Where(c => entityId is null || c.EntityId == entityId)
+            .Skip((page - 1) * HelloPos.Web.Pages.Settings.History.PageSize).Take(HelloPos.Web.Pages.Settings.History.PageSize).ToList()));
+    }
+
     private Task<OwnerActionResult> Change(string call, Action apply)
     {
         if (NextChange is OwnerActionResult.Succeeded)

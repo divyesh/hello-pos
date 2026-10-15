@@ -9,8 +9,12 @@ import com.recbook.hellopos.domain.catalog.CatalogPriceFeed
 import com.recbook.hellopos.domain.catalog.CatalogProduct
 import com.recbook.hellopos.domain.catalog.CatalogSettings
 import com.recbook.hellopos.domain.catalog.CatalogStatus
+import com.recbook.hellopos.domain.catalog.DiningTableInfo
+import com.recbook.hellopos.domain.catalog.PaymentTypeInfo
 import com.recbook.hellopos.domain.catalog.ProductLookup
 import com.recbook.hellopos.domain.catalog.SearchText
+import com.recbook.hellopos.domain.catalog.SellingRules
+import com.recbook.hellopos.domain.catalog.TableAreaInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -30,6 +34,21 @@ class CatalogStore(private val database: CatalogDatabase, private val clock: Clo
     val status: Flow<CatalogStatus?> = dao.observeMeta().map { it?.let(CatalogMapping::status) }.distinctUntilChanged()
 
     val settings: Flow<CatalogSettings?> = dao.observeMeta().map { it?.let(CatalogMapping::settings) }.distinctUntilChanged()
+
+    val sellingRules: Flow<SellingRules?> = dao.observeMeta().map { it?.let(CatalogMapping::sellingRules) }.distinctUntilChanged()
+
+    /** Active payment types in the order the owner set (feature #12). */
+    fun activePaymentTypes(): Flow<List<PaymentTypeInfo>> =
+        dao.observeActivePaymentTypes().map { rows -> rows.map(CatalogMapping::paymentType) }
+
+    /** Every payment type, active or not, in order. */
+    suspend fun paymentTypes(): List<PaymentTypeInfo> = dao.paymentTypes().map(CatalogMapping::paymentType)
+
+    /** Every area, active or not, in order. */
+    suspend fun tableAreas(): List<TableAreaInfo> = dao.tableAreas().map(CatalogMapping::tableArea)
+
+    /** Every table, active or not, by area and position. */
+    suspend fun tables(): List<DiningTableInfo> = dao.diningTables().map(CatalogMapping::diningTable)
 
     fun activeCategories(): Flow<List<CatalogCategory>> =
         dao.observeActiveCategories().map { rows -> rows.map(CatalogMapping::category) }
@@ -101,7 +120,8 @@ class CatalogStore(private val database: CatalogDatabase, private val clock: Clo
 
     /**
      * Applies [download] for [businessId]: a full one replaces everything; changes replace each changed
-     * root whole (a profile with its versions, a product with its barcodes). All or nothing.
+     * root whole (a profile with its versions, a product with its barcodes, a payment type, an area, a
+     * table) and the selling rules. All or nothing.
      */
     suspend fun apply(businessId: String, download: CatalogDownload) {
         database.withTransaction {
@@ -119,6 +139,9 @@ class CatalogStore(private val database: CatalogDatabase, private val clock: Clo
             dao.upsertProducts(download.products.map(CatalogMapping::row))
             dao.insertBarcodes(download.products.flatMap(CatalogMapping::barcodeRows))
             dao.upsertDiscounts(download.discounts.map(CatalogMapping::row))
+            dao.upsertPaymentTypes(download.paymentTypes.map(CatalogMapping::row))
+            dao.upsertTableAreas(download.tableAreas.map(CatalogMapping::row))
+            dao.upsertDiningTables(download.tables.map(CatalogMapping::row))
             dao.upsertMeta(CatalogMapping.meta(businessId, download, clock.instant()))
         }
     }
@@ -137,5 +160,8 @@ class CatalogStore(private val database: CatalogDatabase, private val clock: Clo
         dao.clearProducts()
         dao.clearBarcodes()
         dao.clearDiscounts()
+        dao.clearPaymentTypes()
+        dao.clearTableAreas()
+        dao.clearDiningTables()
     }
 }

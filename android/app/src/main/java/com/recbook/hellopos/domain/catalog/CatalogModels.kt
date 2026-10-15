@@ -85,6 +85,11 @@ data class CatalogDownload(
     val products: List<CatalogProduct>,
     val discounts: List<CatalogDiscount>,
     val removedDiscountIds: List<UUID>,
+    /** Business settings (feature #12): the lists like catalog roots, the selling rules always whole. */
+    val paymentTypes: List<PaymentTypeInfo>,
+    val tableAreas: List<TableAreaInfo>,
+    val tables: List<DiningTableInfo>,
+    val selling: SellingRules,
 )
 
 /** Where the till's copy stands. */

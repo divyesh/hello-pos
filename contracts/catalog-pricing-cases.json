@@ -244,7 +244,15 @@
             "fromDate": "2026-10-13"
           }
         ],
-        "removedDiscountIds": []
+        "removedDiscountIds": [],
+        "paymentTypes": [
+          { "id": "00000000-0000-4000-8000-000000000901", "name": "Cash", "kind": "cash", "builtIn": true, "opensDrawer": true, "asksReference": false, "givesChange": true, "position": 0, "active": true },
+          { "id": "00000000-0000-4000-8000-000000000902", "name": "Card (terminal)", "kind": "externalCard", "builtIn": false, "opensDrawer": false, "asksReference": false, "givesChange": false, "position": 1, "active": true },
+          { "id": "00000000-0000-4000-8000-000000000903", "name": "Cheque", "kind": "cheque", "builtIn": false, "opensDrawer": true, "asksReference": true, "givesChange": false, "position": 2, "active": false }
+        ],
+        "tableAreas": [],
+        "tables": [],
+        "selling": { "usesTables": false, "discountLimitPercent": "10", "discountLimitAmount": 2000, "tipsEnabled": true, "tipPresets": ["10", "15", "20"] }
       },
       "checks": [
         {
@@ -641,7 +649,19 @@
             "toDate": "2026-10-31"
           }
         ],
-        "removedDiscountIds": []
+        "removedDiscountIds": [],
+        "paymentTypes": [
+          { "id": "00000000-0000-4000-8000-000000000911", "name": "UPI", "kind": "digitalWallet", "builtIn": false, "opensDrawer": false, "asksReference": true, "givesChange": false, "position": 0, "active": true },
+          { "id": "00000000-0000-4000-8000-000000000912", "name": "Cash", "kind": "cash", "builtIn": true, "opensDrawer": true, "asksReference": false, "givesChange": true, "position": 1, "active": true }
+        ],
+        "tableAreas": [
+          { "id": "00000000-0000-4000-8000-000000000951", "name": "Inside", "position": 0, "active": true }
+        ],
+        "tables": [
+          { "id": "00000000-0000-4000-8000-000000000961", "areaId": "00000000-0000-4000-8000-000000000951", "name": "1", "seats": 4, "position": 0, "active": true },
+          { "id": "00000000-0000-4000-8000-000000000962", "areaId": "00000000-0000-4000-8000-000000000951", "name": "2", "seats": 2, "position": 1, "active": true }
+        ],
+        "selling": { "usesTables": true, "discountLimitPercent": "0", "tipsEnabled": false, "tipPresets": [] }
       },
       "checks": [
         {

@@ -1,0 +1,223 @@
+@page "/settings/history"
+@using System.Globalization
+@using HelloPos.Kernel.Staff
+@inject ISettingsService SettingsApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+@* Who changed which setting, when, and how (feature #12, US5, FR-016), newest first. Nobody edits it. *@
+
+<PageTitle>Settings history · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Settings history</MudText>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers see business settings.</MudAlert>
+}
+else if (loadError is not null)
+{
+    <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+}
+else if (changes is not null)
+{
+    <MudText Class="mb-2">Every change to payment types, tables, discounts and tips: who made it, when, and each value before and after.</MudText>
+
+    @if (EntityId is not null)
+    {
+        <MudText data-testid="filtered" Typo="Typo.body2" Class="mb-2">
+            Showing one item's changes. <MudLink Href="settings/history">Show all</MudLink>
+        </MudText>
+    }
+
+    <MudPaper Outlined="true" Class="pa-4" Style="max-width: 48rem;" data-testid="history">
+        @if (changes.Count == 0)
+        {
+            <MudText data-testid="empty" Typo="Typo.body2">@(page == 1 ? "No changes recorded yet." : "No older changes.")</MudText>
+        }
+        @foreach (var change in changes)
+        {
+            <div class="mb-3" data-testid="change">
+                <MudText Typo="Typo.body2" data-testid="change-title"><b>@Title(change)</b></MudText>
+                <MudText Typo="Typo.caption" Class="d-block" data-testid="change-who">
+                    @change.At.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) · @change.Actor
+                </MudText>
+                @foreach (var field in change.Fields)
+                {
+                    <MudText Typo="Typo.caption" Class="d-block" data-testid="change-field">
+                        @FieldLabel(field.Field): @Value(field.Field, field.Old) → @Value(field.Field, field.New)
+                    </MudText>
+                }
+            </div>
+        }
+    </MudPaper>
+
+    <div class="d-flex mt-2" style="gap: 8px;">
+        @if (page > 1)
+        {
+            <MudButton data-testid="newer" Variant="Variant.Text" Color="Color.Primary" Disabled="busy" OnClick="() => GoToAsync(page - 1)">Newer</MudButton>
+        }
+        @if (changes.Count == PageSize)
+        {
+            <MudButton data-testid="older" Variant="Variant.Text" Color="Color.Primary" Disabled="busy" OnClick="() => GoToAsync(page + 1)">Older</MudButton>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The server's page size (<c>SettingsHistory.PageSize</c>).</summary>
+    public const int PageSize = 50;
+
+    /// <summary>Only this item's changes when set (a payment type, area, table or the selling settings).</summary>
+    [SupplyParameterFromQuery]
+    public Guid? EntityId { get; set; }
+
+    private Guid pageBusiness;
+    private bool noBusiness;
+    private bool stale;
+    private bool busy;
+    private int page = 1;
+    private IReadOnlyList<SettingsChangeItem>? changes;
+    private string? loadError;
+    private string currency = string.Empty;
+    private Dictionary<Guid, string> names = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        pageBusiness = id;
+        if (OpenBusiness.Role is StaffRole.Owner or StaffRole.Manager)
+        {
+            await LoadNamesAsync();
+            await GoToAsync(1);
+        }
+    }
+
+    /// <summary>Current names of payment types, areas and tables, so entries say which item changed (best effort).</summary>
+    private async Task LoadNamesAsync()
+    {
+        if (await SettingsApi.ListPaymentTypesAsync(pageBusiness) is LoadResult<IReadOnlyList<PaymentTypeItem>>.Loaded types)
+        {
+            foreach (var type in types.Value)
+            {
+                names[type.Id] = type.Name;
+            }
+        }
+
+        if (await SettingsApi.ListAreasAsync(pageBusiness) is LoadResult<IReadOnlyList<TableAreaItem>>.Loaded areas)
+        {
+            foreach (var area in areas.Value)
+            {
+                names[area.Id] = area.Name;
+                foreach (var table in area.Tables)
+                {
+                    names[table.Id] = table.Name;
+                }
+            }
+        }
+
+        if (await SettingsApi.GetSellingAsync(pageBusiness) is LoadResult<SellingItem>.Loaded selling)
+        {
+            currency = selling.Value.Currency;
+        }
+    }
+
+    private async Task GoToAsync(int target)
+    {
+        busy = true;
+        var result = await SettingsApi.ListChangesAsync(pageBusiness, EntityId, target);
+        busy = false;
+        switch (result)
+        {
+            case LoadResult<IReadOnlyList<SettingsChangeItem>>.Loaded loaded:
+                (changes, page, loadError) = (loaded.Value, target, null);
+                break;
+            case LoadResult<IReadOnlyList<SettingsChangeItem>>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<IReadOnlyList<SettingsChangeItem>>.Failed f:
+                loadError = f.Message;
+                break;
+        }
+    }
+
+    private string Title(SettingsChangeItem change)
+    {
+        var name = names.TryGetValue(change.EntityId, out var known) ? $" {known}" : string.Empty;
+        return (change.Entity, change.Action) switch
+        {
+            ("paymentType", "reordered") => "Payment types reordered",
+            ("table", "bulkCreated") => $"Tables added in bulk to{name}",
+            ("selling", _) => "Tables, discounts and tips changed",
+            ("paymentType", var action) => $"Payment type{name} {ActionText(action)}",
+            ("tableArea", var action) => $"Area{name} {ActionText(action)}",
+            ("table", var action) => $"Table{name} {ActionText(action)}",
+            (var entity, var action) => $"{entity} {ActionText(action)}",
+        };
+    }
+
+    private static string ActionText(string action) => action switch
+    {
+        "created" => "added",
+        "updated" => "changed",
+        _ => action,
+    };
+
+    private static string FieldLabel(string field) => field switch
+    {
+        "name" => "Name",
+        "kind" => "Kind",
+        "opensDrawer" => "Opens the cash drawer",
+        "asksReference" => "Asks for a reference",
+        "active" => "Active",
+        "order" => "Order",
+        "position" => "Position",
+        "seats" => "Seats",
+        "area" => "Area",
+        "count" => "Tables",
+        "names" => "Names",
+        "usesTables" => "Uses tables",
+        "discountLimitPercent" => "Discount limit (%)",
+        "discountLimitAmount" => "Discount limit (amount)",
+        "tipsEnabled" => "Tips",
+        "tipPresets" => "Tip percentages",
+        _ => field,
+    };
+
+    private string Value(string field, string? value) => (field, value) switch
+    {
+        (_, null) => "–",
+        (_, "") => "–",
+        (_, "true") => "yes",
+        (_, "false") => "no",
+        ("kind", _) => SettingsService.KindLabel(value),
+        ("discountLimitAmount", _) when long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var minor) && currency.Length > 0
+            => $"{MoneyText.Format(minor, currency)} {currency}",
+        ("position", _) when int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var position) => (position + 1).ToString(CultureInfo.CurrentCulture),
+        _ => value,
+    };
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

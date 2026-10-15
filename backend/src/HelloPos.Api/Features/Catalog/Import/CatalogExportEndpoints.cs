@@ -90,7 +90,7 @@ public sealed class CatalogExportEndpoints : IEndpointMapper
     }
 
     /// <summary>The stored <c>{ field: [old, new] }</c> as text values (absent when there was none).</summary>
-    private static List<CatalogFieldChange> Fields(string json)
+    internal static List<CatalogFieldChange> Fields(string json)
     {
         static string? Text(JsonElement value) => value.ValueKind switch
         {

@@ -56,12 +56,12 @@ operation, written before the slices and seen failing.
 
 ## Phase 7: User Story 5 - History and tills (P2)
 
-- [ ] T019 [P] [US5] Tests `.../Features/BusinessSettings/SettingsHistoryTests.cs`: list by entity and all, newest first, field from/to, paging; history is append-only for the app login
-- [ ] T020 [US5] Slice `Features/Settings/SettingsHistory.cs` and web page `Pages/Settings/History.razor` with bUnit tests
-- [ ] T021 [P] [US5] Contract: `CatalogSync` gains required `paymentTypes`, `tableAreas`, `tables`, `selling` (lint, regenerate Kiota). Tests in `backend/tests/HelloPos.Api.Tests/Features/Pos/CatalogSyncTests.cs`: full download carries payment types (Cash first by position), areas, tables and `selling`; changes after a payment type rename carry only it; `selling` always present
-- [ ] T022 [US5] `CatalogSync.cs`: settings lists (changed since `since`) and `selling` (makes T021 pass)
-- [ ] T023 [P] [US5] `backend/tests/HelloPos.Api.Tests/Tenancy/SettingsIsolationTests.cs`: another business's payment types, areas, tables, selling settings and history are invisible and unchangeable by every operation (ids in paths and in bodies, e.g. `areaId`); a till receives only its business's settings
-- [ ] T024 [US5] Android: Room version 2 (`payment_types`, `table_areas`, `dining_tables`; selling values in `catalog_meta`; destructive migration so the copy is downloaded again), mapping from the generated client, apply in the same transaction; domain models `PaymentTypeInfo`, `TableAreaInfo`, `DiningTableInfo`, `SellingRules`; repository `paymentTypes()`, `sellingRules()`; Robolectric tests (stored, replaced on changes, version change triggers a full download)
+- [x] T019 [P] [US5] Tests `.../Features/BusinessSettings/SettingsHistoryTests.cs`: list by entity and all, newest first, field from/to, paging; history is append-only for the app login
+- [x] T020 [US5] Slice `Features/Settings/SettingsHistory.cs` and web page `Pages/Settings/History.razor` with bUnit tests
+- [x] T021 [P] [US5] Contract: `CatalogSync` gains required `paymentTypes`, `tableAreas`, `tables`, `selling` (lint, regenerate Kiota). Tests in `backend/tests/HelloPos.Api.Tests/Features/Pos/CatalogSyncTests.cs`: full download carries payment types (Cash first by position), areas, tables and `selling`; changes after a payment type rename carry only it; `selling` always present
+- [x] T022 [US5] `CatalogSync.cs`: settings lists (changed since `since`) and `selling` (makes T021 pass)
+- [x] T023 [P] [US5] `backend/tests/HelloPos.Api.Tests/Tenancy/SettingsIsolationTests.cs`: another business's payment types, areas, tables, selling settings and history are invisible and unchangeable by every operation (ids in paths and in bodies, e.g. `areaId`); a till receives only its business's settings
+- [x] T024 [US5] Android: Room version 2 (`payment_types`, `table_areas`, `dining_tables`; selling values in `catalog_meta`; destructive migration so the copy is downloaded again), mapping from the generated client, apply in the same transaction; domain models `PaymentTypeInfo`, `TableAreaInfo`, `DiningTableInfo`, `SellingRules`; repository `paymentTypes()`, `sellingRules()`; Robolectric tests (stored, replaced on changes, version change triggers a full download)
 
 ## Phase 8: Polish
 
