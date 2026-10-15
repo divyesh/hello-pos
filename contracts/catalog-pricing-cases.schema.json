@@ -22,7 +22,7 @@
           "catalog": {
             "description": "A CatalogSync with mode full; validated against the OpenAPI schema by the suites.",
             "type": "object",
-            "required": ["mode", "business", "taxProfiles", "categories", "products", "discounts"],
+            "required": ["mode", "business", "taxProfiles", "categories", "products", "discounts", "paymentTypes", "tableAreas", "tables", "selling"],
             "properties": { "mode": { "const": "full" } }
           },
           "checks": {

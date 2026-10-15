@@ -1,5 +1,6 @@
 package com.recbook.hellopos.data.catalog
 
+import android.content.Context
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -8,13 +9,15 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Room
 import androidx.room.RoomDatabase
 import kotlinx.coroutines.flow.Flow
 
-// The till's catalog copy (feature #13, data-model.md, research R6). Ids are UUID strings, dates ISO
-// strings, quantities and rates invariant decimal strings, money minor units.
+// The till's catalog copy (feature #13, data-model.md, research R6) with the business settings of feature
+// #12. Ids are UUID strings, dates ISO strings, quantities and rates invariant decimal strings, money minor
+// units.
 
-/** The single row describing the copy: whose it is, how fresh, and the pricing settings. */
+/** The single row describing the copy: whose it is, how fresh, the pricing settings and the selling rules. */
 @Entity(tableName = "catalog_meta")
 data class CatalogMetaEntity(
     @PrimaryKey val id: Int = 0,
@@ -27,6 +30,12 @@ data class CatalogMetaEntity(
     val timeZone: String,
     val cashRoundingStep: Long,
     val depositsTaxable: Boolean,
+    val usesTables: Boolean,
+    val discountLimitPercent: String,
+    val discountLimitAmount: Long?,
+    val tipsEnabled: Boolean,
+    /** Comma-separated ascending percentages; empty when tips are off. */
+    val tipPresets: String,
 )
 
 @Entity(tableName = "tax_profiles")
@@ -91,6 +100,37 @@ data class DiscountEntity(
     val toDate: String?,
 )
 
+@Entity(tableName = "payment_types")
+data class PaymentTypeEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val kind: String,
+    val builtIn: Boolean,
+    val opensDrawer: Boolean,
+    val asksReference: Boolean,
+    val givesChange: Boolean,
+    val position: Int,
+    val active: Boolean,
+)
+
+@Entity(tableName = "table_areas")
+data class TableAreaEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val position: Int,
+    val active: Boolean,
+)
+
+@Entity(tableName = "dining_tables", indices = [Index("areaId")])
+data class DiningTableEntity(
+    @PrimaryKey val id: String,
+    val areaId: String,
+    val name: String,
+    val seats: Int,
+    val position: Int,
+    val active: Boolean,
+)
+
 @Dao
 interface CatalogDao {
 
@@ -143,6 +183,18 @@ interface CatalogDao {
     @Query("SELECT * FROM discounts")
     suspend fun discounts(): List<DiscountEntity>
 
+    @Query("SELECT * FROM payment_types WHERE active ORDER BY position, name")
+    fun observeActivePaymentTypes(): Flow<List<PaymentTypeEntity>>
+
+    @Query("SELECT * FROM payment_types ORDER BY position, name")
+    suspend fun paymentTypes(): List<PaymentTypeEntity>
+
+    @Query("SELECT * FROM table_areas ORDER BY position, name")
+    suspend fun tableAreas(): List<TableAreaEntity>
+
+    @Query("SELECT * FROM dining_tables ORDER BY areaId, position, name")
+    suspend fun diningTables(): List<DiningTableEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertMeta(meta: CatalogMetaEntity)
 
@@ -164,6 +216,15 @@ interface CatalogDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertDiscounts(rows: List<DiscountEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertPaymentTypes(rows: List<PaymentTypeEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertTableAreas(rows: List<TableAreaEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertDiningTables(rows: List<DiningTableEntity>)
 
     @Query("DELETE FROM tax_versions WHERE taxProfileId IN (:profileIds)")
     suspend fun deleteTaxVersionsOf(profileIds: List<String>)
@@ -194,14 +255,24 @@ interface CatalogDao {
 
     @Query("DELETE FROM discounts")
     suspend fun clearDiscounts()
+
+    @Query("DELETE FROM payment_types")
+    suspend fun clearPaymentTypes()
+
+    @Query("DELETE FROM table_areas")
+    suspend fun clearTableAreas()
+
+    @Query("DELETE FROM dining_tables")
+    suspend fun clearDiningTables()
 }
 
 @Database(
     entities = [
         CatalogMetaEntity::class, TaxProfileEntity::class, TaxVersionEntity::class, CategoryEntity::class,
         ProductEntity::class, BarcodeEntity::class, DiscountEntity::class,
+        PaymentTypeEntity::class, TableAreaEntity::class, DiningTableEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class CatalogDatabase : RoomDatabase() {
@@ -209,5 +280,12 @@ abstract class CatalogDatabase : RoomDatabase() {
 
     companion object {
         const val NAME = "catalog.db"
+
+        /**
+         * The copy on disk. A schema change drops it (it is only a copy of the server), so the next refresh
+         * finds no revision and downloads everything again (feature #12: version 1 to 2 added the settings).
+         */
+        fun builder(context: Context, name: String = NAME): RoomDatabase.Builder<CatalogDatabase> =
+            Room.databaseBuilder(context, CatalogDatabase::class.java, name).fallbackToDestructiveMigration(dropAllTables = true)
     }
 }

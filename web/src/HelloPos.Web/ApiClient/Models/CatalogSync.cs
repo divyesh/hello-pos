@@ -38,6 +38,14 @@ namespace HelloPos.Web.ApiClient.Models
 #endif
         /// <summary>full replaces the device&apos;s copy; changes applies on top of `since`.</summary>
         public global::HelloPos.Web.ApiClient.Models.CatalogSync_mode? Mode { get; set; }
+        /// <summary>Payment types, active and inactive (feature</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public List<global::HelloPos.Web.ApiClient.Models.SyncPaymentType>? PaymentTypes { get; set; }
+#nullable restore
+#else
+        public List<global::HelloPos.Web.ApiClient.Models.SyncPaymentType> PaymentTypes { get; set; }
+#endif
         /// <summary>The products property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
@@ -56,8 +64,32 @@ namespace HelloPos.Web.ApiClient.Models
 #endif
         /// <summary>The copy&apos;s revision once applied; send it as `since` next time.</summary>
         public long? Revision { get; set; }
+        /// <summary>Always sent whole, in both modes.</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public global::HelloPos.Web.ApiClient.Models.SyncSelling? Selling { get; set; }
+#nullable restore
+#else
+        public global::HelloPos.Web.ApiClient.Models.SyncSelling Selling { get; set; }
+#endif
         /// <summary>The serverTime property</summary>
         public DateTimeOffset? ServerTime { get; set; }
+        /// <summary>Table areas, active and inactive; in changes mode only those changed after `since`.</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public List<global::HelloPos.Web.ApiClient.Models.SyncTableArea>? TableAreas { get; set; }
+#nullable restore
+#else
+        public List<global::HelloPos.Web.ApiClient.Models.SyncTableArea> TableAreas { get; set; }
+#endif
+        /// <summary>Tables, active and inactive; in changes mode only those changed after `since`.</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public List<global::HelloPos.Web.ApiClient.Models.SyncTable>? Tables { get; set; }
+#nullable restore
+#else
+        public List<global::HelloPos.Web.ApiClient.Models.SyncTable> Tables { get; set; }
+#endif
         /// <summary>The taxProfiles property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
@@ -88,10 +120,14 @@ namespace HelloPos.Web.ApiClient.Models
                 { "categories", n => { Categories = n.GetCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncCategory>(global::HelloPos.Web.ApiClient.Models.SyncCategory.CreateFromDiscriminatorValue)?.AsList(); } },
                 { "discounts", n => { Discounts = n.GetCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncDiscount>(global::HelloPos.Web.ApiClient.Models.SyncDiscount.CreateFromDiscriminatorValue)?.AsList(); } },
                 { "mode", n => { Mode = n.GetEnumValue<global::HelloPos.Web.ApiClient.Models.CatalogSync_mode>(); } },
+                { "paymentTypes", n => { PaymentTypes = n.GetCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncPaymentType>(global::HelloPos.Web.ApiClient.Models.SyncPaymentType.CreateFromDiscriminatorValue)?.AsList(); } },
                 { "products", n => { Products = n.GetCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncProduct>(global::HelloPos.Web.ApiClient.Models.SyncProduct.CreateFromDiscriminatorValue)?.AsList(); } },
                 { "removedDiscountIds", n => { RemovedDiscountIds = n.GetCollectionOfPrimitiveValues<Guid?>()?.AsList(); } },
                 { "revision", n => { Revision = n.GetLongValue(); } },
+                { "selling", n => { Selling = n.GetObjectValue<global::HelloPos.Web.ApiClient.Models.SyncSelling>(global::HelloPos.Web.ApiClient.Models.SyncSelling.CreateFromDiscriminatorValue); } },
                 { "serverTime", n => { ServerTime = n.GetDateTimeOffsetValue(); } },
+                { "tableAreas", n => { TableAreas = n.GetCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncTableArea>(global::HelloPos.Web.ApiClient.Models.SyncTableArea.CreateFromDiscriminatorValue)?.AsList(); } },
+                { "tables", n => { Tables = n.GetCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncTable>(global::HelloPos.Web.ApiClient.Models.SyncTable.CreateFromDiscriminatorValue)?.AsList(); } },
                 { "taxProfiles", n => { TaxProfiles = n.GetCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncTaxProfile>(global::HelloPos.Web.ApiClient.Models.SyncTaxProfile.CreateFromDiscriminatorValue)?.AsList(); } },
             };
         }
@@ -106,10 +142,14 @@ namespace HelloPos.Web.ApiClient.Models
             writer.WriteCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncCategory>("categories", Categories);
             writer.WriteCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncDiscount>("discounts", Discounts);
             writer.WriteEnumValue<global::HelloPos.Web.ApiClient.Models.CatalogSync_mode>("mode", Mode);
+            writer.WriteCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncPaymentType>("paymentTypes", PaymentTypes);
             writer.WriteCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncProduct>("products", Products);
             writer.WriteCollectionOfPrimitiveValues<Guid?>("removedDiscountIds", RemovedDiscountIds);
             writer.WriteLongValue("revision", Revision);
+            writer.WriteObjectValue<global::HelloPos.Web.ApiClient.Models.SyncSelling>("selling", Selling);
             writer.WriteDateTimeOffsetValue("serverTime", ServerTime);
+            writer.WriteCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncTableArea>("tableAreas", TableAreas);
+            writer.WriteCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncTable>("tables", Tables);
             writer.WriteCollectionOfObjectValues<global::HelloPos.Web.ApiClient.Models.SyncTaxProfile>("taxProfiles", TaxProfiles);
         }
     }

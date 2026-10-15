@@ -106,6 +106,12 @@ class CatalogSyncTest {
         val drinks = store.activeProducts(UUID.fromString("00000000-0000-4000-8000-000000000201")).first()
         assertEquals(listOf("Cola 355 ml", "Tea", "Water 500 ml"), drinks.map { it.name })
         assertEquals(listOf("0067000004568"), drinks.first().barcodes)
+        // Feature #12: the business settings come with the catalog.
+        assertEquals(listOf("Cash", "Card (terminal)"), store.activePaymentTypes().first().map { it.name })
+        assertEquals(listOf("Cash", "Card (terminal)", "Cheque"), store.paymentTypes().map { it.name })
+        val rules = store.sellingRules.first()!!
+        assertEquals(listOf("10", "15", "20"), rules.tipPresets.map { it.toPlainString() })
+        assertEquals(2000L, rules.discountLimitAmount)
     }
 
     @Test
@@ -151,7 +157,10 @@ class CatalogSyncTest {
     fun theNextRefresh_AsksOnlyForChangesSinceTheCopy() = runBlocking {
         sync().refresh()
         body = """{"mode":"changes","revision":7,"serverTime":"2026-10-12T16:05:00Z","business":$BUSINESS_SETTINGS,""" +
-            """"taxProfiles":[],"categories":[],"products":[],"discounts":[],"removedDiscountIds":["00000000-0000-4000-8000-000000000402"]}"""
+            """"taxProfiles":[],"categories":[],"products":[],"discounts":[],"removedDiscountIds":["00000000-0000-4000-8000-000000000402"],""" +
+            """"paymentTypes":[{"id":"00000000-0000-4000-8000-000000000902","name":"Card","kind":"externalCard","builtIn":false,""" +
+            """"opensDrawer":false,"asksReference":false,"givesChange":false,"position":1,"active":false}],"tableAreas":[],"tables":[],""" +
+            """"selling":{"usesTables":false,"discountLimitPercent":"5","tipsEnabled":false,"tipPresets":["10"]}}"""
 
         assertEquals(RefreshOutcome.Updated, sync().refresh())
 
@@ -159,6 +168,13 @@ class CatalogSyncTest {
         assertEquals(7L, store.status.first()?.revision)
         assertTrue(database.catalog().discounts().none { it.id == "00000000-0000-4000-8000-000000000402" })
         assertEquals(7, database.catalog().products().size)
+        assertEquals(listOf("Cash"), store.activePaymentTypes().first().map { it.name })
+        assertEquals(listOf("Cash", "Card", "Cheque"), store.paymentTypes().map { it.name })
+        val rules = store.sellingRules.first()!!
+        assertEquals("5", rules.discountLimitPercent.toPlainString())
+        assertNull(rules.discountLimitAmount)
+        // Tips off: no presets, whatever the server sent.
+        assertTrue(rules.tipPresets.isEmpty())
     }
 
     private fun sync(): CatalogSync {

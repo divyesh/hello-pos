@@ -198,6 +198,9 @@ class CatalogStoreTest {
         products = products,
         discounts = emptyList(),
         removedDiscountIds = removedDiscountIds,
+        paymentTypes = emptyList(),
+        tableAreas = emptyList(),
+        tables = emptyList(),
     )
 
     private fun open() = Room.databaseBuilder(context, CatalogDatabase::class.java, NAME).allowMainThreadQueries().build()

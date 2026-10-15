@@ -2,8 +2,11 @@ package com.recbook.hellopos.data.catalog
 
 import com.recbook.hellopos.data.remote.generated.models.CatalogSettings as ApiSettings
 import com.recbook.hellopos.data.remote.generated.models.CatalogSync
+import com.recbook.hellopos.data.remote.generated.models.PaymentKind as ApiPaymentKind
 import com.recbook.hellopos.data.remote.generated.models.SyncDiscount
+import com.recbook.hellopos.data.remote.generated.models.SyncPaymentType
 import com.recbook.hellopos.data.remote.generated.models.SyncProduct
+import com.recbook.hellopos.data.remote.generated.models.SyncSelling
 import com.recbook.hellopos.data.remote.generated.models.SyncTaxProfile
 import com.recbook.hellopos.domain.catalog.CatalogCategory
 import com.recbook.hellopos.domain.catalog.CatalogDiscount
@@ -13,8 +16,13 @@ import com.recbook.hellopos.domain.catalog.CatalogSettings
 import com.recbook.hellopos.domain.catalog.CatalogStatus
 import com.recbook.hellopos.domain.catalog.CatalogTaxProfile
 import com.recbook.hellopos.domain.catalog.CatalogTaxVersion
+import com.recbook.hellopos.domain.catalog.DiningTableInfo
+import com.recbook.hellopos.domain.catalog.PaymentKind
+import com.recbook.hellopos.domain.catalog.PaymentTypeInfo
 import com.recbook.hellopos.domain.catalog.SaleUnit
 import com.recbook.hellopos.domain.catalog.SearchText
+import com.recbook.hellopos.domain.catalog.SellingRules
+import com.recbook.hellopos.domain.catalog.TableAreaInfo
 import com.recbook.hellopos.domain.pricing.DiscountKind
 import com.recbook.hellopos.domain.pricing.PricingMode
 import com.recbook.hellopos.domain.pricing.TaxComponent
@@ -41,6 +49,38 @@ internal object CatalogMapping {
         products = sync.products.map(::product),
         discounts = sync.discounts.map(::discount),
         removedDiscountIds = sync.removedDiscountIds,
+        paymentTypes = sync.paymentTypes.map(::paymentType),
+        tableAreas = sync.tableAreas.map { TableAreaInfo(it.id, it.name, it.position, it.active) },
+        tables = sync.tables.map { DiningTableInfo(it.id, it.areaId, it.name, it.seats, it.position, it.active) },
+        selling = selling(sync.selling),
+    )
+
+    private fun paymentType(api: SyncPaymentType) = PaymentTypeInfo(
+        id = api.id,
+        name = api.name,
+        kind = when (api.kind) {
+            ApiPaymentKind.cash -> PaymentKind.Cash
+            ApiPaymentKind.externalCard -> PaymentKind.ExternalCard
+            ApiPaymentKind.digitalWallet -> PaymentKind.DigitalWallet
+            ApiPaymentKind.cheque -> PaymentKind.Cheque
+            ApiPaymentKind.voucher -> PaymentKind.Voucher
+            ApiPaymentKind.other -> PaymentKind.Other
+        },
+        builtIn = api.builtIn,
+        opensDrawer = api.opensDrawer,
+        asksReference = api.asksReference,
+        givesChange = api.givesChange,
+        position = api.position,
+        active = api.active,
+    )
+
+    /** Tips off means no presets, whatever the server sent. */
+    private fun selling(api: SyncSelling) = SellingRules(
+        usesTables = api.usesTables,
+        discountLimitPercent = BigDecimal(api.discountLimitPercent),
+        discountLimitAmount = api.discountLimitAmount,
+        tipsEnabled = api.tipsEnabled,
+        tipPresets = if (api.tipsEnabled) api.tipPresets.map(::BigDecimal).sorted() else emptyList(),
     )
 
     private fun settings(api: ApiSettings) = CatalogSettings(
@@ -123,6 +163,11 @@ internal object CatalogMapping {
         timeZone = download.settings.timeZone,
         cashRoundingStep = download.settings.cashRoundingStep,
         depositsTaxable = download.settings.depositsTaxable,
+        usesTables = download.selling.usesTables,
+        discountLimitPercent = download.selling.discountLimitPercent.toPlainString(),
+        discountLimitAmount = download.selling.discountLimitAmount,
+        tipsEnabled = download.selling.tipsEnabled,
+        tipPresets = download.selling.tipPresets.joinToString(",") { it.toPlainString() },
     )
 
     fun status(meta: CatalogMetaEntity) =
@@ -131,6 +176,33 @@ internal object CatalogMapping {
     fun settings(meta: CatalogMetaEntity) = CatalogSettings(
         meta.currency, PricingMode.valueOf(meta.pricingMode), meta.timeZone, meta.cashRoundingStep, meta.depositsTaxable,
     )
+
+    fun sellingRules(meta: CatalogMetaEntity) = SellingRules(
+        usesTables = meta.usesTables,
+        discountLimitPercent = BigDecimal(meta.discountLimitPercent),
+        discountLimitAmount = meta.discountLimitAmount,
+        tipsEnabled = meta.tipsEnabled,
+        tipPresets = if (meta.tipPresets.isEmpty()) emptyList() else meta.tipPresets.split(',').map(::BigDecimal),
+    )
+
+    fun row(type: PaymentTypeInfo) = PaymentTypeEntity(
+        type.id.toString(), type.name, type.kind.name, type.builtIn, type.opensDrawer, type.asksReference, type.givesChange, type.position, type.active,
+    )
+
+    fun paymentType(row: PaymentTypeEntity) = PaymentTypeInfo(
+        UUID.fromString(row.id), row.name, PaymentKind.valueOf(row.kind), row.builtIn, row.opensDrawer, row.asksReference, row.givesChange,
+        row.position, row.active,
+    )
+
+    fun row(area: TableAreaInfo) = TableAreaEntity(area.id.toString(), area.name, area.position, area.active)
+
+    fun tableArea(row: TableAreaEntity) = TableAreaInfo(UUID.fromString(row.id), row.name, row.position, row.active)
+
+    fun row(table: DiningTableInfo) =
+        DiningTableEntity(table.id.toString(), table.areaId.toString(), table.name, table.seats, table.position, table.active)
+
+    fun diningTable(row: DiningTableEntity) =
+        DiningTableInfo(UUID.fromString(row.id), UUID.fromString(row.areaId), row.name, row.seats, row.position, row.active)
 
     fun row(profile: CatalogTaxProfile) =
         TaxProfileEntity(profile.id.toString(), profile.name, profile.kind.name, profile.active)

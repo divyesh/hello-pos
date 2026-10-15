@@ -5,6 +5,7 @@ using HelloPos.Api.Tests.Features.Catalog;
 using HelloPos.Api.Tests.Features.Staff;
 using HelloPos.Api.Tests.Infrastructure.Database;
 using Npgsql;
+using static HelloPos.Api.Tests.Features.BusinessSettings.SettingsApi;
 using static HelloPos.Api.Tests.Features.Catalog.CatalogApi;
 using static HelloPos.Api.Tests.Features.Owners.OwnerApi;
 using static HelloPos.Api.Tests.Features.Pos.PosApi;
@@ -97,10 +98,17 @@ public sealed class CatalogSyncTests(PostgresFixture postgres)
         var catalog = JsonNode.Parse(await AssertContractAsync(await SyncAsync(client), HttpStatusCode.OK, "posCatalog"))!;
 
         Assert.Equal("full", (string?)catalog["mode"]);
-        foreach (var list in new[] { "taxProfiles", "categories", "products", "discounts" })
+        foreach (var list in new[] { "taxProfiles", "categories", "products", "discounts", "tableAreas", "tables" })
         {
             Assert.Empty(catalog[list]!.AsArray());
         }
+
+        // A new business's settings: Cash only, no tables, every cashier discount approved, no tips.
+        Assert.Equal(["Cash"], catalog["paymentTypes"]!.AsArray().Select(t => (string)t!["name"]!));
+        var selling = catalog["selling"]!;
+        Assert.Equal((false, "0", false), ((bool)selling["usesTables"]!, (string)selling["discountLimitPercent"]!, (bool)selling["tipsEnabled"]!));
+        Assert.Null(selling["discountLimitAmount"]);
+        Assert.Empty(selling["tipPresets"]!.AsArray());
     }
 
     [Fact]
@@ -157,12 +165,13 @@ public sealed class CatalogSyncTests(PostgresFixture postgres)
         var changes = JsonNode.Parse(await AssertContractAsync(await SyncAsync(client, since), HttpStatusCode.OK, "posCatalog"))!;
 
         Assert.Equal("changes", (string?)changes["mode"]);
-        foreach (var list in new[] { "taxProfiles", "categories", "products", "discounts", "removedDiscountIds" })
+        foreach (var list in new[] { "taxProfiles", "categories", "products", "discounts", "removedDiscountIds", "paymentTypes", "tableAreas", "tables" })
         {
             Assert.Empty(changes[list]!.AsArray());
         }
 
         Assert.Equal("INR", (string?)changes["business"]!["currency"]);
+        Assert.False((bool)changes["selling"]!["usesTables"]!);
     }
 
     [Fact]
@@ -204,6 +213,110 @@ public sealed class CatalogSyncTests(PostgresFixture postgres)
         Assert.Empty(changes["categories"]!.AsArray());
         Assert.Equal([discount], changes["removedDiscountIds"]!.AsArray().Select(d => Guid.Parse((string)d!)));
         Assert.True((long)changes["revision"]! >= since);
+    }
+
+    // ---- Feature #12 US5: settings in the download (FR-018) -------------------------------------------
+
+    [Fact]
+    public async Task AFullDownload_CarriesPaymentTypesTablesAndSellingSettings()
+    {
+        await using var shop = await ShopAsync(postgres);
+        var cash = Guid.Parse((string)(await JsonAsync(await ListPaymentTypesAsync(shop.Owner, shop.Id)))[0]!["id"]!);
+        var (cheque, _) = await PaymentTypeAsync(shop.Owner, shop.Id, "Cheque", "cheque");
+        var (upi, _) = await PaymentTypeAsync(shop.Owner, shop.Id, "UPI");
+        var ordered = (await JsonAsync(await ReorderPaymentTypesAsync(shop.Owner, shop.Id, cash, upi, cheque))).AsArray();
+        using (await SetPaymentTypeActiveAsync(shop.Owner, shop.Id, cheque, false, (int)ordered[2]!["version"]!))
+        {
+        }
+
+        var (hall, _) = await AreaAsync(shop.Owner, shop.Id, "Hall");
+        var (patio, patioVersion) = await AreaAsync(shop.Owner, shop.Id, "Patio");
+        using (await CreateTablesAsync(shop.Owner, shop.Id, hall, 1, 3, seats: 2))
+        {
+        }
+
+        using (await SetAreaActiveAsync(shop.Owner, shop.Id, patio, false, patioVersion))
+        {
+        }
+
+        var selling = SellingBody(await JsonAsync(await GetSellingAsync(shop.Owner, shop.Id)));
+        selling["usesTables"] = true;
+        selling["discountLimitPercent"] = "12.5";
+        selling["discountLimitAmount"] = 50000;
+        selling["tipsEnabled"] = true;
+        selling["tipPresets"] = new JsonArray("15", "10", "20");
+        using (var saved = await UpdateSellingAsync(shop.Owner, shop.Id, selling))
+        {
+            Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        }
+
+        using var device = await RegisterDeviceAsync(shop.App, shop.Owner, shop.Id);
+        using var client = DeviceClient(shop.App, device.Credential);
+        var catalog = JsonNode.Parse(await AssertContractAsync(await SyncAsync(client), HttpStatusCode.OK, "posCatalog"))!;
+
+        var types = catalog["paymentTypes"]!.AsArray();
+        Assert.Equal(["Cash", "UPI", "Cheque"], types.Select(t => (string)t!["name"]!));
+        Assert.Equal([0, 1, 2], types.Select(t => (int)t!["position"]!));
+        Assert.Equal(("cash", true, true, true, true), ((string)types[0]!["kind"]!, (bool)types[0]!["builtIn"]!, (bool)types[0]!["givesChange"]!,
+            (bool)types[0]!["opensDrawer"]!, (bool)types[0]!["active"]!));
+        Assert.Equal(("digitalWallet", false, true), ((string)types[1]!["kind"]!, (bool)types[1]!["givesChange"]!, (bool)types[1]!["asksReference"]!));
+        Assert.False((bool)types[2]!["active"]!);
+
+        Assert.Equal([("Hall", true), ("Patio", false)], catalog["tableAreas"]!.AsArray().Select(a => ((string)a!["name"]!, (bool)a["active"]!)));
+        var tables = catalog["tables"]!.AsArray();
+        Assert.Equal(["1", "2", "3"], tables.Select(t => (string)t!["name"]!));
+        Assert.All(tables, t => Assert.Equal((hall, 2, true), (Guid.Parse((string)t!["areaId"]!), (int)t["seats"]!, (bool)t["active"]!)));
+
+        var rules = catalog["selling"]!;
+        Assert.Equal((true, "12.5", 50000L, true), ((bool)rules["usesTables"]!, (string)rules["discountLimitPercent"]!,
+            (long)rules["discountLimitAmount"]!, (bool)rules["tipsEnabled"]!));
+        Assert.Equal(["10", "15", "20"], rules["tipPresets"]!.AsArray().Select(t => (string)t!));
+    }
+
+    [Fact]
+    public async Task Changes_AfterAPaymentTypeRename_CarryOnlyIt_AndTheSellingSettingsAlways()
+    {
+        await using var shop = await ShopAsync(postgres);
+        var (upi, upiVersion) = await PaymentTypeAsync(shop.Owner, shop.Id, "UPI");
+        await PaymentTypeAsync(shop.Owner, shop.Id, "Cheque", "cheque");
+        var (hall, _) = await AreaAsync(shop.Owner, shop.Id, "Hall");
+        await TableAsync(shop.Owner, shop.Id, hall, "1");
+        using var device = await RegisterDeviceAsync(shop.App, shop.Owner, shop.Id);
+        using var client = DeviceClient(shop.App, device.Credential);
+        var since = (long)(await CatalogAsync(client))["revision"]!;
+
+        using (await UpdatePaymentTypeAsync(shop.Owner, shop.Id, upi, "UPI / QR", "digitalWallet", false, true, upiVersion))
+        {
+        }
+
+        var changes = JsonNode.Parse(await AssertContractAsync(await SyncAsync(client, since), HttpStatusCode.OK, "posCatalog"))!;
+
+        Assert.Equal("changes", (string?)changes["mode"]);
+        var renamed = Assert.Single(changes["paymentTypes"]!.AsArray())!;
+        Assert.Equal((upi, "UPI / QR"), (Guid.Parse((string)renamed["id"]!), (string)renamed["name"]!));
+        Assert.Empty(changes["tableAreas"]!.AsArray());
+        Assert.Empty(changes["tables"]!.AsArray());
+        Assert.Equal("0", (string?)changes["selling"]!["discountLimitPercent"]);
+    }
+
+    [Fact]
+    public async Task WithTipsOff_TheTillGetsNoTipPresets()
+    {
+        await using var shop = await ShopAsync(postgres);
+        var selling = SellingBody(await JsonAsync(await GetSellingAsync(shop.Owner, shop.Id)));
+        selling["tipsEnabled"] = true;
+        selling["tipPresets"] = new JsonArray("10", "15");
+        var off = SellingBody(await JsonAsync(await UpdateSellingAsync(shop.Owner, shop.Id, selling)));
+        off["tipsEnabled"] = false;
+        var stored = await JsonAsync(await UpdateSellingAsync(shop.Owner, shop.Id, off));
+        Assert.Equal(["10", "15"], stored["tipPresets"]!.AsArray().Select(t => (string)t!));
+        using var device = await RegisterDeviceAsync(shop.App, shop.Owner, shop.Id);
+        using var client = DeviceClient(shop.App, device.Credential);
+
+        var rules = (await CatalogAsync(client))["selling"]!;
+
+        Assert.False((bool)rules["tipsEnabled"]!);
+        Assert.Empty(rules["tipPresets"]!.AsArray());
     }
 
     [Fact]

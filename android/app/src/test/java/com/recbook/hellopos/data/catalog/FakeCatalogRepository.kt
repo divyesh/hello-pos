@@ -5,7 +5,9 @@ import com.recbook.hellopos.domain.catalog.CatalogPriceFeed
 import com.recbook.hellopos.domain.catalog.CatalogProduct
 import com.recbook.hellopos.domain.catalog.CatalogSettings
 import com.recbook.hellopos.domain.catalog.CatalogStatus
+import com.recbook.hellopos.domain.catalog.PaymentTypeInfo
 import com.recbook.hellopos.domain.catalog.ProductLookup
+import com.recbook.hellopos.domain.catalog.SellingRules
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -17,6 +19,8 @@ class FakeCatalogRepository : CatalogRepository {
     val settingsFlow = MutableStateFlow<CatalogSettings?>(null)
     val categoriesFlow = MutableStateFlow<List<CatalogCategory>>(emptyList())
     val productsFlow = MutableStateFlow<List<CatalogProduct>>(emptyList())
+    val sellingRulesFlow = MutableStateFlow<SellingRules?>(null)
+    val paymentTypesFlow = MutableStateFlow<List<PaymentTypeInfo>>(emptyList())
     var nextRefresh: RefreshOutcome = RefreshOutcome.Updated
     var refreshes = 0
         private set
@@ -27,6 +31,10 @@ class FakeCatalogRepository : CatalogRepository {
     override val status: Flow<CatalogStatus?> = statusFlow
 
     override val settings: Flow<CatalogSettings?> = settingsFlow
+
+    override val sellingRules: Flow<SellingRules?> = sellingRulesFlow
+
+    override fun paymentTypes(): Flow<List<PaymentTypeInfo>> = paymentTypesFlow
 
     override fun categories(): Flow<List<CatalogCategory>> = categoriesFlow
 

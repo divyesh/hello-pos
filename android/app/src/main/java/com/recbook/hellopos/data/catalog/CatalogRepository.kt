@@ -5,7 +5,9 @@ import com.recbook.hellopos.domain.catalog.CatalogPriceFeed
 import com.recbook.hellopos.domain.catalog.CatalogProduct
 import com.recbook.hellopos.domain.catalog.CatalogSettings
 import com.recbook.hellopos.domain.catalog.CatalogStatus
+import com.recbook.hellopos.domain.catalog.PaymentTypeInfo
 import com.recbook.hellopos.domain.catalog.ProductLookup
+import com.recbook.hellopos.domain.catalog.SellingRules
 import com.recbook.hellopos.core.session.DeviceStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +26,12 @@ interface CatalogRepository {
 
     /** The pricing settings of the copy (currency, pricing mode, …); null without a copy. */
     val settings: Flow<CatalogSettings?>
+
+    /** The tables switch, the discount approval limit and tips; null without a copy. */
+    val sellingRules: Flow<SellingRules?>
+
+    /** Payment types the till offers (active ones), in the order the owner set. */
+    fun paymentTypes(): Flow<List<PaymentTypeInfo>>
 
     /** Active categories in sort order. */
     fun categories(): Flow<List<CatalogCategory>>
@@ -60,6 +68,10 @@ class DefaultCatalogRepository @Inject constructor(
     override val status: Flow<CatalogStatus?> = guarded { store.status }
 
     override val settings: Flow<CatalogSettings?> = guarded { store.settings }
+
+    override val sellingRules: Flow<SellingRules?> = guarded { store.sellingRules }
+
+    override fun paymentTypes(): Flow<List<PaymentTypeInfo>> = guarded(emptyList()) { store.activePaymentTypes() }
 
     override fun categories(): Flow<List<CatalogCategory>> = guarded(emptyList()) { store.activeCategories() }
 

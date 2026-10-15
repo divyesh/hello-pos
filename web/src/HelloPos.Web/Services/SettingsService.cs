@@ -16,6 +16,10 @@ public sealed record TableAreaItem(Guid Id, string Name, int Position, bool Acti
 
 public sealed record DiningTableItem(Guid Id, Guid AreaId, string Name, int Seats, int Position, bool Active, int Version);
 
+/// <summary>One settings history entry; <see cref="Entity"/> and <see cref="Action"/> are wire names (paymentType, bulkCreated, …).</summary>
+public sealed record SettingsChangeItem(
+    DateTimeOffset At, string Actor, string Entity, Guid EntityId, string Action, IReadOnlyList<(string Field, string? Old, string? New)> Fields);
+
 public interface ISettingsService
 {
     Task<LoadResult<IReadOnlyList<PaymentTypeItem>>> ListPaymentTypesAsync(Guid pageBusiness, CancellationToken cancellationToken = default);
@@ -52,6 +56,9 @@ public interface ISettingsService
 
     /// <summary>Saves <paramref name="changed"/>; its <see cref="SellingItem.Version"/> is the one that was read.</summary>
     Task<OwnerActionResult> UpdateSellingAsync(Guid pageBusiness, SellingItem changed, CancellationToken cancellationToken = default);
+
+    /// <summary>One page (from 1) of the settings history, newest first; only <paramref name="entityId"/>'s when given.</summary>
+    Task<LoadResult<IReadOnlyList<SettingsChangeItem>>> ListChangesAsync(Guid pageBusiness, Guid? entityId, int page, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Business settings calls (feature #12) through the client generated from the contract.</summary>
@@ -187,6 +194,23 @@ public sealed class SettingsService(HttpClient http, ILogger<SettingsService> lo
             c => Page(c, pageBusiness), cancellationToken));
     }
 
+    public Task<LoadResult<IReadOnlyList<SettingsChangeItem>>> ListChangesAsync(Guid pageBusiness, Guid? entityId, int page, CancellationToken cancellationToken = default) =>
+        StaffService.LoadAsync<IReadOnlyList<SettingsChangeItem>>(http, logger, "list-settings-changes", async () =>
+            (await ApiClients.Create(http).Settings.Changes.GetAsync(c =>
+            {
+                Page(c, pageBusiness);
+                c.QueryParameters.EntityId = entityId;
+                c.QueryParameters.Page = page;
+            }, cancellationToken).ConfigureAwait(false) ?? [])
+            .Select(c => new SettingsChangeItem(
+                c.At ?? default,
+                c.Actor ?? string.Empty,
+                Wire(c.Entity?.ToString()),
+                c.EntityId ?? Guid.Empty,
+                Wire(c.Action?.ToString()),
+                (c.Changes ?? []).Select(f => (f.Field ?? string.Empty, f.Old, f.New)).ToList()))
+            .ToList());
+
     private static PaymentTypeItem ToItem(PaymentType type) => new(
         type.Id ?? Guid.Empty,
         type.Name ?? string.Empty,
@@ -226,11 +250,9 @@ public sealed class SettingsService(HttpClient http, ILogger<SettingsService> lo
         selling.Version ?? 0);
 
     /// <summary>Enum member to wire name ("DigitalWallet" to "digitalWallet").</summary>
-    private static string Wire(PaymentKind? kind)
-    {
-        var name = (kind ?? PaymentKind.Other).ToString();
-        return char.ToLowerInvariant(name[0]) + name[1..];
-    }
+    private static string Wire(PaymentKind? kind) => Wire((kind ?? PaymentKind.Other).ToString());
+
+    private static string Wire(string? name) => string.IsNullOrEmpty(name) ? string.Empty : char.ToLowerInvariant(name[0]) + name[1..];
 
     private Task<OwnerActionResult> Run(string operation, Func<Task> call) => OwnerAccountService.RunAsync(http, logger, operation, call);
 

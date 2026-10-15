@@ -4046,7 +4046,7 @@ components:
     CatalogSync:
       type: object
       additionalProperties: false
-      required: [mode, revision, serverTime, business, taxProfiles, categories, products, discounts, removedDiscountIds]
+      required: [mode, revision, serverTime, business, taxProfiles, categories, products, discounts, removedDiscountIds, paymentTypes, tableAreas, tables, selling]
       properties:
         mode:
           type: string
@@ -4083,6 +4083,23 @@ components:
           items:
             type: string
             format: uuid
+        paymentTypes:
+          type: array
+          description: Payment types, active and inactive (feature #12); in changes mode only those changed after `since`.
+          items:
+            $ref: '#/components/schemas/SyncPaymentType'
+        tableAreas:
+          type: array
+          description: Table areas, active and inactive; in changes mode only those changed after `since`.
+          items:
+            $ref: '#/components/schemas/SyncTableArea'
+        tables:
+          type: array
+          description: Tables, active and inactive; in changes mode only those changed after `since`.
+          items:
+            $ref: '#/components/schemas/SyncTable'
+        selling:
+          $ref: '#/components/schemas/SyncSelling'
     CatalogSettings:
       type: object
       additionalProperties: false
@@ -4199,6 +4216,93 @@ components:
         barcodes:
           type: array
           description: Normalized codes (UPC-A in its 13-digit EAN form).
+          items:
+            type: string
+    SyncPaymentType:
+      type: object
+      additionalProperties: false
+      required: [id, name, kind, builtIn, opensDrawer, asksReference, givesChange, position, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/PaymentKind'
+        builtIn:
+          type: boolean
+        opensDrawer:
+          type: boolean
+        asksReference:
+          type: boolean
+        givesChange:
+          type: boolean
+        position:
+          type: integer
+          format: int32
+          description: The till shows active types by position, Cash first unless the owner moved it.
+        active:
+          type: boolean
+    SyncTableArea:
+      type: object
+      additionalProperties: false
+      required: [id, name, position, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        position:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+    SyncTable:
+      type: object
+      additionalProperties: false
+      required: [id, areaId, name, seats, position, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        areaId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        seats:
+          type: integer
+          format: int32
+        position:
+          type: integer
+          format: int32
+          description: Position within the area.
+        active:
+          type: boolean
+    SyncSelling:
+      type: object
+      additionalProperties: false
+      required: [usesTables, discountLimitPercent, tipsEnabled, tipPresets]
+      description: Always sent whole, in both modes.
+      properties:
+        usesTables:
+          type: boolean
+          description: When false the till offers no tables, whatever the lists hold.
+        discountLimitPercent:
+          type: string
+          description: Invariant decimal string; cashier discounts above it need approval.
+        discountLimitAmount:
+          type: integer
+          format: int64
+          description: Optional second limit in minor units of the business currency.
+        tipsEnabled:
+          type: boolean
+        tipPresets:
+          type: array
+          description: Ascending percentages as decimal strings; empty when tips are off.
+          maxItems: 3
           items:
             type: string
     SyncDiscount:
