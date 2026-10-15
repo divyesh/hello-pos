@@ -1,0 +1,401 @@
+@page "/settings/tables"
+@using HelloPos.Kernel.Settings
+@using HelloPos.Kernel.Staff
+@inject ISettingsService SettingsApi
+@inject OpenBusinessState OpenBusiness
+@inject NavigationManager Navigation
+
+<PageTitle>Tables · Hello POS</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Tables</MudText>
+
+@if (stale)
+{
+    <MudAlert data-testid="stale" Severity="Severity.Warning" Class="mb-4">
+        This tab is out of date: another business was opened in this session. Nothing was saved.
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Reload">Reload</MudButton>
+    </MudAlert>
+}
+
+@if (noBusiness)
+{
+    <MudAlert data-testid="no-open-business" Severity="Severity.Info">No business is open. <MudLink Href="businesses">Choose one</MudLink>.</MudAlert>
+}
+else if (OpenBusiness.Role is not (StaffRole.Owner or StaffRole.Manager))
+{
+    <MudAlert data-testid="not-allowed" Severity="Severity.Warning">Only owners and managers see business settings.</MudAlert>
+}
+else
+{
+    <MudText Class="mb-3">Areas and tables for seating orders. Retail shops can leave tables off.</MudText>
+
+    @if (message is not null)
+    {
+        <MudAlert data-testid="message" Severity="@(failed ? Severity.Error : Severity.Success)" Dense="true" Class="mb-3">@message</MudAlert>
+    }
+
+    @if (loadError is not null)
+    {
+        <MudAlert data-testid="load-error" Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else if (selling is not null && areas is not null)
+    {
+        <MudSwitch T="bool" data-testid="uses-tables" Value="selling.UsesTables" ValueChanged="SetUsesTablesAsync" Disabled="busy"
+                   Color="Color.Primary" Label="This business uses tables" Class="mb-3" />
+
+        @if (!selling.UsesTables)
+        {
+            <MudAlert data-testid="tables-off" Severity="Severity.Info" Dense="true" Class="mb-3">
+                Turn tables on to set up areas and tables. Areas and tables already set up are kept, but tills do not offer them.
+            </MudAlert>
+        }
+        else
+        {
+            @for (var i = 0; i < areas.Count; i++)
+            {
+                var area = areas[i];
+                var areaIndex = i;
+                <MudPaper Outlined="true" Class="pa-3 mb-3" Style="max-width: 48rem;" data-testid="area">
+                    @if (editingArea?.Id == area.Id)
+                    {
+                        <div class="d-flex align-center flex-wrap" style="gap: 8px;">
+                            <MudTextField T="string" data-testid="edit-area-name" Label="Area name" @bind-Value="editAreaName" MaxLength="SettingsRules.AreaNameMaxLength" />
+                            <MudButton data-testid="save-area" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                       Disabled="@(busy || !AreaNameValid(editAreaName))" OnClick="() => SaveAreaAsync(area)">Save</MudButton>
+                            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => editingArea = null">Cancel</MudButton>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex align-center" style="gap: 8px;">
+                            <MudText Typo="Typo.h6" Class="flex-grow-1">
+                                <span data-testid="area-name">@area.Name</span>
+                                @if (!area.Active) { <MudChip T="string" Size="Size.Small">Inactive</MudChip> }
+                            </MudText>
+                            <MudIconButton data-testid="area-up" Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(busy || areaIndex == 0)"
+                                           OnClick="() => MoveAreaAsync(area, areaIndex - 1)" aria-label="Move area up" />
+                            <MudIconButton data-testid="area-down" Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(busy || areaIndex == areas.Count - 1)"
+                                           OnClick="() => MoveAreaAsync(area, areaIndex + 1)" aria-label="Move area down" />
+                            <MudButton data-testid="rename-area" Size="Size.Small" Variant="Variant.Text" OnClick="() => StartAreaEdit(area)">Rename</MudButton>
+                            <MudButton data-testid="toggle-area" Size="Size.Small" Variant="Variant.Text"
+                                       Disabled="@(busy || (area.Active && area.Tables.Any(t => t.Active)))"
+                                       title="@(area.Active && area.Tables.Any(t => t.Active) ? "Deactivate or move its tables first." : null)"
+                                       OnClick="() => SetAreaActiveAsync(area, !area.Active)">@(area.Active ? "Deactivate" : "Reactivate")</MudButton>
+                        </div>
+                    }
+
+                    @if (area.Tables.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">No tables yet.</MudText>
+                    }
+                    else
+                    {
+                        <MudList T="string" Dense="true">
+                            @for (var j = 0; j < area.Tables.Count; j++)
+                            {
+                                var table = area.Tables[j];
+                                var tableIndex = j;
+                                <MudListItem T="string" data-testid="table">
+                                    @if (editingTable?.Id == table.Id)
+                                    {
+                                        <div class="d-flex align-center flex-wrap" style="gap: 8px;">
+                                            <MudTextField T="string" data-testid="edit-table-name" Label="Name" @bind-Value="editTableName" MaxLength="SettingsRules.TableNameMaxLength" />
+                                            <MudNumericField T="int" data-testid="edit-table-seats" Label="Seats" @bind-Value="editTableSeats"
+                                                             Min="SettingsRules.MinSeats" Max="SettingsRules.MaxSeats" Style="max-width: 7rem;" />
+                                            <MudSelect T="Guid" data-testid="edit-table-area" Label="Area" @bind-Value="editTableArea" Style="min-width: 12rem;">
+                                                @foreach (var choice in areas.Where(a => a.Active || a.Id == table.AreaId))
+                                                {
+                                                    <MudSelectItem T="Guid" Value="choice.Id">@choice.Name</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                            <MudButton data-testid="save-table" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                                       Disabled="@(busy || !TableNameValid(editTableName) || SettingsRules.ValidateSeats(editTableSeats) is not null)"
+                                                       OnClick="() => SaveTableAsync(table)">Save</MudButton>
+                                            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => editingTable = null">Cancel</MudButton>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex align-center" style="gap: 8px;">
+                                            <MudText Class="flex-grow-1">
+                                                <b data-testid="table-name">@table.Name</b> · @Seats(table.Seats)
+                                                @if (!table.Active) { <MudChip T="string" Size="Size.Small">Inactive</MudChip> }
+                                            </MudText>
+                                            <MudIconButton data-testid="table-up" Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(busy || tableIndex == 0)"
+                                                           OnClick="() => MoveTableAsync(table, tableIndex - 1)" aria-label="Move table up" />
+                                            <MudIconButton data-testid="table-down" Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(busy || tableIndex == area.Tables.Count - 1)"
+                                                           OnClick="() => MoveTableAsync(table, tableIndex + 1)" aria-label="Move table down" />
+                                            <MudButton data-testid="edit-table" Size="Size.Small" Variant="Variant.Text" OnClick="() => StartTableEdit(table)">Edit</MudButton>
+                                            <MudButton data-testid="toggle-table" Size="Size.Small" Variant="Variant.Text" Disabled="@(busy || (!table.Active && !area.Active))"
+                                                       OnClick="() => SetTableActiveAsync(table, !table.Active)">@(table.Active ? "Deactivate" : "Reactivate")</MudButton>
+                                        </div>
+                                    }
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                </MudPaper>
+            }
+
+            <MudPaper Outlined="true" Class="pa-4 mb-3" Style="max-width: 48rem;" data-testid="new-area">
+                <MudText Typo="Typo.h6">Add an area</MudText>
+                <div class="d-flex align-center flex-wrap" style="gap: 8px;">
+                    <MudTextField T="string" data-testid="new-area-name" Label="Name, e.g. Main hall" @bind-Value="newAreaName" MaxLength="SettingsRules.AreaNameMaxLength"
+                                  Error="@(fieldErrors.ContainsKey("name") && form == Form.Area)" ErrorText="@fieldErrors.GetValueOrDefault("name")" />
+                    <MudButton data-testid="create-area" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(busy || !AreaNameValid(newAreaName))"
+                               OnClick="CreateAreaAsync">Add area</MudButton>
+                </div>
+            </MudPaper>
+
+            @if (ActiveAreas.Any())
+            {
+                <MudPaper Outlined="true" Class="pa-4 mb-3" Style="max-width: 48rem;" data-testid="new-tables">
+                    <MudText Typo="Typo.h6">Add tables</MudText>
+                    <MudRadioGroup T="bool" @bind-Value="bulk" data-testid="bulk-choice">
+                        <MudRadio T="bool" Value="false" data-testid="add-one">One table</MudRadio>
+                        <MudRadio T="bool" Value="true" data-testid="add-many">Many at once</MudRadio>
+                    </MudRadioGroup>
+                    <div class="d-flex align-center flex-wrap" style="gap: 8px;">
+                        <MudSelect T="Guid" data-testid="new-table-area" Label="Area" @bind-Value="newTableArea" Style="min-width: 12rem;">
+                            @foreach (var choice in ActiveAreas)
+                            {
+                                <MudSelectItem T="Guid" Value="choice.Id">@choice.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        @if (bulk)
+                        {
+                            <MudTextField T="string" data-testid="bulk-prefix" Label="Before the number" @bind-Value="bulkPrefix" MaxLength="SettingsRules.RangeAffixMaxLength"
+                                          Immediate="true" Style="max-width: 9rem;" />
+                            <MudNumericField T="int" data-testid="bulk-from" Label="From" @bind-Value="bulkFrom" Min="1" Immediate="true" Style="max-width: 7rem;" />
+                            <MudNumericField T="int" data-testid="bulk-to" Label="To" @bind-Value="bulkTo" Min="1" Immediate="true" Style="max-width: 7rem;" />
+                            <MudTextField T="string" data-testid="bulk-suffix" Label="After the number" @bind-Value="bulkSuffix" MaxLength="SettingsRules.RangeAffixMaxLength"
+                                          Immediate="true" Style="max-width: 9rem;" />
+                        }
+                        else
+                        {
+                            <MudTextField T="string" data-testid="new-table-name" Label="Name, e.g. 7 or T7" @bind-Value="newTableName" MaxLength="SettingsRules.TableNameMaxLength"
+                                          Error="@(fieldErrors.ContainsKey("name") && form == Form.Table)" ErrorText="@fieldErrors.GetValueOrDefault("name")" />
+                        }
+                        <MudNumericField T="int" data-testid="new-table-seats" Label="Seats" @bind-Value="newTableSeats"
+                                         Min="SettingsRules.MinSeats" Max="SettingsRules.MaxSeats" Style="max-width: 7rem;" />
+                    </div>
+                    @if (bulk)
+                    {
+                        var (names, rangeError) = SettingsRules.TableRange(bulkFrom, bulkTo, bulkPrefix, bulkSuffix);
+                        @if (rangeError is not null)
+                        {
+                            <MudText data-testid="bulk-preview" Color="Color.Error" Typo="Typo.body2" Class="mt-2">@rangeError</MudText>
+                        }
+                        else
+                        {
+                            <MudText data-testid="bulk-preview" Typo="Typo.body2" Class="mt-2">@Preview(names)</MudText>
+                        }
+
+                        <MudButton data-testid="create-tables" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2"
+                                   Disabled="@(busy || rangeError is not null || SettingsRules.ValidateSeats(newTableSeats) is not null)"
+                                   OnClick="CreateTablesAsync">@($"Add {names.Count} tables")</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton data-testid="create-table" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2"
+                                   Disabled="@(busy || !TableNameValid(newTableName) || SettingsRules.ValidateSeats(newTableSeats) is not null)"
+                                   OnClick="CreateTableAsync">Add table</MudButton>
+                    }
+                </MudPaper>
+            }
+        }
+    }
+}
+
+@code {
+    private enum Form { None, Area, Table }
+
+    private Guid pageBusiness;
+    private bool noBusiness;
+    private bool stale;
+    private bool busy;
+    private SellingItem? selling;
+    private IReadOnlyList<TableAreaItem>? areas;
+    private string? loadError;
+    private string? message;
+    private bool failed;
+    private Form form;
+    private Dictionary<string, string> fieldErrors = new(StringComparer.Ordinal);
+    private string newAreaName = string.Empty;
+    private bool bulk;
+    private Guid newTableArea;
+    private string newTableName = string.Empty;
+    private int newTableSeats = SettingsRules.DefaultSeats;
+    private string bulkPrefix = string.Empty;
+    private string bulkSuffix = string.Empty;
+    private int bulkFrom = 1;
+    private int bulkTo = 10;
+    private TableAreaItem? editingArea;
+    private string editAreaName = string.Empty;
+    private DiningTableItem? editingTable;
+    private string editTableName = string.Empty;
+    private int editTableSeats;
+    private Guid editTableArea;
+
+    private IEnumerable<TableAreaItem> ActiveAreas => areas?.Where(a => a.Active) ?? [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (OpenBusiness.Id is null)
+        {
+            await OpenBusiness.LoadAsync();
+        }
+
+        if (OpenBusiness.Id is not { } id)
+        {
+            noBusiness = true;
+            return;
+        }
+
+        pageBusiness = id;
+        if (OpenBusiness.Role is StaffRole.Owner or StaffRole.Manager)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        switch (await SettingsApi.GetSellingAsync(pageBusiness))
+        {
+            case LoadResult<SellingItem>.Loaded loaded:
+                selling = loaded.Value;
+                break;
+            case LoadResult<SellingItem>.BusinessChanged:
+                stale = true;
+                return;
+            case LoadResult<SellingItem>.Failed f:
+                loadError = f.Message;
+                return;
+        }
+
+        switch (await SettingsApi.ListAreasAsync(pageBusiness))
+        {
+            case LoadResult<IReadOnlyList<TableAreaItem>>.Loaded loaded:
+                (areas, loadError) = (loaded.Value, null);
+                if (!ActiveAreas.Any(a => a.Id == newTableArea))
+                {
+                    newTableArea = ActiveAreas.FirstOrDefault()?.Id ?? Guid.Empty;
+                }
+
+                break;
+            case LoadResult<IReadOnlyList<TableAreaItem>>.BusinessChanged:
+                stale = true;
+                break;
+            case LoadResult<IReadOnlyList<TableAreaItem>>.Failed f:
+                loadError = f.Message;
+                break;
+        }
+    }
+
+    private static bool AreaNameValid(string name) => SettingsRules.ValidateName(name, SettingsRules.AreaNameMaxLength) is null;
+
+    private static bool TableNameValid(string name) => SettingsRules.ValidateName(name, SettingsRules.TableNameMaxLength) is null;
+
+    private static string Seats(int seats) => seats == 1 ? "1 seat" : $"{seats} seats";
+
+    /// <summary>The names a range creates: all of a short range, the ends of a long one.</summary>
+    private static string Preview(IReadOnlyList<string> names) =>
+        names.Count <= 6
+            ? $"Creates {string.Join(", ", names)}."
+            : $"Creates {names.Count} tables: {string.Join(", ", names.Take(3))}, …, {string.Join(", ", names.TakeLast(2))}.";
+
+    private Task SetUsesTablesAsync(bool usesTables) =>
+        ApplyAsync(SettingsApi.UpdateSellingAsync(pageBusiness, selling! with { UsesTables = usesTables }), Form.None,
+            usesTables ? "Tables are on." : "Tables are off; tills will not offer them.");
+
+    private async Task CreateAreaAsync()
+    {
+        if (await ApplyAsync(SettingsApi.CreateAreaAsync(pageBusiness, newAreaName.Trim()), Form.Area, $"{newAreaName.Trim()} was added."))
+        {
+            newAreaName = string.Empty;
+        }
+    }
+
+    private void StartAreaEdit(TableAreaItem area) => (editingArea, editAreaName) = (area, area.Name);
+
+    private async Task SaveAreaAsync(TableAreaItem area)
+    {
+        if (await ApplyAsync(SettingsApi.UpdateAreaAsync(pageBusiness, area, editAreaName.Trim(), area.Position), Form.None, "The area was saved."))
+        {
+            editingArea = null;
+        }
+    }
+
+    private Task MoveAreaAsync(TableAreaItem area, int position) =>
+        ApplyAsync(SettingsApi.UpdateAreaAsync(pageBusiness, area, area.Name, position), Form.None, "The order was saved.");
+
+    private Task SetAreaActiveAsync(TableAreaItem area, bool active) =>
+        ApplyAsync(SettingsApi.SetAreaActiveAsync(pageBusiness, area, active), Form.None, $"{area.Name} is now {(active ? "active" : "inactive")}.");
+
+    private async Task CreateTableAsync()
+    {
+        if (await ApplyAsync(SettingsApi.CreateTableAsync(pageBusiness, newTableArea, newTableName.Trim(), newTableSeats), Form.Table, $"Table {newTableName.Trim()} was added."))
+        {
+            newTableName = string.Empty;
+        }
+    }
+
+    private Task CreateTablesAsync()
+    {
+        var count = bulkTo - bulkFrom + 1;
+        return ApplyAsync(SettingsApi.CreateTablesAsync(pageBusiness, newTableArea, bulkFrom, bulkTo, bulkPrefix.Trim(), bulkSuffix.Trim(), newTableSeats), Form.Table,
+            $"{count} tables were added.");
+    }
+
+    private void StartTableEdit(DiningTableItem table) =>
+        (editingTable, editTableName, editTableSeats, editTableArea) = (table, table.Name, table.Seats, table.AreaId);
+
+    private async Task SaveTableAsync(DiningTableItem table)
+    {
+        // Moved to another area, it goes to the end there; otherwise it keeps its place.
+        var position = editTableArea == table.AreaId ? table.Position : int.MaxValue;
+        if (await ApplyAsync(SettingsApi.UpdateTableAsync(pageBusiness, table, editTableArea, editTableName.Trim(), editTableSeats, position), Form.None, "The table was saved."))
+        {
+            editingTable = null;
+        }
+    }
+
+    private Task MoveTableAsync(DiningTableItem table, int position) =>
+        ApplyAsync(SettingsApi.UpdateTableAsync(pageBusiness, table, table.AreaId, table.Name, table.Seats, position), Form.None, "The order was saved.");
+
+    private Task SetTableActiveAsync(DiningTableItem table, bool active) =>
+        ApplyAsync(SettingsApi.SetTableActiveAsync(pageBusiness, table, active), Form.None, $"Table {table.Name} is now {(active ? "active" : "inactive")}.");
+
+    private async Task<bool> ApplyAsync(Task<OwnerActionResult> call, Form source, string success)
+    {
+        busy = true;
+        message = null;
+        form = source;
+        fieldErrors = new(StringComparer.Ordinal);
+        var result = await call;
+        busy = false;
+        switch (result)
+        {
+            case OwnerActionResult.Succeeded:
+                (message, failed) = (success, false);
+                await LoadAsync();
+                return true;
+            case OwnerActionResult.BusinessChanged:
+                stale = true;
+                return false;
+            case OwnerActionResult.FieldErrors fields:
+                fieldErrors = new(fields.Errors, StringComparer.Ordinal);
+                (message, failed) = (string.Join(" ", fields.Errors.Values), true);
+                return false;
+            case OwnerActionResult.Failed changeFailed:
+                (message, failed) = (changeFailed.Message, true);
+                await LoadAsync();
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    private void Reload() => Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+}

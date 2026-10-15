@@ -53,6 +53,15 @@ public sealed class SettingsRulesTests
     }
 
     [Fact]
+    public void Tips_On_NeedAtLeastOnePreset()
+    {
+        Assert.Null(SettingsRules.ValidateTips(false, []));
+        Assert.Null(SettingsRules.ValidateTips(true, [10m]));
+        Assert.Equal("Add at least one tip percentage.", SettingsRules.ValidateTips(true, []));
+        Assert.Equal("Use at most 3 tip percentages.", SettingsRules.ValidateTips(false, [5m, 10m, 15m, 20m]));
+    }
+
+    [Fact]
     public void TableRanges_NameEachTable()
     {
         Assert.Equal(["1", "2", "3"], SettingsRules.TableRange(1, 3, null, null).Names);

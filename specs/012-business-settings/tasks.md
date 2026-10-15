@@ -45,14 +45,14 @@ operation, written before the slices and seen failing.
 
 ## Phase 5: User Story 3 - Areas and tables (P2)
 
-- [ ] T014 [P] [US3] Tests `.../Features/BusinessSettings/TableTests.cs`: "uses tables" by owner and manager; areas create/rename/reorder; tables create/update/move area/seats; names unique ignoring case; bulk 1–20 with prefix and suffix, positions continue; bulk clash refuses all and lists names; bulk over 200 refused; area with active tables cannot be deactivated; deactivate/reactivate; cashier 403; stale 409; history (one `bulkCreated` row with the count); 200 tables bulk in under 2 s
-- [ ] T015 [US3] Slices `Features/Settings/Tables/*` (makes T014 pass)
-- [ ] T016 [US3] Web page `Pages/Settings/Tables.razor` (switch, areas, tables, bulk add dialog with preview of names) and bUnit tests
+- [X] T014 [P] [US3] Tests `.../Features/BusinessSettings/TableTests.cs`: "uses tables" by owner and manager; areas create/rename/reorder; tables create/update/move area/seats; names unique ignoring case; bulk 1–20 with prefix and suffix, positions continue; bulk clash refuses all and lists names; bulk over 200 refused; area with active tables cannot be deactivated; deactivate/reactivate; cashier 403; stale 409; history (one `bulkCreated` row with the count); 200 tables bulk in under 2 s
+- [X] T015 [US3] Slices `Features/Settings/Tables/*` (makes T014 pass)
+- [X] T016 [US3] Web page `Pages/Settings/Tables.razor` (switch, areas, tables, bulk add dialog with preview of names) and bUnit tests
 
 ## Phase 6: User Story 4 - Tip presets (P3)
 
-- [ ] T017 [P] [US4] Tests in `SellingSettingsTests.cs`: tips on with 10/15/20 saved ascending; duplicates, more than 3, out of range refused; tips off keeps no presets offered; managers 403
-- [ ] T018 [US4] Tips in the selling slice and `DiscountsAndTips.razor` (makes T017 pass); bUnit tests
+- [x] T017 [P] [US4] Tests in `SellingSettingsTests.cs`: tips on with 10/15/20 saved ascending; duplicates, more than 3, out of range refused; tips off keeps no presets offered; managers 403
+- [x] T018 [US4] Tips in the selling slice and `DiscountsAndTips.razor` (makes T017 pass); bUnit tests
 
 ## Phase 7: User Story 5 - History and tills (P2)
 

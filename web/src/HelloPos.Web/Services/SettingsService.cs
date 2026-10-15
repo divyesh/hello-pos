@@ -11,6 +11,11 @@ public sealed record PaymentTypeItem(
 public sealed record SellingItem(
     bool UsesTables, string DiscountLimitPercent, long? DiscountLimitAmount, string Currency, bool TipsEnabled, IReadOnlyList<string> TipPresets, int Version);
 
+/// <summary>A table area with its tables, in order.</summary>
+public sealed record TableAreaItem(Guid Id, string Name, int Position, bool Active, int Version, IReadOnlyList<DiningTableItem> Tables);
+
+public sealed record DiningTableItem(Guid Id, Guid AreaId, string Name, int Seats, int Position, bool Active, int Version);
+
 public interface ISettingsService
 {
     Task<LoadResult<IReadOnlyList<PaymentTypeItem>>> ListPaymentTypesAsync(Guid pageBusiness, CancellationToken cancellationToken = default);
@@ -23,6 +28,25 @@ public interface ISettingsService
 
     /// <summary>A new order: every payment type of the business exactly once.</summary>
     Task<OwnerActionResult> ReorderPaymentTypesAsync(Guid pageBusiness, IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default);
+
+    Task<LoadResult<IReadOnlyList<TableAreaItem>>> ListAreasAsync(Guid pageBusiness, CancellationToken cancellationToken = default);
+
+    Task<OwnerActionResult> CreateAreaAsync(Guid pageBusiness, string name, CancellationToken cancellationToken = default);
+
+    /// <summary>Renames <paramref name="area"/> and moves it to <paramref name="position"/> among the areas.</summary>
+    Task<OwnerActionResult> UpdateAreaAsync(Guid pageBusiness, TableAreaItem area, string name, int position, CancellationToken cancellationToken = default);
+
+    Task<OwnerActionResult> SetAreaActiveAsync(Guid pageBusiness, TableAreaItem area, bool active, CancellationToken cancellationToken = default);
+
+    Task<OwnerActionResult> CreateTableAsync(Guid pageBusiness, Guid areaId, string name, int seats, CancellationToken cancellationToken = default);
+
+    /// <summary>Tables named prefix + n + suffix for n from <paramref name="first"/> to <paramref name="last"/>, all or nothing.</summary>
+    Task<OwnerActionResult> CreateTablesAsync(Guid pageBusiness, Guid areaId, int first, int last, string prefix, string suffix, int seats, CancellationToken cancellationToken = default);
+
+    /// <summary>Renames, resizes and moves <paramref name="table"/> to <paramref name="position"/> in <paramref name="areaId"/>.</summary>
+    Task<OwnerActionResult> UpdateTableAsync(Guid pageBusiness, DiningTableItem table, Guid areaId, string name, int seats, int position, CancellationToken cancellationToken = default);
+
+    Task<OwnerActionResult> SetTableActiveAsync(Guid pageBusiness, DiningTableItem table, bool active, CancellationToken cancellationToken = default);
 
     Task<LoadResult<SellingItem>> GetSellingAsync(Guid pageBusiness, CancellationToken cancellationToken = default);
 
@@ -80,6 +104,69 @@ public sealed class SettingsService(HttpClient http, ILogger<SettingsService> lo
         Run("reorder-payment-types", () => ApiClients.Create(http).Settings.PaymentTypes.Order.PutAsync(
             new PaymentTypeOrder { Ids = ids.Select(id => (Guid?)id).ToList() }, c => Page(c, pageBusiness), cancellationToken));
 
+    public Task<LoadResult<IReadOnlyList<TableAreaItem>>> ListAreasAsync(Guid pageBusiness, CancellationToken cancellationToken = default) =>
+        StaffService.LoadAsync<IReadOnlyList<TableAreaItem>>(http, logger, "list-table-areas", async () =>
+            (await ApiClients.Create(http).Settings.Tables.Areas.GetAsync(c => Page(c, pageBusiness), cancellationToken).ConfigureAwait(false) ?? [])
+            .Select(ToItem).ToList());
+
+    public Task<OwnerActionResult> CreateAreaAsync(Guid pageBusiness, string name, CancellationToken cancellationToken = default) =>
+        Run("create-table-area", () => ApiClients.Create(http).Settings.Tables.Areas.PostAsync(
+            new TableAreaInput { Name = name }, c => Page(c, pageBusiness), cancellationToken));
+
+    public Task<OwnerActionResult> UpdateAreaAsync(Guid pageBusiness, TableAreaItem area, string name, int position, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(area);
+        return Run("update-table-area", () => ApiClients.Create(http).Settings.Tables.Areas[area.Id].PutAsync(
+            new TableAreaUpdate { Name = name, Position = position, Version = area.Version }, c => Page(c, pageBusiness), cancellationToken));
+    }
+
+    public Task<OwnerActionResult> SetAreaActiveAsync(Guid pageBusiness, TableAreaItem area, bool active, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(area);
+        var body = new SettingsVersion { Version = area.Version };
+        var item = ApiClients.Create(http).Settings.Tables.Areas[area.Id];
+        return active
+            ? Run("reactivate-table-area", () => item.Reactivate.PostAsync(body, c => Page(c, pageBusiness), cancellationToken))
+            : Run("deactivate-table-area", () => item.Deactivate.PostAsync(body, c => Page(c, pageBusiness), cancellationToken));
+    }
+
+    public Task<OwnerActionResult> CreateTableAsync(Guid pageBusiness, Guid areaId, string name, int seats, CancellationToken cancellationToken = default) =>
+        Run("create-table", () => ApiClients.Create(http).Settings.Tables.PostAsync(
+            new DiningTableInput { AreaId = areaId, Name = name, Seats = seats }, c => Page(c, pageBusiness), cancellationToken));
+
+    public Task<OwnerActionResult> CreateTablesAsync(
+        Guid pageBusiness, Guid areaId, int first, int last, string prefix, string suffix, int seats, CancellationToken cancellationToken = default) =>
+        Run("create-tables", () => ApiClients.Create(http).Settings.Tables.Bulk.PostAsync(
+            new TableRangeInput
+            {
+                AreaId = areaId,
+                From = first,
+                To = last,
+                Prefix = string.IsNullOrEmpty(prefix) ? null : prefix,
+                Suffix = string.IsNullOrEmpty(suffix) ? null : suffix,
+                Seats = seats,
+            },
+            c => Page(c, pageBusiness), cancellationToken));
+
+    public Task<OwnerActionResult> UpdateTableAsync(
+        Guid pageBusiness, DiningTableItem table, Guid areaId, string name, int seats, int position, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        return Run("update-table", () => ApiClients.Create(http).Settings.Tables[table.Id].PutAsync(
+            new DiningTableUpdate { AreaId = areaId, Name = name, Seats = seats, Position = position, Version = table.Version },
+            c => Page(c, pageBusiness), cancellationToken));
+    }
+
+    public Task<OwnerActionResult> SetTableActiveAsync(Guid pageBusiness, DiningTableItem table, bool active, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        var body = new SettingsVersion { Version = table.Version };
+        var item = ApiClients.Create(http).Settings.Tables[table.Id];
+        return active
+            ? Run("reactivate-table", () => item.Reactivate.PostAsync(body, c => Page(c, pageBusiness), cancellationToken))
+            : Run("deactivate-table", () => item.Deactivate.PostAsync(body, c => Page(c, pageBusiness), cancellationToken));
+    }
+
     public Task<LoadResult<SellingItem>> GetSellingAsync(Guid pageBusiness, CancellationToken cancellationToken = default) =>
         StaffService.LoadAsync(http, logger, "get-selling", async () =>
             ToItem((await ApiClients.Create(http).Settings.Selling.GetAsync(c => Page(c, pageBusiness), cancellationToken).ConfigureAwait(false))!));
@@ -111,6 +198,23 @@ public sealed class SettingsService(HttpClient http, ILogger<SettingsService> lo
         type.Position ?? 0,
         type.Active ?? false,
         type.Version ?? 0);
+
+    private static TableAreaItem ToItem(TableArea area) => new(
+        area.Id ?? Guid.Empty,
+        area.Name ?? string.Empty,
+        area.Position ?? 0,
+        area.Active ?? false,
+        area.Version ?? 0,
+        (area.Tables ?? []).Select(ToItem).ToList());
+
+    private static DiningTableItem ToItem(DiningTable table) => new(
+        table.Id ?? Guid.Empty,
+        table.AreaId ?? Guid.Empty,
+        table.Name ?? string.Empty,
+        table.Seats ?? 0,
+        table.Position ?? 0,
+        table.Active ?? false,
+        table.Version ?? 0);
 
     private static SellingItem ToItem(SellingSettings selling) => new(
         selling.UsesTables ?? false,
