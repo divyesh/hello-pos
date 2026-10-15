@@ -74,7 +74,7 @@ Goal: a business can set up everything it sells.
 28. **Promotions** (web, pricing engine): multi-buy ("2 for $5", "3 for the price of 2"),
    buy-one-get-one, mix and match across a group of products, with schedules; added to
    `specs/pricing-rules.md` and the shared pricing test cases.
-12. **Business settings** (web): payment types, tables, discount approval limit.
+12. **Business settings** (done, `specs/012-business-settings/`) (web): payment types, tables, discount approval limit.
 13. **Catalog on Android** (done, `specs/011-android-catalog/`): download and cache the catalog for offline selling, including a
    barcode index for instant offline lookup.
 

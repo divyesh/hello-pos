@@ -65,9 +65,9 @@ operation, written before the slices and seen failing.
 
 ## Phase 8: Polish
 
-- [ ] T025 [P] Docs: `docs/tenancy.md` (settings tables), README (setting up payment types, tables, discounts), `specs/roadmap.md` (#12 done)
-- [ ] T026 Quickstart: automated results in `checklists/quickstart-results.md`; manual steps for the project owner
-- [ ] T027 Constitution re-check after delivery in `plan.md`; full suites green (backend, web, Android, contract lint)
+- [x] T025 [P] Docs: `docs/tenancy.md` (settings tables), README (setting up payment types, tables, discounts), `specs/roadmap.md` (#12 done)
+- [x] T026 Quickstart: automated results in `checklists/quickstart-results.md`; manual steps for the project owner
+- [x] T027 Constitution re-check after delivery in `plan.md`; full suites green (backend, web, Android, contract lint)
 
 ---
 
