@@ -70,7 +70,7 @@ backend/src/HelloPos.Api/Features/Settings/             # SettingsEntities.cs, S
 backend/src/HelloPos.Api/Features/Businesses/CreateBusiness.cs   # Cash + selling row with the business
 backend/src/HelloPos.Api/Features/Pos/CatalogSync.cs    # settings in the till download
 backend/src/HelloPos.Api/Infrastructure/Persistence/Migrations/  # AddBusinessSettings (+ backfill, triggers)
-backend/tests/HelloPos.Api.Tests/Features/Settings/, Tenancy/SettingsIsolationTests.cs
+backend/tests/HelloPos.Api.Tests/Features/BusinessSettings/, Tenancy/SettingsIsolationTests.cs
 web/src/HelloPos.Web/Pages/Settings/, Services/SettingsService.cs; tests in web/tests/.../Pages/Settings/
 android/app/src/main/java/com/recbook/hellopos/data/catalog/   # Room v2: payment types, areas, tables, selling
 ```
@@ -81,3 +81,21 @@ change tracking so tills have one refresh path.
 ## Complexity Tracking
 
 No deviations from the constitution; nothing to justify.
+
+## Constitution re-check after delivery (T027)
+
+All gates still pass against the delivered code. Deviations from the design above:
+
+- **Test folder `Features/BusinessSettings`** instead of `Features/Settings`: a `Settings` namespace clashed
+  with the `CreateBusinessTests.Settings(...)` helper used across the tests.
+- **Tip rule in the kernel**: `SettingsRules.ValidateTips` (tips on needs at least one preset), shared by the
+  API and the web page. Turning tips off keeps the stored presets for when tips come back on; the till
+  download sends none while tips are off.
+- **Table order**: a move carries the target position; the server clamps it and renumbers the area's
+  tables 0..n-1, so two moves can never leave gaps or duplicates. The web page puts a table moved to
+  another area last.
+- **Android copy**: Room version 2 with a destructive upgrade, so a till that updates downloads the whole
+  catalog with the settings once instead of migrating rows. `contracts/catalog-pricing-cases.json` carries
+  the new required download fields so both suites keep comparing the full download.
+- SC-001 and SC-002 (setup times) and SC-003 on a real till are manual quickstart steps
+  (`checklists/quickstart-results.md`); SC-004 and SC-005 are covered by the history and isolation tests.

@@ -141,6 +141,29 @@ Tills download their business's catalog with `GET /pos/catalog` and keep a copy 
   another business or not at all, and unpairing erases it explicitly. App data is excluded from backups and
   device-to-device transfer (`res/xml/data_extraction_rules.xml`).
 
+## Business settings (feature #12)
+
+`payment_types`, `table_areas`, `dining_tables`, `selling_settings` and `settings_changes` are
+business-owned and under row-level security like the catalog.
+
+- **Links carry the business id**: `dining_tables (business_id, area_id) -> table_areas (business_id, id)`.
+  The tables slice checks the area against the open business and answers "unknown" for another
+  business's area.
+- **One row per business**: `selling_settings` (tables switch, discount approval limit, tips) uses the
+  business id as its own id. Select it with `SettingsSupport.SellingAsync`, not `Single()`, for the same
+  reason as the open business row above.
+- **Every business has its Cash and its selling row.** Business creation adds both, and the migration
+  backfilled them for existing businesses. Nothing a sale may reference is ever deleted: payment types,
+  areas and tables are deactivated.
+- **Roles per field**: owners change everything; managers may only read payment types and the discount
+  and tips settings, and may change tables and the tables switch. Cashiers have no access.
+- **History**: `settings_changes` is append-only for the app login (who, when, item, each field's old and
+  new value); the entry is saved in the same unit of work as the change (`RecordSettingsChange`).
+- **On tills**: `payment_types`, `table_areas` and `dining_tables` are stamped by the catalog revision
+  trigger and travel in `GET /pos/catalog` like catalog roots; the selling row is sent in every download
+  (no tip presets when tips are off). `Tenancy/SettingsIsolationTests` covers every settings operation and
+  the download.
+
 ## Add a business-owned table
 
 1. The entity implements `IBusinessOwned` and creates its id with `Guid.CreateVersion7()`:

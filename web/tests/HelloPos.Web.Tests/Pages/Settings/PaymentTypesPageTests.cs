@@ -64,17 +64,18 @@ public sealed class PaymentTypesPageTests : BunitContext
         var page = Render<PaymentTypes>();
 
         page.FindAll("[data-testid=move-up]")[1].Click();
-        Assert.Equal(["UPI", "Cash"], page.FindAll("[data-testid=type-name]").Select(e => e.TextContent));
+        page.WaitForAssertion(() => Assert.Equal(["UPI", "Cash"], page.FindAll("[data-testid=type-name]").Select(e => e.TextContent)));
 
         page.FindAll("[data-testid=edit]")[0].Click();
-        Type(page.Find("[data-testid=edit-name]"), "PhonePe");
+        Type(page.WaitForElement("[data-testid=edit-name]"), "PhonePe");
         page.Find("[data-testid=save-edit]").Click();
+        page.WaitForAssertion(() => Assert.Equal("PhonePe", page.FindAll("[data-testid=type-name]")[0].TextContent));
         page.Find("[data-testid=toggle-active]").Click();
 
+        page.WaitForAssertion(() => Assert.Contains("Inactive", page.FindAll("[data-testid=payment-type]")[0].TextContent, StringComparison.Ordinal));
         Assert.Equal(
             ["reorder UPI, Cash", "update UPI -> PhonePe digitalWallet drawer=False reference=True v1", "deactivate PhonePe"],
             settings.Calls);
-        Assert.Contains("Inactive", page.FindAll("[data-testid=payment-type]")[0].TextContent, StringComparison.Ordinal);
     }
 
     [Fact]

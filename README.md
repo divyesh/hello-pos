@@ -5,7 +5,7 @@ It replaces the old .NET 8 / MySQL backend, the old admin website, and the old A
 (`com.recbook.ohypos`), fixing their main problems: money rounding errors, sales lost or
 duplicated on network failure, data leaking between businesses, and tokens stored in plain text.
 
-> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). #7 login and sessions (owners and managers register POS devices on the web; staff sign in on Android with username and PIN, also offline; idle lock; own PIN change). Phase 2 (#8 billing) is specified and parked; Phase 3 in progress: #10 pricing engine, #11 catalog setup (tax profiles with dated rates, categories, products with barcodes, scheduled discounts, CSV import and price-list export), #13 catalog on Android (tills keep the catalog for offline lookup and pricing).
+> Status: Phase 0 done (#1 repository skeleton, #2 local environment, #3 tenancy infrastructure, #4 CI). Phase 1 in progress: #5 owner sign-up and businesses, #6 staff and roles (owners add cashiers and managers with POS usernames and PINs, invite co-owners and managers by email; roles enforced on every request). #7 login and sessions (owners and managers register POS devices on the web; staff sign in on Android with username and PIN, also offline; idle lock; own PIN change). Phase 2 (#8 billing) is specified and parked; Phase 3 in progress: #10 pricing engine, #11 catalog setup (tax profiles with dated rates, categories, products with barcodes, scheduled discounts, CSV import and price-list export), #12 business settings (payment types, tables, discount approval limit, tips, settings history; sent to tills with the catalog), #13 catalog on Android (tills keep the catalog for offline lookup and pricing).
 
 ## Applications
 
@@ -234,6 +234,27 @@ In the web back office (owners and managers), open **Catalog**:
    unchanged or with errors; nothing is saved until a file without errors is imported, all at once.
    Rows match existing products by SKU, then barcode. **Export price list** on the products page writes the
    same format, so an export imports back with no changes.
+
+### Setting up payment types, tables and discounts
+
+In the web back office, open **Settings**:
+
+1. **Payment types** (owners; managers read only): every business has Cash, which cannot be deactivated.
+   Add others such as "UPI" (digital wallet), "Card (terminal)" (external card) or "Cheque"; each says
+   whether it opens the drawer and asks for a reference. Only Cash gives change; the others are recorded
+   for exactly the amount paid, with no payment provider. Move them up or down to set the order the till offers them.
+   Deactivate instead of deleting (at most 20 active).
+2. **Discounts and tips** (owners; managers read only): the discount approval limit is a percentage of
+   the sale and, optionally, an amount. A cashier's discounts above either need a manager or owner at the
+   till; changing a fixed price always does. New businesses start at 0%, so every cashier discount needs
+   approval until you raise it. Tips, when on, offer one to three preset percentages.
+3. **Tables** (owners and managers): turn on "uses tables", add areas ("Main hall", "Patio") and their
+   tables, one at a time or in bulk ("1"–"20" with a prefix or suffix and a number of seats). A bulk add
+   that clashes with existing names is refused and lists them. An area can be deactivated only once its
+   tables are.
+4. **History** lists every settings change with who made it, when and what changed.
+
+Tills receive these settings with their catalog download (see below).
 
 ### The catalog on a till
 
